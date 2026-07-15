@@ -6,8 +6,17 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isHydrated } = useAuthStore();
   const location = useLocation();
+
+  // 等待 zustand persist 恢复完成
+  if (!isHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-medical-bg">
+        <div className="text-medical-text">加载中...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
