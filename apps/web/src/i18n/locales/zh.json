@@ -1,0 +1,55 @@
+{
+  "app": {
+    "name": "PACS Viewer",
+    "description": "眼科影像管理系统"
+  },
+  "nav": {
+    "dashboard": "工作台",
+    "patients": "患者管理",
+    "studies": "检查记录",
+    "reports": "报告",
+    "settings": "设置"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "退出登录",
+    "username": "用户名",
+    "password": "密码",
+    "rememberMe": "记住我",
+    "forgotPassword": "忘记密码？"
+  },
+  "patient": {
+    "name": "姓名",
+    "gender": "性别",
+    "male": "男",
+    "female": "女",
+    "birthDate": "出生日期",
+    "phone": "电话",
+    "mrn": "病历号",
+    "search": "搜索患者",
+    "add": "添加患者",
+    "edit": "编辑患者",
+    "delete": "删除患者"
+  },
+  "viewer": {
+    "zoom": "缩放",
+    "pan": "平移",
+    "rotate": "旋转",
+    "flip": "翻转",
+    "windowLevel": "窗宽窗位",
+    "measure": "测量",
+    "annotate": "标注",
+    "layers": "图层",
+    "filters": "滤镜",
+    "compare": "对比"
+  },
+  "report": {
+    "create": "创建报告",
+    "edit": "编辑报告",
+    "preview": "预览",
+    "export": "导出PDF",
+    "submit": "提交审核",
+    "approve": "审核通过",
+    "reject": "退回修改"
+  }
+}

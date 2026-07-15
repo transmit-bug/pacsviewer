@@ -1,0 +1,55 @@
+{
+  "app": {
+    "name": "PACS Viewer",
+    "description": "Ophthalmic Image Management System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "studies": "Studies",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?"
+  },
+  "patient": {
+    "name": "Name",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "birthDate": "Birth Date",
+    "phone": "Phone",
+    "mrn": "MRN",
+    "search": "Search patients",
+    "add": "Add Patient",
+    "edit": "Edit Patient",
+    "delete": "Delete Patient"
+  },
+  "viewer": {
+    "zoom": "Zoom",
+    "pan": "Pan",
+    "rotate": "Rotate",
+    "flip": "Flip",
+    "windowLevel": "Window/Level",
+    "measure": "Measure",
+    "annotate": "Annotate",
+    "layers": "Layers",
+    "filters": "Filters",
+    "compare": "Compare"
+  },
+  "report": {
+    "create": "Create Report",
+    "edit": "Edit Report",
+    "preview": "Preview",
+    "export": "Export PDF",
+    "submit": "Submit for Review",
+    "approve": "Approve",
+    "reject": "Reject"
+  }
+}
