@@ -1,168 +1,175 @@
+/**
+ * Images route - Uses image processing module for metadata extraction.
+ */
+
 import { Hono } from 'hono';
-import { z } from 'zod';
-import { db, images, series } from '../db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { mkdir, writeFile } from 'fs/promises';
+import { db, images, series } from '../db';
+import { processImage } from '@pacsviewer/image-processing';
+import { NotFoundError, ValidationError } from '../lib/errors';
 
 const imagesRouter = new Hono();
 
 // Upload image
 imagesRouter.post('/upload', async (c) => {
-  try {
-    const formData = await c.req.formData();
-    const file = formData.get('file') as File;
-    const seriesId = formData.get('seriesId') as string;
-    const instanceNumber = Number(formData.get('instanceNumber')) || 1;
+  const formData = await c.req.formData();
+  const file = formData.get('file') as File;
+  const seriesId = formData.get('seriesId') as string;
+  const instanceNumber = Number(formData.get('instanceNumber')) || 1;
 
-    if (!file) {
-      return c.json({ success: false, message: '请选择文件' }, 400);
-    }
+  if (!file) throw new ValidationError('请选择文件');
 
-    // Create upload directory
-    const uploadDir = join(process.cwd(), 'data', 'images');
-    await mkdir(uploadDir, { recursive: true });
+  // Create upload directory
+  const uploadDir = join(process.cwd(), 'data', 'images');
+  await mkdir(uploadDir, { recursive: true });
 
-    // Generate unique filename
-    const ext = file.name.split('.').pop();
-    const filename = `${uuid()}.${ext}`;
-    const filePath = join(uploadDir, filename);
+  // Process image
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { hash, metadata, thumbnail } = await processImage(buffer, file.name);
 
-    // Save file
-    const buffer = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(buffer));
+  // Generate unique filename
+  const ext = file.name.split('.').pop();
+  const filename = `${uuid()}.${ext}`;
+  const filePath = join(uploadDir, filename);
+  const thumbnailFilename = `${uuid()}-thumb.jpeg`;
+  const thumbnailPath = join(uploadDir, thumbnailFilename);
 
-    // Create image record
-    const id = uuid();
-    await db.insert(images).values({
-      id,
-      seriesId,
-      instanceNumber,
-      filePath: filename,
-      fileSize: file.size,
-      fileHash: '', // TODO: calculate hash
-      format: ext as any,
-      width: 0, // TODO: get from image
-      height: 0, // TODO: get from image
-      createdAt: new Date().toISOString(),
-    });
+  // Save files
+  await Promise.all([
+    writeFile(filePath, buffer),
+    writeFile(thumbnailPath, thumbnail),
+  ]);
 
-    // Update series image count
-    await db.update(series)
-      .set({ imageCount: sql`${series.imageCount} + 1` })
-      .where(eq(series.id, seriesId));
+  // Create image record
+  const id = uuid();
+  await db.insert(images).values({
+    id,
+    seriesId,
+    instanceNumber,
+    filePath: filename,
+    fileSize: file.size,
+    fileHash: hash,
+    format: ext as any,
+    width: metadata.width,
+    height: metadata.height,
+    bitsAllocated: metadata.bitsPerSample ?? 8,
+    thumbnailPath: thumbnailFilename,
+    createdAt: new Date().toISOString(),
+  });
 
-    const image = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
+  // Update series image count
+  await db.update(series)
+    .set({ imageCount: sql`${series.imageCount} + 1` })
+    .where(eq(series.id, seriesId));
 
-    return c.json({ success: true, data: image }, 201);
-  } catch (error) {
-    console.error('Upload image error:', error);
-    return c.json({ success: false, message: '上传失败' }, 500);
-  }
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
+
+  return c.json({ success: true, data: image }, 201);
 });
 
 // Get image by ID
 imagesRouter.get('/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const image = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
+  const id = c.req.param('id');
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
 
-    if (!image) {
-      return c.json({ success: false, message: '图像未找到' }, 404);
-    }
+  if (!image) throw new NotFoundError('图像');
 
-    return c.json({ success: true, data: image });
-  } catch (error) {
-    console.error('Get image error:', error);
-    return c.json({ success: false, message: '服务器错误' }, 500);
-  }
+  return c.json({ success: true, data: image });
 });
 
 // Get image file
 imagesRouter.get('/:id/file', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const image = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
+  const id = c.req.param('id');
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
 
-    if (!image) {
-      return c.json({ success: false, message: '图像未找到' }, 404);
-    }
+  if (!image) throw new NotFoundError('图像');
 
-    const filePath = join(process.cwd(), 'data', 'images', image.filePath);
-    const file = Bun.file(filePath);
+  const filePath = join(process.cwd(), 'data', 'images', image.filePath);
+  const file = Bun.file(filePath);
 
-    if (!(await file.exists())) {
-      return c.json({ success: false, message: '文件不存在' }, 404);
-    }
+  if (!(await file.exists())) throw new NotFoundError('文件');
 
-    return new Response(file, {
-      headers: {
-        'Content-Type': `image/${image.format}`,
-        'Cache-Control': 'public, max-age=31536000',
-      },
-    });
-  } catch (error) {
-    console.error('Get image file error:', error);
-    return c.json({ success: false, message: '服务器错误' }, 500);
-  }
+  return new Response(file, {
+    headers: {
+      'Content-Type': `image/${image.format}`,
+      'Cache-Control': 'public, max-age=31536000',
+    },
+  });
+});
+
+// Get thumbnail
+imagesRouter.get('/:id/thumbnail', async (c) => {
+  const id = c.req.param('id');
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
+
+  if (!image?.thumbnailPath) throw new NotFoundError('缩略图');
+
+  const thumbnailPath = join(process.cwd(), 'data', 'images', image.thumbnailPath);
+  const file = Bun.file(thumbnailPath);
+
+  if (!(await file.exists())) throw new NotFoundError('缩略图文件');
+
+  return new Response(file, {
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=31536000',
+    },
+  });
 });
 
 // Delete image
 imagesRouter.delete('/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const image = await db.query.images.findFirst({
-      where: eq(images.id, id),
-    });
+  const id = c.req.param('id');
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
 
-    if (!image) {
-      return c.json({ success: false, message: '图像未找到' }, 404);
-    }
+  if (!image) throw new NotFoundError('图像');
 
-    // Delete file
-    const filePath = join(process.cwd(), 'data', 'images', image.filePath);
-    await Bun.file(filePath).delete();
+  // Delete files
+  const filePath = join(process.cwd(), 'data', 'images', image.filePath);
+  await Bun.file(filePath).delete();
 
-    // Delete record
-    await db.delete(images).where(eq(images.id, id));
-
-    // Update series image count
-    await db.update(series)
-      .set({ imageCount: sql`${series.imageCount} - 1` })
-      .where(eq(series.id, image.seriesId));
-
-    return c.json({ success: true, message: '图像已删除' });
-  } catch (error) {
-    console.error('Delete image error:', error);
-    return c.json({ success: false, message: '服务器错误' }, 500);
+  if (image.thumbnailPath) {
+    const thumbnailPath = join(process.cwd(), 'data', 'images', image.thumbnailPath);
+    await Bun.file(thumbnailPath).delete();
   }
+
+  // Delete record
+  await db.delete(images).where(eq(images.id, id));
+
+  // Update series image count
+  await db.update(series)
+    .set({ imageCount: sql`${series.imageCount} - 1` })
+    .where(eq(series.id, image.seriesId));
+
+  return c.json({ success: true, message: '图像已删除' });
 });
 
-// Search images
+// Search images by series
 imagesRouter.get('/search', async (c) => {
-  try {
-    const seriesId = c.req.query('seriesId');
-    if (!seriesId) {
-      return c.json({ success: true, data: [] });
-    }
-
-    const allImages = await db.query.images.findMany({
-      where: eq(images.seriesId, seriesId),
-      orderBy: (images, { asc }) => [asc(images.instanceNumber)],
-    });
-
-    return c.json({ success: true, data: allImages });
-  } catch (error) {
-    console.error('Search images error:', error);
-    return c.json({ success: false, message: '服务器错误' }, 500);
+  const seriesId = c.req.query('seriesId');
+  if (!seriesId) {
+    return c.json({ success: true, data: [] });
   }
+
+  const allImages = await db.query.images.findMany({
+    where: eq(images.seriesId, seriesId),
+    orderBy: (i, { asc }) => [asc(i.instanceNumber)],
+  });
+
+  return c.json({ success: true, data: allImages });
 });
 
 export default imagesRouter;

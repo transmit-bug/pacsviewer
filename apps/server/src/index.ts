@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { AppError } from './lib/errors';
 
 import auth from './routes/auth';
 import patientsRouter from './routes/patients';
@@ -16,6 +17,15 @@ import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
 
 const app = new Hono();
+
+// Global error handler
+app.onError((err, c) => {
+  if (err instanceof AppError) {
+    return c.json({ success: false, message: err.message, code: err.code }, err.statusCode as any);
+  }
+  console.error('Unhandled error:', err);
+  return c.json({ success: false, message: '服务器错误' }, 500);
+});
 
 // Middleware
 app.use('*', logger());
