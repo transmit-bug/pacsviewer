@@ -324,6 +324,32 @@ export const reportTemplatesRelations = relations(reportTemplates, ({ one, many 
   reports: many(reports),
 }));
 
+// Comparisons table
+export const comparisons = sqliteTable('comparisons', {
+  id: text('id').primaryKey(),
+  patientId: text('patient_id').references(() => patients.id),
+  name: text('name').notNull(),
+  type: text('type', { enum: ['side_by_side', 'overlay', 'slider'] }).notNull(),
+  config: text('config', { mode: 'json' }).notNull(),
+  imageIds: text('image_ids', { mode: 'json' }).notNull().default('[]'),
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false).notNull(),
+  snapshotPath: text('snapshot_path'),
+  createdBy: text('created_by').references(() => users.id).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const comparisonsRelations = relations(comparisons, ({ one }) => ({
+  patient: one(patients, {
+    fields: [comparisons.patientId],
+    references: [patients.id],
+  }),
+  creator: one(users, {
+    fields: [comparisons.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
@@ -340,3 +366,5 @@ export const insertStudySchema = createInsertSchema(studies);
 export const selectStudySchema = createSelectSchema(studies);
 export const insertReportSchema = createInsertSchema(reports);
 export const selectReportSchema = createSelectSchema(reports);
+export const insertComparisonSchema = createInsertSchema(comparisons);
+export const selectComparisonSchema = createSelectSchema(comparisons);

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Plus, Search, FileText, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -51,32 +52,21 @@ export function ReportListPage() {
     if (!confirm('确定要删除这个报告吗？')) return;
     try {
       await reportApi.delete(id);
-      setReports(reports.filter(r => r.id !== id));
+      setReports(reports.filter((r) => r.id !== id));
     } catch (error) {
       console.error('Failed to delete report:', error);
     }
   };
 
-  const filteredReports = reports.filter(report => {
+  const filteredReports = reports.filter((report) => {
     if (activeTab !== 'all' && report.status !== activeTab) return false;
-    if (searchQuery && !report.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (
+      searchQuery &&
+      !report.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+      return false;
     return true;
   });
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <span className="px-2 py-1 rounded text-xs bg-gray-500/10 text-gray-500">草稿</span>;
-      case 'pending_review':
-        return <span className="px-2 py-1 rounded text-xs bg-yellow-500/10 text-yellow-500">待审核</span>;
-      case 'reviewed':
-        return <span className="px-2 py-1 rounded text-xs bg-blue-500/10 text-blue-500">已审核</span>;
-      case 'published':
-        return <span className="px-2 py-1 rounded text-xs bg-green-500/10 text-green-500">已发布</span>;
-      default:
-        return <span className="px-2 py-1 rounded text-xs bg-gray-500/10 text-gray-500">{status}</span>;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -105,10 +95,10 @@ export function ReportListPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="all">全部</TabsTrigger>
-          <TabsTrigger value="draft">草稿</TabsTrigger>
-          <TabsTrigger value="pending_review">待审核</TabsTrigger>
-          <TabsTrigger value="reviewed">已审核</TabsTrigger>
-          <TabsTrigger value="published">已发布</TabsTrigger>
+          <TabsTrigger value="draft">{t('report.status.draft')}</TabsTrigger>
+          <TabsTrigger value="pending_review">{t('report.status.pending_review')}</TabsTrigger>
+          <TabsTrigger value="reviewed">{t('report.status.reviewed')}</TabsTrigger>
+          <TabsTrigger value="published">{t('report.status.published')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab}>
@@ -130,7 +120,10 @@ export function ReportListPage() {
                       key={report.id}
                       className="flex items-center justify-between rounded-lg border p-4"
                     >
-                      <Link to={`/reports/${report.studyId}`} className="flex-1">
+                      <Link
+                        to={`/reports/${report.studyId}`}
+                        className="flex-1"
+                      >
                         <div className="flex items-center space-x-4">
                           <div className="flex h-10 w-10 items-center justify-center rounded bg-primary/10">
                             <FileText className="h-5 w-5 text-primary" />
@@ -138,13 +131,16 @@ export function ReportListPage() {
                           <div>
                             <p className="font-medium">{report.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              创建时间: {new Date(report.createdAt).toLocaleDateString('zh-CN')}
+                              创建时间:{' '}
+                              {new Date(report.createdAt).toLocaleDateString(
+                                'zh-CN'
+                              )}
                             </p>
                           </div>
                         </div>
                       </Link>
                       <div className="flex items-center space-x-2">
-                        {getStatusBadge(report.status)}
+                        <StatusBadge status={report.status} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -153,10 +149,14 @@ export function ReportListPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                              <Link to={`/reports/${report.studyId}`}>查看</Link>
+                              <Link to={`/reports/${report.studyId}`}>
+                                查看
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link to={`/reports/${report.studyId}/edit`}>编辑</Link>
+                              <Link to={`/reports/${report.studyId}/edit`}>
+                                编辑
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"

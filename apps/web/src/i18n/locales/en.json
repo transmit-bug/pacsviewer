@@ -48,10 +48,14 @@
       "type": "Layer Type",
       "image": "Image",
       "annotation": "Annotation",
-      "aiResult": "AI Result",
+      "aiResult": "Image Analysis",
       "opacity": "Opacity",
       "visibility": "Visibility",
       "lock": "Lock",
+      "unlock": "Unlock",
+      "show": "Show",
+      "hide": "Hide",
+      "delete": "Delete",
       "empty": "No layers"
     },
     "filter": {
@@ -66,7 +70,28 @@
       "sobel": "Sobel Edge Detection",
       "canny": "Canny Edge Detection",
       "histogramEq": "Histogram Equalization",
-      "empty": "No filters"
+      "empty": "No filters",
+      "param": {
+        "value": "Value",
+        "strength": "Strength",
+        "radius": "Radius",
+        "lowThreshold": "Low Threshold",
+        "highThreshold": "High Threshold"
+      }
+    },
+    "compare": {
+      "loading": "Loading...",
+      "zoom": "Zoom",
+      "windowLevel": "Window/Level",
+      "opacity": "Opacity",
+      "blendMode": "Blend Mode",
+      "blend": "Blend",
+      "diffHighlight": "Diff Highlight",
+      "sliderPosition": "Slider Position",
+      "blendNormal": "Normal",
+      "blendDifference": "Difference",
+      "blendLighten": "Lighten",
+      "blendDarken": "Darken"
     }
   },
   "report": {
@@ -76,6 +101,43 @@
     "export": "Export PDF",
     "submit": "Submit for Review",
     "approve": "Approve",
-    "reject": "Reject"
+    "reject": "Reject",
+    "publish": "Publish",
+    "save": "Save",
+    "saving": "Saving...",
+    "conclusion": "Conclusion",
+    "notes": "Notes",
+    "noReport": "No report. Please select a template to create one.",
+    "selectTemplate": "Select Report Template",
+    "templateType": "Type",
+    "createReport": "Create Report",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending Review",
+      "reviewed": "Reviewed",
+      "published": "Published"
+    },
+    "workflow": {
+      "submitForReview": "Submit for Review",
+      "approveReport": "Approve",
+      "rejectReport": "Reject",
+      "publishReport": "Publish"
+    },
+    "reviewNotes": "Review Notes",
+    "reviewNotesPlaceholder": "Enter review notes...",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "history": "Version History",
+    "version": "Version",
+    "noHistory": "No version history",
+    "viewVersion": "View",
+    "findings": "Findings",
+    "findingsPlaceholder": "Enter findings...",
+    "imageReferences": "Image References",
+    "addImage": "Add Image",
+    "noImages": "No referenced images",
+    "structuredFields": "Structured Fields",
+    "print": "Print",
+    "printPreview": "Print Preview"
   }
 }

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
-  detectRetinalDisease,
+  analyzeRetinalImage,
   segmentOpticDisc,
   segmentVessels,
   generateHeatmap,
@@ -68,7 +68,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize TensorFlow on mount
+  // Initialize AI subsystem on mount
   useEffect(() => {
     if (!isInitialized) {
       initialize();
@@ -86,7 +86,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
 
       switch (detectionConfig.model) {
         case 'retinal_disease':
-          result = await detectRetinalDisease(sourceImage);
+          result = await analyzeRetinalImage(sourceImage);
           break;
         case 'optic_disc':
           const discResult = await segmentOpticDisc(sourceImage);
@@ -115,7 +115,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
             heatmap,
             overlay: applyHeatmapOverlay(imageData, heatmap),
             processingTime: discResult.processingTime,
-            modelUsed: 'optic_disc',
+            analysisMethod: 'local',
           };
           break;
         case 'vessel':
@@ -138,7 +138,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
             heatmap: vesselHeatmap,
             overlay: applyHeatmapOverlay(vesselImageData, vesselHeatmap),
             processingTime: vesselResult.processingTime,
-            modelUsed: 'vessel',
+            analysisMethod: 'local',
           };
           break;
         default:
@@ -195,13 +195,13 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <Brain className="h-4 w-4" />
-          AI 检测
+          图像分析
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Model Selection */}
         <div className="space-y-2">
-          <Label>检测模型</Label>
+          <Label>分析类型</Label>
           <div className="grid grid-cols-3 gap-2">
             {(['retinal_disease', 'optic_disc', 'vessel'] as const).map((model) => (
               <Button
@@ -211,7 +211,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
                 onClick={() => setDetectionConfig({ model })}
               >
                 {model === 'retinal_disease'
-                  ? '眼底病变'
+                  ? '眼底分析'
                   : model === 'optic_disc'
                   ? '视盘/杯'
                   : '血管'}
@@ -284,7 +284,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
           disabled={!sourceImage || isDetecting || !isInitialized}
           className="w-full"
         >
-          {isDetecting ? '检测中...' : !isInitialized ? '加载模型...' : '开始检测'}
+          {isDetecting ? '分析中...' : !isInitialized ? '初始化...' : '开始分析'}
         </Button>
 
         {/* Error Display */}
@@ -298,10 +298,10 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
         {/* Results */}
         {detectionResult && (
           <div className="space-y-3 pt-3 border-t">
-            {/* Model Info */}
+            {/* Analysis Method Info */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">模型:</span>
-              <span className="font-medium">{detectionResult.modelUsed}</span>
+              <span className="text-muted-foreground">分析方法:</span>
+              <span className="font-medium">本地图像分析算法</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">处理时间:</span>
@@ -313,7 +313,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
             {/* Predictions */}
             {detectionResult.predictions.length > 0 && (
               <div className="space-y-2">
-                <Label>检测结果</Label>
+                <Label>分析结果</Label>
                 <div className="space-y-1">
                   {detectionResult.predictions.map((pred, index) => (
                     <div

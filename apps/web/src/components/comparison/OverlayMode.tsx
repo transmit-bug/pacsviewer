@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-
-interface ViewportState {
-  zoom: number;
-  pan: { x: number; y: number };
-  rotation: number;
-  flipH: boolean;
-  flipV: boolean;
-  windowWidth: number;
-  windowLevel: number;
-  invert: boolean;
-}
+import { ViewportState, defaultViewport } from './shared';
 
 type BlendMode = 'normal' | 'difference' | 'lighten' | 'darken';
 
@@ -21,22 +12,11 @@ interface OverlayModeProps {
   className?: string;
 }
 
-const defaultViewport: ViewportState = {
-  zoom: 1,
-  pan: { x: 0, y: 0 },
-  rotation: 0,
-  flipH: false,
-  flipV: false,
-  windowWidth: 400,
-  windowLevel: 40,
-  invert: false,
-};
-
-const BLEND_MODES: { value: BlendMode; label: string }[] = [
-  { value: 'normal', label: '正常' },
-  { value: 'difference', label: '差异' },
-  { value: 'lighten', label: '变亮' },
-  { value: 'darken', label: '变暗' },
+const BLEND_MODES: { value: BlendMode; labelKey: string }[] = [
+  { value: 'normal', labelKey: 'viewer.compare.blendNormal' },
+  { value: 'difference', labelKey: 'viewer.compare.blendDifference' },
+  { value: 'lighten', labelKey: 'viewer.compare.blendLighten' },
+  { value: 'darken', labelKey: 'viewer.compare.blendDarken' },
 ];
 
 function renderOverlayToCanvas(
@@ -122,6 +102,7 @@ function renderOverlayToCanvas(
 }
 
 export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgARef = useRef<HTMLImageElement | null>(null);
@@ -230,7 +211,7 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
     <div className={cn('flex flex-col w-full h-full', className)}>
       <div className="flex items-center gap-4 p-2 bg-card border-b">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">透明度</label>
+          <label className="text-xs text-muted-foreground">{t('viewer.compare.opacity')}</label>
           <input
             type="range"
             min={0}
@@ -244,7 +225,7 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">混合模式</label>
+          <label className="text-xs text-muted-foreground">{t('viewer.compare.blendMode')}</label>
           <div className="flex gap-1">
             {BLEND_MODES.map((mode) => (
               <Button
@@ -254,7 +235,7 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
                 onClick={() => setBlendMode(mode.value)}
                 className="text-xs h-7"
               >
-                {mode.label}
+                {t(mode.labelKey)}
               </Button>
             ))}
           </div>
@@ -266,14 +247,14 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
           onClick={() => setDiffHighlight(!diffHighlight)}
           className="text-xs h-7"
         >
-          差异高亮
+          {t('viewer.compare.diffHighlight')}
         </Button>
       </div>
 
       <div ref={containerRef} className="relative flex-1 bg-black overflow-hidden">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-white text-sm">加载中...</div>
+            <div className="text-white text-sm">{t('viewer.compare.loading')}</div>
           </div>
         )}
         <canvas
@@ -283,8 +264,8 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
           onWheel={handleWheel}
         />
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
-          <div>缩放: {(viewport.zoom * 100).toFixed(0)}%</div>
-          <div>混合: {BLEND_MODES.find((m) => m.value === blendMode)?.label}</div>
+          <div>{t('viewer.compare.zoom')}: {(viewport.zoom * 100).toFixed(0)}%</div>
+          <div>{t('viewer.compare.blend')}: {t(BLEND_MODES.find((m) => m.value === blendMode)?.labelKey || '')}</div>
         </div>
       </div>
     </div>

@@ -170,3 +170,24 @@ export const auditLogApi = {
   getAll: (params?: any) => api.get('/audit-logs', { params }),
   export: (params?: any) => api.get('/audit-logs/export', { params, responseType: 'blob' }),
 };
+
+export const comparisonApi = {
+  getAll: (params?: { patientId?: string; isFavorite?: boolean }) =>
+    api.get('/comparisons', { params }),
+  getFavorites: () => api.get('/comparisons/favorites'),
+  getById: (id: string) => api.get(`/comparisons/${id}`),
+  create: (data: {
+    name: string;
+    type: 'side_by_side' | 'overlay' | 'slider';
+    config: any;
+    imageIds?: string[];
+    patientId?: string;
+    isFavorite?: boolean;
+  }) => api.post('/comparisons', data),
+  update: (id: string, data: any) => api.put(`/comparisons/${id}`, data),
+  delete: (id: string) => api.delete(`/comparisons/${id}`),
+  toggleFavorite: (id: string) => api.put(`/comparisons/${id}/favorite`),
+  saveSnapshot: (id: string, image: string) =>
+    api.post(`/comparisons/${id}/snapshot`, { image }),
+  getSnapshotUrl: (id: string) => `/api/comparisons/${id}/snapshot`,
+};

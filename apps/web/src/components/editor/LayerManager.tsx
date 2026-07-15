@@ -28,14 +28,15 @@ const layerTypeIcons = {
   ai_result: Cpu,
 };
 
-const layerTypeLabels = {
-  image: '图像',
-  annotation: '标注',
-  ai_result: 'AI结果',
+const layerTypeLabelKeys: Record<Layer['type'], string> = {
+  image: 'viewer.layer.image',
+  annotation: 'viewer.layer.annotation',
+  ai_result: 'viewer.layer.aiResult',
 };
 
 export function LayerManager({ className }: LayerManagerProps) {
   const { t } = useTranslation();
+
   const {
     layers,
     activeLayerId,
@@ -96,7 +97,7 @@ export function LayerManager({ className }: LayerManagerProps) {
         <Input
           value={newLayerName}
           onChange={(e) => setNewLayerName(e.target.value)}
-          placeholder="图层名称"
+          placeholder={t('viewer.layer.name')}
           className="flex-1 h-8 text-xs"
           onKeyDown={(e) => e.key === 'Enter' && handleAddLayer()}
         />
@@ -105,9 +106,9 @@ export function LayerManager({ className }: LayerManagerProps) {
           onChange={(e) => setNewLayerType(e.target.value as Layer['type'])}
           className="h-8 rounded border bg-background px-2 text-xs"
         >
-          {Object.entries(layerTypeLabels).map(([value, label]) => (
+          {Object.entries(layerTypeLabelKeys).map(([value, labelKey]) => (
             <option key={value} value={value}>
-              {label}
+              {t(labelKey)}
             </option>
           ))}
         </select>
@@ -125,7 +126,7 @@ export function LayerManager({ className }: LayerManagerProps) {
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
         {layers.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground text-xs">
-            暂无图层
+            {t('viewer.layer.empty')}
           </div>
         ) : (
           [...layers]
@@ -157,7 +158,7 @@ export function LayerManager({ className }: LayerManagerProps) {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate">{layer.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {layerTypeLabels[layer.type]}
+                      {t(layerTypeLabelKeys[layer.type])}
                     </div>
                   </div>
 
@@ -170,7 +171,7 @@ export function LayerManager({ className }: LayerManagerProps) {
                         e.stopPropagation();
                         toggleLayerVisibility(layer.id);
                       }}
-                      title={layer.visible ? '隐藏' : '显示'}
+                      title={layer.visible ? t('viewer.layer.hide') : t('viewer.layer.show')}
                     >
                       {layer.visible ? (
                         <Eye className="h-3 w-3" />
@@ -187,7 +188,7 @@ export function LayerManager({ className }: LayerManagerProps) {
                         e.stopPropagation();
                         toggleLayerLock(layer.id);
                       }}
-                      title={layer.locked ? '解锁' : '锁定'}
+                      title={layer.locked ? t('viewer.layer.unlock') : t('viewer.layer.lock')}
                     >
                       {layer.locked ? (
                         <Lock className="h-3 w-3 text-yellow-500" />
@@ -204,7 +205,7 @@ export function LayerManager({ className }: LayerManagerProps) {
                         e.stopPropagation();
                         removeLayer(layer.id);
                       }}
-                      title="删除"
+                      title={t('viewer.layer.delete')}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -219,7 +220,7 @@ export function LayerManager({ className }: LayerManagerProps) {
       {activeLayerId && (
         <div className="pt-2 border-t">
           <div className="flex justify-between text-xs mb-1">
-            <Label>透明度</Label>
+            <Label>{t('viewer.layer.opacity')}</Label>
             <span>{Math.round((layers.find((l) => l.id === activeLayerId)?.opacity || 1) * 100)}%</span>
           </div>
           <input

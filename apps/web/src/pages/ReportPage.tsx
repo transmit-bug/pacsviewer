@@ -6,21 +6,52 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Save, FileText, Download, Send } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { StatusBadge } from '@/components/StatusBadge';
+import { ReviewNotesDialog } from '@/components/ReviewNotesDialog';
+import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
+import {
+  Save,
+  FileText,
+  Send,
+  CheckCircle,
+  XCircle,
+  Globe,
+  History,
+  Printer,
+  Image as ImageIcon,
+  X,
+} from 'lucide-react';
 
 interface Report {
   id: string;
+  studyId: string;
+  patientId: string;
+  templateId: string;
   title: string;
   content: Record<string, any>;
+  images: string[];
   status: string;
-  templateId: string;
+  reviewerId?: string;
+  reviewNotes?: string;
+  publishedAt?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ReportTemplate {
   id: string;
   name: string;
   type: string;
-  fields: any[];
+  description?: string;
+  fields: Array<{
+    key: string;
+    label: string;
+    type: string;
+    required?: boolean;
+    options?: string[];
+  }>;
 }
 
 export function ReportPage() {
@@ -31,6 +62,9 @@ export function ReportPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewAction, setReviewAction] = useState<'reject' | 'approve' | 'publish' | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -39,13 +73,15 @@ export function ReportPage() {
   useEffect(() => {
     if (studyId) {
       loadReport(studyId);
+    } else {
+      setLoading(false);
     }
   }, [studyId]);
 
   const loadTemplates = async () => {
     try {
       const response = await reportTemplateApi.getAll();
-      setTemplates(response.data || []);
+      setTemplates(response.data?.items || response.data || []);
     } catch (error) {
       console.error('Failed to load templates:', error);
     }
@@ -54,8 +90,12 @@ export function ReportPage() {
   const loadReport = async (id: string) => {
     try {
       const response = await reportApi.getAll({ studyId: id });
-      if (response.data?.length > 0) {
+      if (response.data?.items?.length > 0) {
+        setReport(response.data.items[0]);
+        setSelectedTemplate(response.data.items[0].templateId);
+      } else if (response.data?.length > 0) {
         setReport(response.data[0]);
+        setSelectedTemplate(response.data[0].templateId);
       }
     } catch (error) {
       console.error('Failed to load report:', error);
@@ -64,11 +104,44 @@ export function ReportPage() {
     }
   };
 
+  const handleCreateReport = async () => {
+    if (!selectedTemplate || !studyId) return;
+    const template = templates.find((t) => t.id === selectedTemplate);
+    if (!template) return;
+
+    // Initialize content with empty fields from template
+    const initialContent: Record<string, any> = {};
+    if (template.fields && Array.isArray(template.fields)) {
+      template.fields.forEach((field) => {
+        initialContent[field.key] = field.type === 'select' ? '' : '';
+      });
+    }
+
+    try {
+      const response = await reportApi.create({
+        studyId,
+        patientId: '', // Will be resolved by backend from study
+        templateId: selectedTemplate,
+        title: `${template.name} - ${new Date().toLocaleDateString('zh-CN')}`,
+        content: initialContent,
+        images: [],
+        status: 'draft',
+      });
+      setReport(response.data);
+    } catch (error) {
+      console.error('Failed to create report:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!report) return;
     setSaving(true);
     try {
-      await reportApi.update(report.id, report);
+      await reportApi.update(report.id, {
+        title: report.title,
+        content: report.content,
+        images: report.images,
+      });
     } catch (error) {
       console.error('Failed to save report:', error);
     } finally {
@@ -76,19 +149,170 @@ export function ReportPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleStatusChange = async (status: string, notes?: string) => {
     if (!report) return;
     try {
-      await reportApi.updateStatus(report.id, 'pending_review');
-      setReport({ ...report, status: 'pending_review' });
+      await reportApi.updateStatus(report.id, status);
+      setReport({ ...report, status, reviewNotes: notes || report.reviewNotes });
     } catch (error) {
-      console.error('Failed to submit report:', error);
+      console.error('Failed to update status:', error);
     }
   };
 
+  const handleSubmitForReview = () => {
+    handleStatusChange('pending_review');
+  };
+
+  const handleApprove = () => {
+    setReviewAction('approve');
+    setReviewDialogOpen(true);
+  };
+
+  const handleReject = () => {
+    setReviewAction('reject');
+    setReviewDialogOpen(true);
+  };
+
+  const handlePublish = () => {
+    setReviewAction('publish');
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewConfirm = (notes: string) => {
+    if (!reviewAction) return;
+    const statusMap = {
+      approve: 'reviewed',
+      reject: 'draft',
+      publish: 'published',
+    };
+    handleStatusChange(statusMap[reviewAction], notes);
+    setReviewAction(null);
+  };
+
   const handleExportPdf = () => {
+    window.print();
+  };
+
+  const handleContentChange = (key: string, value: any) => {
     if (!report) return;
-    window.open(reportApi.getPdf(report.id), '_blank');
+    setReport({
+      ...report,
+      content: { ...report.content, [key]: value },
+    });
+  };
+
+  const handleAddImage = () => {
+    if (!report) return;
+    const imageId = prompt('请输入图像ID:');
+    if (imageId) {
+      setReport({
+        ...report,
+        images: [...(report.images || []), imageId],
+      });
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    if (!report) return;
+    const newImages = [...(report.images || [])];
+    newImages.splice(index, 1);
+    setReport({ ...report, images: newImages });
+  };
+
+  const getTemplate = () => {
+    if (!report) return null;
+    return templates.find((t) => t.id === report.templateId);
+  };
+
+  const renderStatusActions = () => {
+    if (!report) return null;
+
+    switch (report.status) {
+      case 'draft':
+        return (
+          <Button onClick={handleSubmitForReview}>
+            <Send className="mr-2 h-4 w-4" />
+            {t('report.workflow.submitForReview')}
+          </Button>
+        );
+      case 'pending_review':
+        return (
+          <>
+            <Button variant="outline" onClick={handleReject}>
+              <XCircle className="mr-2 h-4 w-4" />
+              {t('report.workflow.rejectReport')}
+            </Button>
+            <Button onClick={handleApprove}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {t('report.workflow.approveReport')}
+            </Button>
+          </>
+        );
+      case 'reviewed':
+        return (
+          <Button onClick={handlePublish}>
+            <Globe className="mr-2 h-4 w-4" />
+            {t('report.workflow.publishReport')}
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderStructuredFields = () => {
+    const template = getTemplate();
+    if (!template?.fields || !Array.isArray(template.fields)) {
+      return null;
+    }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{t('report.structuredFields')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {template.fields.map((field) => (
+              <div key={field.key}>
+                <Label>
+                  {field.label}
+                  {field.required && <span className="text-destructive ml-1">*</span>}
+                </Label>
+                {field.type === 'textarea' ? (
+                  <textarea
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
+                    value={report?.content?.[field.key] || ''}
+                    onChange={(e) => handleContentChange(field.key, e.target.value)}
+                    placeholder={field.label}
+                  />
+                ) : field.type === 'select' ? (
+                  <select
+                    className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={report?.content?.[field.key] || ''}
+                    onChange={(e) => handleContentChange(field.key, e.target.value)}
+                  >
+                    <option value="">请选择...</option>
+                    {field.options?.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    className="mt-1"
+                    value={report?.content?.[field.key] || ''}
+                    onChange={(e) => handleContentChange(field.key, e.target.value)}
+                    placeholder={field.label}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -97,28 +321,38 @@ export function ReportPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{t('report.edit')}</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold">{t('report.edit')}</h1>
+          {report && <StatusBadge status={report.status} />}
+        </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? '保存中...' : '保存'}
-          </Button>
-          <Button variant="outline" onClick={handleExportPdf}>
-            <Download className="mr-2 h-4 w-4" />
-            {t('report.export')}
-          </Button>
-          <Button onClick={handleSubmit}>
-            <Send className="mr-2 h-4 w-4" />
-            {t('report.submit')}
-          </Button>
+          {report && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? t('report.saving') : t('report.save')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                {t('report.print')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setHistoryDialogOpen(true)}>
+                <History className="mr-2 h-4 w-4" />
+                {t('report.history')}
+              </Button>
+              {renderStatusActions()}
+            </>
+          )}
         </div>
       </div>
 
+      {/* Template Selector or Report Editor */}
       {!report ? (
         <Card>
           <CardHeader>
-            <CardTitle>选择报告模板</CardTitle>
+            <CardTitle>{t('report.selectTemplate')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -137,84 +371,303 @@ export function ReportPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      类型: {template.type}
+                      {t('report.templateType')}: {template.type}
                     </p>
+                    {template.description && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {template.description}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
-            <Button className="mt-4" disabled={!selectedTemplate}>
+            <Button
+              className="mt-4"
+              disabled={!selectedTemplate}
+              onClick={handleCreateReport}
+            >
               <FileText className="mr-2 h-4 w-4" />
-              创建报告
+              {t('report.createReport')}
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="edit">
-          <TabsList>
-            <TabsTrigger value="edit">编辑</TabsTrigger>
-            <TabsTrigger value="preview">预览</TabsTrigger>
-          </TabsList>
+        <div className="print-container">
+          <Tabs defaultValue="edit">
+            <TabsList className="print:hidden">
+              <TabsTrigger value="edit">{t('report.edit')}</TabsTrigger>
+              <TabsTrigger value="preview">{t('report.preview')}</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="edit">
-            <Card>
-              <CardHeader>
-                <CardTitle>{report.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Report content editor - simplified for now */}
-                  <div>
-                    <Label>诊断结论</Label>
+            <TabsContent value="edit">
+              <div className="space-y-4">
+                {/* Title */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <Label>{t('report.edit')}</Label>
+                    <Input
+                      className="mt-1 text-lg font-medium"
+                      value={report.title}
+                      onChange={(e) =>
+                        setReport({ ...report, title: e.target.value })
+                      }
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Structured Fields from Template */}
+                {renderStructuredFields()}
+
+                {/* Findings - Rich Text Area */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{t('report.findings')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className="min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) =>
+                        handleContentChange('findings', e.currentTarget.innerHTML)
+                      }
+                      dangerouslySetInnerHTML={{
+                        __html: report.content?.findings || '',
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Conclusion */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{t('report.conclusion')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <textarea
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      rows={4}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px] resize-y"
                       value={report.content?.conclusion || ''}
                       onChange={(e) =>
-                        setReport({
-                          ...report,
-                          content: { ...report.content, conclusion: e.target.value },
-                        })
+                        handleContentChange('conclusion', e.target.value)
                       }
+                      placeholder={t('report.conclusion')}
                     />
-                  </div>
-                  <div>
-                    <Label>备注</Label>
+                  </CardContent>
+                </Card>
+
+                {/* Notes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{t('report.notes')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <textarea
-                      className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      rows={3}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
                       value={report.content?.notes || ''}
                       onChange={(e) =>
-                        setReport({
-                          ...report,
-                          content: { ...report.content, notes: e.target.value },
-                        })
+                        handleContentChange('notes', e.target.value)
                       }
+                      placeholder={t('report.notes')}
                     />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </CardContent>
+                </Card>
 
-          <TabsContent value="preview">
-            <Card>
-              <CardHeader>
-                <CardTitle>报告预览</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose dark:prose-invert max-w-none">
-                  <h2>{report.title}</h2>
-                  <h3>诊断结论</h3>
-                  <p>{report.content?.conclusion || '暂无'}</p>
-                  <h3>备注</h3>
-                  <p>{report.content?.notes || '暂无'}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                {/* Image References */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{t('report.imageReferences')}</CardTitle>
+                      <Button variant="outline" size="sm" onClick={handleAddImage}>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        {t('report.addImage')}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {report.images && report.images.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {report.images.map((imageId, index) => (
+                          <div
+                            key={index}
+                            className="relative group rounded-md border overflow-hidden"
+                          >
+                            <img
+                              src={`/api/images/${imageId}/thumbnail`}
+                              alt={`Image ${index + 1}`}
+                              className="w-full h-24 object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW1hZ2U8L3RleHQ+PC9zdmc+';
+                              }}
+                            />
+                            <button
+                              className="absolute top-1 right-1 bg-destructive/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleRemoveImage(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        {t('report.noImages')}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Review Notes (if any) */}
+                {report.reviewNotes && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{t('report.reviewNotes')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm whitespace-pre-wrap">{report.reviewNotes}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview">
+              <Card className="print:shadow-none print:border-0">
+                <CardHeader className="print:pb-2">
+                  <div className="flex items-center justify-between print:flex-col print:items-start">
+                    <CardTitle className="text-2xl">{report.title}</CardTitle>
+                    <StatusBadge status={report.status} className="print:hidden" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(report.createdAt).toLocaleString('zh-CN')}
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Structured fields preview */}
+                  {getTemplate()?.fields?.map((field) => {
+                    const value = report.content?.[field.key];
+                    if (!value) return null;
+                    return (
+                      <div key={field.key}>
+                        <h3 className="font-medium text-lg mb-2">{field.label}</h3>
+                        <p className="text-sm whitespace-pre-wrap">{value}</p>
+                      </div>
+                    );
+                  })}
+
+                  {/* Findings preview */}
+                  {report.content?.findings && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">{t('report.findings')}</h3>
+                      <div
+                        className="prose dark:prose-invert max-w-none text-sm"
+                        dangerouslySetInnerHTML={{ __html: report.content.findings }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Conclusion preview */}
+                  <div>
+                    <h3 className="font-medium text-lg mb-2">{t('report.conclusion')}</h3>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {report.content?.conclusion || '-'}
+                    </p>
+                  </div>
+
+                  {/* Notes preview */}
+                  {report.content?.notes && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">{t('report.notes')}</h3>
+                      <p className="text-sm whitespace-pre-wrap">{report.content.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Images preview */}
+                  {report.images && report.images.length > 0 && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">{t('report.imageReferences')}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {report.images.map((imageId, index) => (
+                          <img
+                            key={index}
+                            src={`/api/images/${imageId}/thumbnail`}
+                            alt={`Image ${index + 1}`}
+                            className="w-full rounded border"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Review Notes */}
+                  {report.reviewNotes && (
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">{t('report.reviewNotes')}</h3>
+                      <p className="text-sm whitespace-pre-wrap">{report.reviewNotes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       )}
+
+      {/* Review Notes Dialog */}
+      <ReviewNotesDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        title={
+          reviewAction === 'approve'
+            ? t('report.workflow.approveReport')
+            : reviewAction === 'reject'
+            ? t('report.workflow.rejectReport')
+            : t('report.workflow.publishReport')
+        }
+        onConfirm={handleReviewConfirm}
+        confirmLabel={
+          reviewAction === 'approve'
+            ? t('report.approve')
+            : reviewAction === 'reject'
+            ? t('report.reject')
+            : t('report.publish')
+        }
+        showNotes={reviewAction !== 'approve'}
+      />
+
+      {/* Version History Dialog */}
+      {report && (
+        <VersionHistoryDialog
+          open={historyDialogOpen}
+          onOpenChange={setHistoryDialogOpen}
+          reportId={report.id}
+        />
+      )}
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          .print\\:hidden {
+            display: none !important;
+          }
+          .print-container {
+            padding: 0;
+          }
+          body * {
+            visibility: hidden;
+          }
+          .print-container, .print-container * {
+            visibility: visible;
+          }
+          .print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 }

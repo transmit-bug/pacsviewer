@@ -48,10 +48,14 @@
       "type": "图层类型",
       "image": "图像",
       "annotation": "标注",
-      "aiResult": "AI结果",
+      "aiResult": "图像分析结果",
       "opacity": "透明度",
       "visibility": "可见性",
       "lock": "锁定",
+      "unlock": "解锁",
+      "show": "显示",
+      "hide": "隐藏",
+      "delete": "删除",
       "empty": "暂无图层"
     },
     "filter": {
@@ -66,7 +70,28 @@
       "sobel": "Sobel边缘检测",
       "canny": "Canny边缘检测",
       "histogramEq": "直方图均衡化",
-      "empty": "暂无滤镜"
+      "empty": "暂无滤镜",
+      "param": {
+        "value": "值",
+        "strength": "强度",
+        "radius": "半径",
+        "lowThreshold": "低阈值",
+        "highThreshold": "高阈值"
+      }
+    },
+    "compare": {
+      "loading": "加载中...",
+      "zoom": "缩放",
+      "windowLevel": "窗宽/窗位",
+      "opacity": "透明度",
+      "blendMode": "混合模式",
+      "blend": "混合",
+      "diffHighlight": "差异高亮",
+      "sliderPosition": "滑块位置",
+      "blendNormal": "正常",
+      "blendDifference": "差异",
+      "blendLighten": "变亮",
+      "blendDarken": "变暗"
     }
   },
   "report": {
@@ -76,6 +101,43 @@
     "export": "导出PDF",
     "submit": "提交审核",
     "approve": "审核通过",
-    "reject": "退回修改"
+    "reject": "退回修改",
+    "publish": "发布",
+    "save": "保存",
+    "saving": "保存中...",
+    "conclusion": "诊断结论",
+    "notes": "备注",
+    "noReport": "暂无报告，请选择模板创建",
+    "selectTemplate": "选择报告模板",
+    "templateType": "类型",
+    "createReport": "创建报告",
+    "status": {
+      "draft": "草稿",
+      "pending_review": "待审核",
+      "reviewed": "已审核",
+      "published": "已发布"
+    },
+    "workflow": {
+      "submitForReview": "提交审核",
+      "approveReport": "审核通过",
+      "rejectReport": "退回修改",
+      "publishReport": "发布"
+    },
+    "reviewNotes": "审核意见",
+    "reviewNotesPlaceholder": "请输入审核意见...",
+    "confirm": "确认",
+    "cancel": "取消",
+    "history": "版本历史",
+    "version": "版本",
+    "noHistory": "暂无历史版本",
+    "viewVersion": "查看",
+    "findings": "检查所见",
+    "findingsPlaceholder": "请输入检查所见...",
+    "imageReferences": "图像引用",
+    "addImage": "添加图像",
+    "noImages": "暂无关联图像",
+    "structuredFields": "结构化字段",
+    "print": "打印",
+    "printPreview": "打印预览"
   }
 }

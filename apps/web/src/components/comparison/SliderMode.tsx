@@ -1,16 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-
-interface ViewportState {
-  zoom: number;
-  pan: { x: number; y: number };
-  rotation: number;
-  flipH: boolean;
-  flipV: boolean;
-  windowWidth: number;
-  windowLevel: number;
-  invert: boolean;
-}
+import { ViewportState, defaultViewport } from './shared';
 
 interface SliderModeProps {
   imageIdA: string;
@@ -19,23 +10,13 @@ interface SliderModeProps {
   className?: string;
 }
 
-const defaultViewport: ViewportState = {
-  zoom: 1,
-  pan: { x: 0, y: 0 },
-  rotation: 0,
-  flipH: false,
-  flipV: false,
-  windowWidth: 400,
-  windowLevel: 40,
-  invert: false,
-};
-
 export function SliderMode({
   imageIdA,
   imageIdB,
   orientation = 'horizontal',
   className,
 }: SliderModeProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgARef = useRef<HTMLImageElement | null>(null);
@@ -264,7 +245,7 @@ export function SliderMode({
     <div ref={containerRef} className={cn('relative w-full h-full bg-black overflow-hidden', className)}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white text-sm">加载中...</div>
+          <div className="text-white text-sm">{t('viewer.compare.loading')}</div>
         </div>
       )}
       <canvas
@@ -280,8 +261,8 @@ export function SliderMode({
         B
       </div>
       <div className="absolute bottom-2 left-2 text-xs text-white/70">
-        <div>缩放: {(viewport.zoom * 100).toFixed(0)}%</div>
-        <div>滑块位置: {(sliderPosition * 100).toFixed(0)}%</div>
+        <div>{t('viewer.compare.zoom')}: {(viewport.zoom * 100).toFixed(0)}%</div>
+        <div>{t('viewer.compare.sliderPosition')}: {(sliderPosition * 100).toFixed(0)}%</div>
       </div>
     </div>
   );

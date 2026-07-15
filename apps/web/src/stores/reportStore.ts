@@ -139,7 +139,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
     try {
       await reportApi.delete(id);
       set((state) => ({
-        reports: state.reports.filter(r => r.id !== id),
+        reports: state.reports.filter((r) => r.id !== id),
         loading: false,
       }));
     } catch (error) {
@@ -155,12 +155,11 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
     try {
       await reportApi.updateStatus(id, status);
       set((state) => ({
-        reports: state.reports.map(r => 
-          r.id === id ? { ...r, status } : r
-        ),
-        selectedReport: state.selectedReport?.id === id 
-          ? { ...state.selectedReport, status } 
-          : state.selectedReport,
+        reports: state.reports.map((r) => (r.id === id ? { ...r, status } : r)),
+        selectedReport:
+          state.selectedReport?.id === id
+            ? { ...state.selectedReport, status }
+            : state.selectedReport,
         loading: false,
       }));
     } catch (error) {
@@ -176,7 +175,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
     try {
       const response = await reportTemplateApi.getAll();
       set({
-        templates: response.data,
+        templates: response.data.items || response.data,
         loading: false,
       });
     } catch (error) {

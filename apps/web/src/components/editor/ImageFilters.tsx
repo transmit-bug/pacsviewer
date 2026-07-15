@@ -13,55 +13,55 @@ interface ImageFiltersProps {
 
 const availableFilters: Array<{
   type: ImageFilter['type'];
-  name: string;
-  params: Array<{ key: string; label: string; min: number; max: number; default: number }>;
+  nameKey: string;
+  params: Array<{ key: string; labelKey: string; min: number; max: number; default: number }>;
 }> = [
   {
     type: 'brightness',
-    name: '亮度',
-    params: [{ key: 'value', label: '值', min: -100, max: 100, default: 0 }],
+    nameKey: 'viewer.filter.brightness',
+    params: [{ key: 'value', labelKey: 'viewer.filter.param.value', min: -100, max: 100, default: 0 }],
   },
   {
     type: 'contrast',
-    name: '对比度',
-    params: [{ key: 'value', label: '值', min: -100, max: 100, default: 0 }],
+    nameKey: 'viewer.filter.contrast',
+    params: [{ key: 'value', labelKey: 'viewer.filter.param.value', min: -100, max: 100, default: 0 }],
   },
   {
     type: 'saturation',
-    name: '饱和度',
-    params: [{ key: 'value', label: '值', min: -100, max: 100, default: 0 }],
+    nameKey: 'viewer.filter.saturation',
+    params: [{ key: 'value', labelKey: 'viewer.filter.param.value', min: -100, max: 100, default: 0 }],
   },
   {
     type: 'sharpen',
-    name: '锐化',
-    params: [{ key: 'strength', label: '强度', min: 0, max: 5, default: 1 }],
+    nameKey: 'viewer.filter.sharpen',
+    params: [{ key: 'strength', labelKey: 'viewer.filter.param.strength', min: 0, max: 5, default: 1 }],
   },
   {
     type: 'gaussian_blur',
-    name: '高斯模糊',
-    params: [{ key: 'radius', label: '半径', min: 1, max: 20, default: 1 }],
+    nameKey: 'viewer.filter.gaussianBlur',
+    params: [{ key: 'radius', labelKey: 'viewer.filter.param.radius', min: 1, max: 20, default: 1 }],
   },
   {
     type: 'median',
-    name: '中值滤波',
-    params: [{ key: 'radius', label: '半径', min: 1, max: 5, default: 1 }],
+    nameKey: 'viewer.filter.median',
+    params: [{ key: 'radius', labelKey: 'viewer.filter.param.radius', min: 1, max: 5, default: 1 }],
   },
   {
     type: 'sobel',
-    name: 'Sobel边缘检测',
+    nameKey: 'viewer.filter.sobel',
     params: [],
   },
   {
     type: 'canny',
-    name: 'Canny边缘检测',
+    nameKey: 'viewer.filter.canny',
     params: [
-      { key: 'low', label: '低阈值', min: 0, max: 255, default: 50 },
-      { key: 'high', label: '高阈值', min: 0, max: 255, default: 150 },
+      { key: 'low', labelKey: 'viewer.filter.param.lowThreshold', min: 0, max: 255, default: 50 },
+      { key: 'high', labelKey: 'viewer.filter.param.highThreshold', min: 0, max: 255, default: 150 },
     ],
   },
   {
     type: 'histogram_eq',
-    name: '直方图均衡化',
+    nameKey: 'viewer.filter.histogramEq',
     params: [],
   },
 ];
@@ -96,7 +96,7 @@ export function ImageFilters({ className }: ImageFiltersProps) {
     const newFilter: ImageFilter = {
       id: `filter-${Date.now()}`,
       type: selectedFilterType,
-      name: filterDef.name,
+      name: t(filterDef.nameKey),
       enabled: true,
       params,
     };
@@ -119,7 +119,7 @@ export function ImageFilters({ className }: ImageFiltersProps) {
           className="h-7 px-2 text-xs"
         >
           <RotateCcw className="h-3 w-3 mr-1" />
-          重置
+          {t('viewer.filter.reset')}
         </Button>
       </div>
 
@@ -136,7 +136,7 @@ export function ImageFilters({ className }: ImageFiltersProps) {
               value={f.type}
               disabled={filters.some((sf) => sf.type === f.type)}
             >
-              {f.name}
+              {t(f.nameKey)}
             </option>
           ))}
         </select>
@@ -154,7 +154,7 @@ export function ImageFilters({ className }: ImageFiltersProps) {
       <div className="space-y-3 max-h-[400px] overflow-y-auto">
         {filters.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground text-xs">
-            暂无滤镜
+            {t('viewer.filter.empty')}
           </div>
         ) : (
           filters.map((filter) => {
@@ -193,7 +193,7 @@ export function ImageFilters({ className }: ImageFiltersProps) {
                     {filterDef.params.map((param) => (
                       <div key={param.key}>
                         <div className="flex justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">{param.label}</span>
+                          <span className="text-muted-foreground">{t(param.labelKey)}</span>
                           <span>{filter.params[param.key] ?? param.default}</span>
                         </div>
                         <input

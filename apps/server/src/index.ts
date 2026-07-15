@@ -13,6 +13,7 @@ import usersRouter from './routes/users';
 import rolesRouter from './routes/roles';
 import auditLogsRouter from './routes/audit-logs';
 import adaptersRouter from './routes/adapters';
+import comparisonsRouter from './routes/comparisons';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
 
@@ -56,6 +57,7 @@ app.route('/api/users', usersRouter);
 app.route('/api/roles', rolesRouter);
 app.route('/api/audit-logs', auditLogsRouter);
 app.route('/api/adapters', adaptersRouter);
+app.route('/api/comparisons', comparisonsRouter);
 
 export default {
   port: Number(process.env.PORT) || 3000,
