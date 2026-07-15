@@ -350,6 +350,28 @@ export const comparisonsRelations = relations(comparisons, ({ one }) => ({
   }),
 }));
 
+// Report versions table
+export const reportVersions = sqliteTable('report_versions', {
+  id: text('id').primaryKey(),
+  reportId: text('report_id').references(() => reports.id).notNull(),
+  version: integer('version').notNull(),
+  content: text('content', { mode: 'json' }).notNull(),
+  images: text('images', { mode: 'json' }).default('[]'),
+  createdBy: text('created_by').references(() => users.id).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const reportVersionsRelations = relations(reportVersions, ({ one }) => ({
+  report: one(reports, {
+    fields: [reportVersions.reportId],
+    references: [reports.id],
+  }),
+  creator: one(users, {
+    fields: [reportVersions.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
@@ -368,3 +390,5 @@ export const insertReportSchema = createInsertSchema(reports);
 export const selectReportSchema = createSelectSchema(reports);
 export const insertComparisonSchema = createInsertSchema(comparisons);
 export const selectComparisonSchema = createSelectSchema(comparisons);
+export const insertReportVersionSchema = createInsertSchema(reportVersions);
+export const selectReportVersionSchema = createSelectSchema(reportVersions);
