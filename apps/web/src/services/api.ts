@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '@/stores/authStore';
 
 const api = axios.create({
   baseURL: '/api',
@@ -8,10 +9,10 @@ const api = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - 从 Zustand store 读取 token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth-token');
+    const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -32,18 +33,21 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh-token');
+        const refreshToken = useAuthStore.getState().refreshToken;
         const response = await axios.post('/api/auth/refresh', { refreshToken });
         const { token, refreshToken: newRefreshToken } = response.data;
 
-        localStorage.setItem('auth-token', token);
-        localStorage.setItem('refresh-token', newRefreshToken);
+        // 更新 Zustand store（会自动同步到 localStorage）
+        useAuthStore.setState({
+          token,
+          refreshToken: newRefreshToken,
+        });
 
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('auth-token');
-        localStorage.removeItem('refresh-token');
+        // 刷新失败，清除登录状态并跳转
+        useAuthStore.getState().logout();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
