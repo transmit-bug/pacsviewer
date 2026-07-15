@@ -6,6 +6,7 @@ import { PatientListPage } from '@/pages/PatientListPage';
 import { PatientDetailPage } from '@/pages/PatientDetailPage';
 import { ViewerPage } from '@/pages/ViewerPage';
 import { ReportPage } from '@/pages/ReportPage';
+import { ReportListPage } from '@/pages/ReportListPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ComparisonPage } from '@/pages/ComparisonPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="patients" element={<PatientListPage />} />
         <Route path="patients/:id" element={<PatientDetailPage />} />
         <Route path="viewer/:studyId" element={<ViewerPage />} />
+        <Route path="reports" element={<ReportListPage />} />
         <Route path="reports/:studyId" element={<ReportPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="settings" element={<SettingsPage />} />
