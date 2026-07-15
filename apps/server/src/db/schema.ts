@@ -75,10 +75,7 @@ export const studies = sqliteTable('studies', {
   patientId: text('patient_id').references(() => patients.id).notNull(),
   studyDate: text('study_date').notNull(),
   studyTime: text('study_time'),
-  studyType: text('study_type', { 
-    enum: ['oct', 'fundus', 'ffa', 'icga', 'vf', 'octa', 'other'] 
-  }).notNull(),
-  modality: text('modality').notNull(),
+  // studyType removed - modality is determined by child Series (DICOM standard)
   device: text('device'),
   physicianId: text('physician_id').references(() => users.id),
   status: text('status', { 
@@ -124,7 +121,8 @@ export const images = sqliteTable('images', {
 // Annotations table
 export const annotations = sqliteTable('annotations', {
   id: text('id').primaryKey(),
-  imageId: text('image_id').references(() => images.id).notNull(),
+  imageId: text('image_id').references(() => images.id),
+  studyId: text('study_id').references(() => studies.id),
   userId: text('user_id').references(() => users.id).notNull(),
   layerId: text('layer_id').references(() => layers.id),
   type: text('type', { 
@@ -204,7 +202,64 @@ export const deviceAdapters = sqliteTable('device_adapters', {
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export const deviceAdaptersRelations = relations(deviceAdapters, ({ one }) => ({}));
+export const deviceAdaptersRelations = relations(deviceAdapters, ({ many }) => ({
+  devices: many(devices),
+  inboundTransfers: many(inboundTransfers),
+}));
+
+// Devices table
+export const devices = sqliteTable('devices', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type').notNull(),  // OCT, Fundus Camera, etc.
+  manufacturer: text('manufacturer').notNull(),
+  model: text('model').notNull(),
+  serialNumber: text('serial_number'),
+  adapterId: text('adapter_id').references(() => deviceAdapters.id).notNull(),
+  connectionInfo: text('connection_info', { mode: 'json' }),
+  status: text('status', {
+    enum: ['online', 'offline', 'error']
+  }).default('offline').notNull(),
+  lastSyncAt: text('last_sync_at'),
+  imageCount: integer('image_count').default(0).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const devicesRelations = relations(devices, ({ one, many }) => ({
+  adapter: one(deviceAdapters, {
+    fields: [devices.adapterId],
+    references: [deviceAdapters.id],
+  }),
+  inboundTransfers: many(inboundTransfers),
+}));
+
+// Inbound Transfers table
+export const inboundTransfers = sqliteTable('inbound_transfers', {
+  id: text('id').primaryKey(),
+  deviceId: text('device_id').references(() => devices.id),
+  adapterId: text('adapter_id').references(() => deviceAdapters.id).notNull(),
+  status: text('status', {
+    enum: ['pending', 'processing', 'completed', 'failed']
+  }).default('pending').notNull(),
+  fileCount: integer('file_count').notNull(),
+  processedCount: integer('processed_count').default(0).notNull(),
+  errorCount: integer('error_count').default(0).notNull(),
+  metadata: text('metadata', { mode: 'json' }),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  completedAt: text('completed_at'),
+});
+
+export const inboundTransfersRelations = relations(inboundTransfers, ({ one }) => ({
+  device: one(devices, {
+    fields: [inboundTransfers.deviceId],
+    references: [devices.id],
+  }),
+  adapter: one(deviceAdapters, {
+    fields: [inboundTransfers.adapterId],
+    references: [deviceAdapters.id],
+  }),
+}));
 
 // Audit logs table
 export const auditLogs = sqliteTable('audit_logs', {
@@ -283,6 +338,10 @@ export const annotationsRelations = relations(annotations, ({ one }) => ({
     fields: [annotations.imageId],
     references: [images.id],
   }),
+  study: one(studies, {
+    fields: [annotations.studyId],
+    references: [studies.id],
+  }),
   user: one(users, {
     fields: [annotations.userId],
     references: [users.id],
@@ -293,7 +352,7 @@ export const annotationsRelations = relations(annotations, ({ one }) => ({
   }),
 }));
 
-export const reportsRelations = relations(reports, ({ one }) => ({
+export const reportsRelations = relations(reports, ({ one, many }) => ({
   study: one(studies, {
     fields: [reports.studyId],
     references: [studies.id],
@@ -312,6 +371,29 @@ export const reportsRelations = relations(reports, ({ one }) => ({
   }),
   reviewer: one(users, {
     fields: [reports.reviewerId],
+    references: [users.id],
+  }),
+  versions: many(reportVersions),
+}));
+
+// Report Versions table
+export const reportVersions = sqliteTable('report_versions', {
+  id: text('id').primaryKey(),
+  reportId: text('report_id').references(() => reports.id).notNull(),
+  version: integer('version').notNull(),
+  content: text('content', { mode: 'json' }).notNull(),
+  images: text('images', { mode: 'json' }).default('[]'),
+  createdBy: text('created_by').references(() => users.id).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const reportVersionsRelations = relations(reportVersions, ({ one }) => ({
+  report: one(reports, {
+    fields: [reportVersions.reportId],
+    references: [reports.id],
+  }),
+  creator: one(users, {
+    fields: [reportVersions.createdBy],
     references: [users.id],
   }),
 }));
@@ -350,28 +432,6 @@ export const comparisonsRelations = relations(comparisons, ({ one }) => ({
   }),
 }));
 
-// Report versions table
-export const reportVersions = sqliteTable('report_versions', {
-  id: text('id').primaryKey(),
-  reportId: text('report_id').references(() => reports.id).notNull(),
-  version: integer('version').notNull(),
-  content: text('content', { mode: 'json' }).notNull(),
-  images: text('images', { mode: 'json' }).default('[]'),
-  createdBy: text('created_by').references(() => users.id).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
-
-export const reportVersionsRelations = relations(reportVersions, ({ one }) => ({
-  report: one(reports, {
-    fields: [reportVersions.reportId],
-    references: [reports.id],
-  }),
-  creator: one(users, {
-    fields: [reportVersions.createdBy],
-    references: [users.id],
-  }),
-}));
-
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
@@ -388,7 +448,11 @@ export const insertStudySchema = createInsertSchema(studies);
 export const selectStudySchema = createSelectSchema(studies);
 export const insertReportSchema = createInsertSchema(reports);
 export const selectReportSchema = createSelectSchema(reports);
-export const insertComparisonSchema = createInsertSchema(comparisons);
-export const selectComparisonSchema = createSelectSchema(comparisons);
 export const insertReportVersionSchema = createInsertSchema(reportVersions);
 export const selectReportVersionSchema = createSelectSchema(reportVersions);
+export const insertComparisonSchema = createInsertSchema(comparisons);
+export const selectComparisonSchema = createSelectSchema(comparisons);
+export const insertDeviceSchema = createInsertSchema(devices);
+export const selectDeviceSchema = createSelectSchema(devices);
+export const insertInboundTransferSchema = createInsertSchema(inboundTransfers);
+export const selectInboundTransferSchema = createSelectSchema(inboundTransfers);
