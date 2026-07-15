@@ -187,6 +187,25 @@ export const reportTemplates = sqliteTable('report_templates', {
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
 });
 
+// Device adapters table
+export const deviceAdapters = sqliteTable('device_adapters', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type', { enum: ['dicom', 'rest', 'file', 'custom'] }).notNull(),
+  status: text('status', {
+    enum: ['idle', 'starting', 'running', 'stopping', 'error', 'disabled']
+  }).default('idle').notNull(),
+  config: text('config', { mode: 'json' }).notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
+  lastError: text('last_error'),
+  lastImageAt: text('last_image_at'),
+  imageCount: integer('image_count').default(0).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const deviceAdaptersRelations = relations(deviceAdapters, ({ one }) => ({}));
+
 // Audit logs table
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),

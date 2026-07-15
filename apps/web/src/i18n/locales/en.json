@@ -41,7 +41,33 @@
     "annotate": "Annotate",
     "layers": "Layers",
     "filters": "Filters",
-    "compare": "Compare"
+    "compare": "Compare",
+    "layer": {
+      "add": "Add Layer",
+      "name": "Layer Name",
+      "type": "Layer Type",
+      "image": "Image",
+      "annotation": "Annotation",
+      "aiResult": "AI Result",
+      "opacity": "Opacity",
+      "visibility": "Visibility",
+      "lock": "Lock",
+      "empty": "No layers"
+    },
+    "filter": {
+      "add": "Add Filter",
+      "reset": "Reset",
+      "brightness": "Brightness",
+      "contrast": "Contrast",
+      "saturation": "Saturation",
+      "sharpen": "Sharpen",
+      "gaussianBlur": "Gaussian Blur",
+      "median": "Median Filter",
+      "sobel": "Sobel Edge Detection",
+      "canny": "Canny Edge Detection",
+      "histogramEq": "Histogram Equalization",
+      "empty": "No filters"
+    }
   },
   "report": {
     "create": "Create Report",

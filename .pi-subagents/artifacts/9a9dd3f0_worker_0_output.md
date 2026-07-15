@@ -1,0 +1,1 @@
+All editor components pass type checking with no errors.
