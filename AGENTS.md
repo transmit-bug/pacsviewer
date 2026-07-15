@@ -155,10 +155,16 @@ src/
 **核心实体关系**:
 ```
 Patient → Study → Series → Image
-                ↓
-            Report → ReportTemplate
-                ↓
-            Annotation → Layer
+  │         │              ↓
+  │         │         Annotation (image-level)
+  │         │              ↓
+  │         ├── Report → ReportVersion
+  │         └── Annotation (study-level)
+  │
+  └── Comparison (cross-study)
+
+Device → DeviceAdapter
+         └── InboundTransfer
 ```
 
 ## Testing Instructions
