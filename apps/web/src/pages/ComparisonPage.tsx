@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { ComparisonView } from '@/components/comparison/ComparisonView';
 import type { ComparisonMode } from '@/components/comparison/ComparisonView';
 import {
@@ -79,7 +81,6 @@ export function ComparisonPage() {
   const [showSavedPanel, setShowSavedPanel] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const comparisonViewRef = useRef<HTMLDivElement>(null);
 
@@ -95,11 +96,6 @@ export function ComparisonPage() {
   useEffect(() => {
     loadSavedComparisons();
   }, [showFavoritesOnly]);
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
 
   const loadStudy = async (id: string) => {
     try {
@@ -160,7 +156,10 @@ export function ComparisonPage() {
 
   const handleSave = async () => {
     if (!selectedImageA || !selectedImageB) {
-      showToast('请先选择两张图像');
+      toast({
+        title: '请先选择两张图像',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -181,7 +180,9 @@ export function ComparisonPage() {
           imageIds: [selectedImageA, selectedImageB],
           type: comparisonMode === 'side-by-side' ? 'side_by_side' : comparisonMode,
         });
-        showToast('对比已更新');
+        toast({
+          title: '对比已更新',
+        });
       } else {
         const response = await comparisonApi.create({
           name,
@@ -191,13 +192,18 @@ export function ComparisonPage() {
           patientId: study?.patientId,
         });
         setCurrentComparisonId(response.data.id);
-        showToast('对比已保存');
+        toast({
+          title: '对比已保存',
+        });
       }
 
       loadSavedComparisons();
     } catch (error) {
       console.error('Failed to save comparison:', error);
-      showToast('保存失败');
+      toast({
+        title: '保存失败',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
@@ -213,7 +219,9 @@ export function ComparisonPage() {
     setCurrentComparisonId(saved.id);
     setComparisonName(saved.name);
     setShowSavedPanel(false);
-    showToast('已加载对比配置');
+    toast({
+      title: '已加载对比配置',
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -224,10 +232,15 @@ export function ComparisonPage() {
         setComparisonName('');
       }
       loadSavedComparisons();
-      showToast('已删除');
+      toast({
+        title: '已删除',
+      });
     } catch (error) {
       console.error('Failed to delete comparison:', error);
-      showToast('删除失败');
+      toast({
+        title: '删除失败',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -242,7 +255,10 @@ export function ComparisonPage() {
 
   const handleSnapshot = async () => {
     if (!currentComparisonId) {
-      showToast('请先保存对比配置');
+      toast({
+        title: '请先保存对比配置',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -254,7 +270,10 @@ export function ComparisonPage() {
       // Use html2canvas-style approach: find canvas elements within the view
       const canvasElements = viewElement.querySelectorAll('canvas');
       if (canvasElements.length === 0) {
-        showToast('未找到可截取的画布');
+        toast({
+          title: '未找到可截取的画布',
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -272,11 +291,16 @@ export function ComparisonPage() {
 
         const imageData = compositeCanvas.toDataURL('image/png');
         await comparisonApi.saveSnapshot(currentComparisonId, imageData);
-        showToast('快照已保存');
+        toast({
+          title: '快照已保存',
+        });
       }
     } catch (error) {
       console.error('Failed to take snapshot:', error);
-      showToast('快照失败');
+      toast({
+        title: '快照失败',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -286,17 +310,16 @@ export function ComparisonPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return (
+      <div className="space-y-4 p-4">
+        <Skeleton className="h-8 w-[200px]" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
   }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] space-x-4">
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg text-sm">
-          {toastMessage}
-        </div>
-      )}
 
       {/* Main comparison view */}
       <div className="flex-1 flex flex-col">

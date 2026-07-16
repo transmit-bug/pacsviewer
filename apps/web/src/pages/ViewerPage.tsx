@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { studyApi, imageApi, annotationApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,13 @@ import { ImageViewer } from '@/components/viewer/ImageViewer';
 import { Toolbar } from '@/components/viewer/Toolbar';
 import { ImageList } from '@/components/viewer/ImageList';
 import { WindowLevel } from '@/components/viewer/WindowLevel';
+import { DicomTagViewer } from '@/components/viewer/DicomTagViewer';
+import { SeriesNavigator } from '@/components/viewer/SeriesNavigator';
+import { KeyboardShortcutsHelp } from '@/components/viewer/KeyboardShortcutsHelp';
 import { Badge } from '@/components/ui/badge';
 import { useViewerStore } from '@/stores/viewerStore';
-import { ArrowLeft, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { ArrowLeft, FileText, Tag, Keyboard } from 'lucide-react';
 
 interface Series {
   id: string;
@@ -47,6 +50,9 @@ export function ViewerPage() {
   const [study, setStudy] = useState<Study | null>(null);
   const [images, setImages] = useState<Image[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSeriesId, setCurrentSeriesId] = useState<string | undefined>();
+  const [showDicomTags, setShowDicomTags] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   
   const { currentImageId, setCurrentImage } = useViewerStore();
   const [studyAnnotations, setStudyAnnotations] = useState<any[]>([]);
@@ -68,12 +74,21 @@ export function ViewerPage() {
     }
   };
 
-  const loadImages = async (id: string) => {
+  const loadImages = async (id: string, seriesId?: string) => {
     try {
-      const seriesResponse = await studyApi.getSeries(id);
-      const series = seriesResponse.data || [];
-      if (series.length > 0) {
-        const imagesResponse = await imageApi.search({ seriesId: series[0].id });
+      let targetSeriesId = seriesId;
+      
+      if (!targetSeriesId) {
+        const seriesResponse = await studyApi.getSeries(id);
+        const series = seriesResponse.data || [];
+        if (series.length > 0) {
+          targetSeriesId = series[0].id;
+          setCurrentSeriesId(targetSeriesId);
+        }
+      }
+
+      if (targetSeriesId) {
+        const imagesResponse = await imageApi.search({ seriesId: targetSeriesId });
         const imageList = imagesResponse.data || [];
         setImages(imageList);
         if (imageList.length > 0) {
@@ -95,6 +110,40 @@ export function ViewerPage() {
       console.error('Failed to load study annotations:', error);
     }
   };
+
+  const handleSeriesSelect = (seriesId: string) => {
+    setCurrentSeriesId(seriesId);
+    if (studyId) {
+      loadImages(studyId, seriesId);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (!currentImageId || images.length === 0) return;
+    const currentIndex = images.findIndex(i => i.id === currentImageId);
+    if (currentIndex < images.length - 1) {
+      setCurrentImage(images[currentIndex + 1].id);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (!currentImageId || images.length === 0) return;
+    const currentIndex = images.findIndex(i => i.id === currentImageId);
+    if (currentIndex > 0) {
+      setCurrentImage(images[currentIndex - 1].id);
+    }
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onNextImage: handleNextImage,
+    onPrevImage: handlePrevImage,
+    onToggleHelp: () => setShowShortcutsHelp(prev => !prev),
+    onEscape: () => {
+      setShowDicomTags(false);
+      setShowShortcutsHelp(false);
+    },
+  });
 
   if (loading) {
     return <div className="text-center py-8">加载中...</div>;
@@ -120,6 +169,24 @@ export function ViewerPage() {
                 {study?.studyDate} | {study?.patient?.mrn}
               </p>
             </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDicomTags(!showDicomTags)}
+            >
+              <Tag className="mr-2 h-4 w-4" />
+              DICOM 标签
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowShortcutsHelp(true)}
+              title="键盘快捷键 (?)"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -158,6 +225,13 @@ export function ViewerPage() {
 
       {/* Sidebar */}
       <div className="w-80 flex flex-col space-y-4">
+        {/* Series Navigator */}
+        <SeriesNavigator
+          studyId={studyId || ''}
+          currentSeriesId={currentSeriesId}
+          onSeriesSelect={handleSeriesSelect}
+        />
+
         {/* Study info */}
         <Card>
           <CardHeader className="pb-2">
@@ -180,7 +254,7 @@ export function ViewerPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">状态</span>
-                  <Badge variant={study.status === 'reported' ? 'success' : study.status === 'diagnosed' ? 'info' : 'warning'}>
+                  <Badge variant={study.status === 'reported' ? 'default' : study.status === 'diagnosed' ? 'secondary' : 'outline'}>
                     {study.status === 'reported' ? '已报告' :
                      study.status === 'diagnosed' ? '已诊断' : '待处理'}
                   </Badge>
@@ -239,6 +313,22 @@ export function ViewerPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* DICOM Tags Panel */}
+      {showDicomTags && currentImageId && (
+        <div className="w-96 border-l">
+          <DicomTagViewer
+            imageId={currentImageId}
+            onClose={() => setShowDicomTags(false)}
+          />
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        open={showShortcutsHelp}
+        onOpenChange={setShowShortcutsHelp}
+      />
     </div>
   );
 }

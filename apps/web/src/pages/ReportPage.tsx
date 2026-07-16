@@ -11,6 +11,13 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { ReviewNotesDialog } from '@/components/ReviewNotesDialog';
 import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Save,
   FileText,
   Send,
@@ -65,6 +72,8 @@ export function ReportPage() {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'reject' | 'approve' | 'publish' | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [addImageDialogOpen, setAddImageDialogOpen] = useState(false);
+  const [newImageId, setNewImageId] = useState('');
 
   useEffect(() => {
     loadTemplates();
@@ -202,14 +211,13 @@ export function ReportPage() {
   };
 
   const handleAddImage = () => {
-    if (!report) return;
-    const imageId = prompt('请输入图像ID:');
-    if (imageId) {
-      setReport({
-        ...report,
-        images: [...(report.images || []), imageId],
-      });
-    }
+    if (!report || !newImageId.trim()) return;
+    setReport({
+      ...report,
+      images: [...(report.images || []), newImageId.trim()],
+    });
+    setNewImageId('');
+    setAddImageDialogOpen(false);
   };
 
   const handleRemoveImage = (index: number) => {
@@ -478,7 +486,7 @@ export function ReportPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{t('report.imageReferences')}</CardTitle>
-                      <Button variant="outline" size="sm" onClick={handleAddImage}>
+                      <Button variant="outline" size="sm" onClick={() => setAddImageDialogOpen(true)}>
                         <ImageIcon className="mr-2 h-4 w-4" />
                         {t('report.addImage')}
                       </Button>
@@ -644,6 +652,36 @@ export function ReportPage() {
           reportId={report.id}
         />
       )}
+
+      {/* Add Image Dialog */}
+      <Dialog open={addImageDialogOpen} onOpenChange={setAddImageDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>添加图像</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="imageId">图像 ID</Label>
+              <Input
+                id="imageId"
+                value={newImageId}
+                onChange={(e) => setNewImageId(e.target.value)}
+                placeholder="请输入图像ID"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddImage()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddImageDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleAddImage} disabled={!newImageId.trim()}>
+              添加
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Print Styles */}
       <style>{`

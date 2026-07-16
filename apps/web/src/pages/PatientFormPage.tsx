@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { ArrowLeft, Save } from 'lucide-react';
 
 interface PatientFormData {
@@ -65,7 +67,11 @@ export function PatientFormPage() {
       });
     } catch (error) {
       console.error('Failed to load patient:', error);
-      alert('加载患者信息失败');
+      toast({
+        title: '加载失败',
+        description: '无法加载患者信息，请稍后重试。',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -96,7 +102,11 @@ export function PatientFormPage() {
     e.preventDefault();
     
     if (!formData.mrn || !formData.name) {
-      alert('请填写必填字段：MRN 和姓名');
+      toast({
+        title: '请填写必填字段',
+        description: 'MRN 和姓名为必填项。',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -104,22 +114,54 @@ export function PatientFormPage() {
       setSaving(true);
       if (isEdit) {
         await patientApi.update(id!, formData);
-        alert('患者信息更新成功');
+        toast({
+          title: '更新成功',
+          description: '患者信息已更新。',
+        });
       } else {
         await patientApi.create(formData);
-        alert('患者创建成功');
+        toast({
+          title: '创建成功',
+          description: '新患者已创建。',
+        });
       }
       navigate('/patients');
     } catch (error) {
       console.error('Failed to save patient:', error);
-      alert(isEdit ? '更新患者失败' : '创建患者失败');
+      toast({
+        title: isEdit ? '更新失败' : '创建失败',
+        description: '操作失败，请稍后重试。',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-8 w-[200px]" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-[150px]" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-[80px]" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

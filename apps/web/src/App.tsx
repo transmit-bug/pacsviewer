@@ -12,6 +12,8 @@ import { ReportCreatePage } from '@/pages/ReportCreatePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { DevicesPage } from '@/pages/DevicesPage';
 import { ComparisonPage } from '@/pages/ComparisonPage';
+import { StudyCreatePage } from '@/pages/StudyCreatePage';
+import { UserManagementPage } from '@/pages/UserManagementPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function App() {
@@ -24,12 +26,14 @@ export default function App() {
         <Route path="patients/new" element={<PatientFormPage />} />
         <Route path="patients/:id" element={<PatientDetailPage />} />
         <Route path="patients/:id/edit" element={<PatientFormPage />} />
+        <Route path="patients/:patientId/new-study" element={<StudyCreatePage />} />
         <Route path="viewer/:studyId" element={<ViewerPage />} />
         <Route path="reports" element={<ReportListPage />} />
         <Route path="reports/new" element={<ReportCreatePage />} />
         <Route path="reports/:studyId" element={<ReportPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/users" element={<UserManagementPage />} />
         <Route path="devices" element={<DevicesPage />} />
       </Route>
     </Routes>

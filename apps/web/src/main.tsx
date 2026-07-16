@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useAppStore } from '@/stores/appStore';
 import App from './App';
 import './index.css';
@@ -29,11 +30,13 @@ function ThemeSync() {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <TooltipProvider>
-        <ThemeSync />
-        <App />
-        <Toaster />
-      </TooltipProvider>
+      <ErrorBoundary>
+        <TooltipProvider>
+          <ThemeSync />
+          <App />
+          <Toaster />
+        </TooltipProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   </React.StrictMode>
 );

@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Search, FileText, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -31,6 +42,8 @@ export function ReportListPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadReports();
@@ -48,13 +61,21 @@ export function ReportListPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个报告吗？')) return;
+  const handleDeleteClick = (id: string) => {
+    setReportToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!reportToDelete) return;
     try {
-      await reportApi.delete(id);
-      setReports(reports.filter((r) => r.id !== id));
+      await reportApi.delete(reportToDelete);
+      setReports(reports.filter((r) => r.id !== reportToDelete));
     } catch (error) {
       console.error('Failed to delete report:', error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
     }
   };
 
@@ -108,17 +129,35 @@ export function ReportListPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8">加载中...</div>
+                <div className="space-y-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                      <Skeleton className="h-10 w-10 rounded" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-[250px]" />
+                        <Skeleton className="h-3 w-[150px]" />
+                      </div>
+                      <Skeleton className="h-6 w-[80px]" />
+                    </div>
+                  ))}
+                </div>
               ) : filteredReports.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  暂无报告数据
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4">暂无报告数据</p>
+                  <Button asChild variant="outline">
+                    <Link to="/reports/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      创建第一份报告
+                    </Link>
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {filteredReports.map((report) => (
                     <div
                       key={report.id}
-                      className="flex items-center justify-between rounded-lg border p-4"
+                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors"
                     >
                       <Link
                         to={`/reports/${report.studyId}`}
@@ -160,7 +199,7 @@ export function ReportListPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => handleDelete(report.id)}
+                              onClick={() => handleDeleteClick(report.id)}
                             >
                               删除
                             </DropdownMenuItem>
@@ -175,6 +214,24 @@ export function ReportListPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确定要删除这个报告吗？</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作无法撤销。删除后，该报告将被永久移除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -216,3 +216,9 @@ export const transferApi = {
     api.put(`/transfers/${id}/status`, data),
   retry: (id: string) => api.post(`/transfers/${id}/retry`),
 };
+
+export const dashboardApi = {
+  getStats: () => api.get('/dashboard/stats'),
+  getRecentStudies: (limit?: number) => api.get('/dashboard/recent-studies', { params: { limit } }),
+  getPendingTasks: (limit?: number) => api.get('/dashboard/pending-tasks', { params: { limit } }),
+};

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Download, Search, FileText, RefreshCw, CheckCircle } from 'lucide-react';
+import { Save, Download, Search, FileText, RefreshCw, CheckCircle, Users } from 'lucide-react';
 import api from '@/services/api';
+import { toast } from '@/components/ui/toast';
 
 interface LogEntry {
   id: string;
@@ -88,7 +90,27 @@ export function SettingsPage() {
 
   useEffect(() => {
     loadLogs();
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      const settings = response.data || {};
+      
+      if (settings.general) {
+        setGeneralSettings(prev => ({ ...prev, ...settings.general }));
+      }
+      if (settings.storage) {
+        setStorageSettings(prev => ({ ...prev, ...settings.storage }));
+      }
+      if (settings.dicom) {
+        setDicomSettings(prev => ({ ...prev, ...settings.dicom }));
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
 
   const handleSaveSettings = async (category: string, settings: Record<string, any>) => {
     setSaving(category);
@@ -102,7 +124,10 @@ export function SettingsPage() {
       setTimeout(() => setSaveSuccess(null), 3000);
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert('保存设置失败');
+      toast({
+        title: '保存设置失败',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(null);
     }
@@ -198,7 +223,15 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('nav.settings')}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">{t('nav.settings')}</h1>
+        <Button asChild variant="outline">
+          <Link to="/settings/users">
+            <Users className="mr-2 h-4 w-4" />
+            用户管理
+          </Link>
+        </Button>
+      </div>
 
       <Tabs defaultValue="general">
         <TabsList>

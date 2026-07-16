@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { Button } from '@/components/ui/button';
+import { GlobalSearch } from '@/components/ui/global-search';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,6 +107,9 @@ export function Layout() {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Global Search */}
+            <GlobalSearch />
+            
             {/* Theme toggle */}
             <Button
               variant="ghost"
@@ -127,7 +131,7 @@ export function Layout() {
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full aspect-square overflow-hidden">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     {user?.displayName?.[0] || 'U'}
                   </div>

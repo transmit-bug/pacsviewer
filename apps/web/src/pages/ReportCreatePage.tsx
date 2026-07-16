@@ -4,6 +4,8 @@ import { reportApi, reportTemplateApi, patientApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { ArrowLeft, FileText } from 'lucide-react';
 
 interface ReportTemplate {
@@ -58,7 +60,10 @@ export function ReportCreatePage() {
 
   const handleCreateReport = async () => {
     if (!selectedTemplate || !selectedPatient) {
-      alert('请选择模板和患者');
+      toast({
+        title: '请选择模板和患者',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -83,18 +88,50 @@ export function ReportCreatePage() {
         images: [],
         status: 'draft',
       });
-      alert('报告创建成功');
+      toast({
+        title: '报告创建成功',
+      });
       navigate(`/reports/${response.data.studyId || response.data.id}`);
     } catch (error) {
       console.error('Failed to create report:', error);
-      alert('创建报告失败');
+      toast({
+        title: '创建报告失败',
+        variant: 'destructive',
+      });
     } finally {
       setCreating(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-8 w-[150px]" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-[120px]" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-[180px]" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-[120px] w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

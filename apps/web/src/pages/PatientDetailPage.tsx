@@ -165,9 +165,11 @@ export function PatientDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>检查记录</CardTitle>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                新建检查
+              <Button size="sm" asChild>
+                <Link to={`/patients/${id}/new-study`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  新建检查
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
