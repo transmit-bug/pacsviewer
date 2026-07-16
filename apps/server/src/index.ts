@@ -19,6 +19,7 @@ import layersRouter from './routes/layers';
 import devicesRouter from './routes/devices';
 import transfersRouter from './routes/transfers';
 import dicomRouter from './routes/dicom';
+import settingsRouter from './routes/settings';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
 
@@ -68,6 +69,7 @@ app.route('/api/layers', layersRouter);
 app.route('/api/devices', devicesRouter);
 app.route('/api/transfers', transfersRouter);
 app.route('/api/dicom', dicomRouter);
+app.route('/api/settings', settingsRouter);
 
 export default {
   port: Number(process.env.PORT) || 3000,

@@ -261,6 +261,16 @@ export const inboundTransfersRelations = relations(inboundTransfers, ({ one }) =
   }),
 }));
 
+// System settings table
+export const systemSettings = sqliteTable('system_settings', {
+  id: text('id').primaryKey(),
+  category: text('category').notNull(), // 'dicom', 'storage', 'general'
+  key: text('key').notNull(),
+  value: text('value', { mode: 'json' }),
+  description: text('description'),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+});
+
 // Audit logs table
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),
@@ -464,3 +474,5 @@ export const insertAnnotationSchema = createInsertSchema(annotations);
 export const selectAnnotationSchema = createSelectSchema(annotations);
 export const insertLayerSchema = createInsertSchema(layers);
 export const selectLayerSchema = createSelectSchema(layers);
+export const insertSystemSettingsSchema = createInsertSchema(systemSettings);
+export const selectSystemSettingsSchema = createSelectSchema(systemSettings);
