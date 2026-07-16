@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { safeJsonArray } from '@/lib/utils';
 
 interface Patient {
   id: string;
@@ -131,7 +130,7 @@ export function PatientListPage() {
                     </div>
                   </Link>
                   <div className="flex items-center space-x-2">
-                    {safeJsonArray(patient.tags).map((tag) => (
+                    {patient.tags?.map((tag) => (
                       <span
                         key={tag}
                         className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"

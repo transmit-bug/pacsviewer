@@ -20,28 +20,3 @@ export function formatDate(date: string | Date): string {
 export function formatDateTime(date: string | Date): string {
   return new Date(date).toLocaleString('zh-CN');
 }
-
-/**
- * Safely parse a JSON value that might be a string or already parsed.
- * Useful for Drizzle ORM's { mode: 'json' } fields that may not auto-parse.
- */
-export function safeJsonParse<T>(value: unknown, fallback: T): T {
-  if (value === null || value === undefined) return fallback;
-  if (typeof value === 'object') return value as T;
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value) as T;
-    } catch {
-      return fallback;
-    }
-  }
-  return fallback;
-}
-
-/**
- * Safely parse a JSON array field.
- * Returns the array if already parsed, or parses the JSON string.
- */
-export function safeJsonArray<T = string>(value: unknown): T[] {
-  return safeJsonParse<T[]>(value, []);
-}

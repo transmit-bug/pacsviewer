@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Edit, Plus } from 'lucide-react';
-import { safeJsonArray } from '@/lib/utils';
 
 interface Patient {
   id: string;
@@ -147,7 +146,7 @@ export function PatientDetailPage() {
                 <div className="md:col-span-2">
                   <p className="text-sm text-muted-foreground">标签</p>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {safeJsonArray(patient.tags).map((tag) => (
+                    {patient.tags?.map((tag) => (
                       <span
                         key={tag}
                         className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"
