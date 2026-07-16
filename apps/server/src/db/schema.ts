@@ -23,7 +23,7 @@ export const roles = sqliteTable('roles', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   description: text('description'),
-  permissions: text('permissions', { mode: 'json' }).notNull().default('{}'),
+  permissions: text('permissions', { mode: 'json' }).notNull().default({}),
   isSystem: integer('is_system', { mode: 'boolean' }).default(false).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
 });
@@ -54,7 +54,7 @@ export const patients = sqliteTable('patients', {
   address: text('address'),
   avatar: text('avatar'),
   notes: text('notes'),
-  tags: text('tags', { mode: 'json' }).default('[]'),
+  tags: text('tags', { mode: 'json' }).default([]),
   customFields: text('custom_fields', { mode: 'json' }),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
@@ -82,7 +82,7 @@ export const studies = sqliteTable('studies', {
     enum: ['pending', 'in_progress', 'diagnosed', 'reported'] 
   }).default('pending').notNull(),
   description: text('description'),
-  tags: text('tags', { mode: 'json' }),
+  tags: text('tags', { mode: 'json' }).default([]),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
 });
@@ -157,7 +157,7 @@ export const reports = sqliteTable('reports', {
   templateId: text('template_id').references(() => reportTemplates.id).notNull(),
   title: text('title').notNull(),
   content: text('content', { mode: 'json' }).notNull(),
-  images: text('images', { mode: 'json' }).default('[]'),
+  images: text('images', { mode: 'json' }).default([]),
   status: text('status', { 
     enum: ['draft', 'pending_review', 'reviewed', 'published'] 
   }).default('draft').notNull(),
@@ -397,7 +397,7 @@ export const reportVersions = sqliteTable('report_versions', {
     enum: ['draft', 'pending_review', 'reviewed', 'published'] 
   }).notNull(),
   content: text('content', { mode: 'json' }).notNull(),
-  images: text('images', { mode: 'json' }).default('[]'),
+  images: text('images', { mode: 'json' }).default([]),
   changeNotes: text('change_notes'),
   createdBy: text('created_by').references(() => users.id).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
@@ -429,7 +429,7 @@ export const comparisons = sqliteTable('comparisons', {
   name: text('name').notNull(),
   type: text('type', { enum: ['side_by_side', 'overlay', 'slider'] }).notNull(),
   config: text('config', { mode: 'json' }).notNull(),
-  imageIds: text('image_ids', { mode: 'json' }).notNull().default('[]'),
+  imageIds: text('image_ids', { mode: 'json' }).notNull().default([]),
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false).notNull(),
   snapshotPath: text('snapshot_path'),
   createdBy: text('created_by').references(() => users.id).notNull(),
