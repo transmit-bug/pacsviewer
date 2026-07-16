@@ -14,6 +14,10 @@ import rolesRouter from './routes/roles';
 import auditLogsRouter from './routes/audit-logs';
 import adaptersRouter from './routes/adapters';
 import comparisonsRouter from './routes/comparisons';
+import annotationsRouter from './routes/annotations';
+import layersRouter from './routes/layers';
+import devicesRouter from './routes/devices';
+import transfersRouter from './routes/transfers';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
 
@@ -58,6 +62,10 @@ app.route('/api/roles', rolesRouter);
 app.route('/api/audit-logs', auditLogsRouter);
 app.route('/api/adapters', adaptersRouter);
 app.route('/api/comparisons', comparisonsRouter);
+app.route('/api/annotations', annotationsRouter);
+app.route('/api/layers', layersRouter);
+app.route('/api/devices', devicesRouter);
+app.route('/api/transfers', transfersRouter);
 
 export default {
   port: Number(process.env.PORT) || 3000,

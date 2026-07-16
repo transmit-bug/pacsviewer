@@ -1,18 +1,25 @@
 import { create } from 'zustand';
 import { studyApi } from '@/services/api';
 
+interface Series {
+  id: string;
+  modality: string;
+  seriesNumber: number;
+  seriesDescription?: string;
+}
+
 interface Study {
   id: string;
   patientId: string;
   studyDate: string;
   studyTime?: string;
-  studyType: string;
   modality: string;
   device?: string;
   physicianId?: string;
   status: string;
   description?: string;
   tags?: string[];
+  series?: Series[];
   createdAt: string;
   updatedAt: string;
 }
@@ -25,7 +32,6 @@ interface StudyState {
   filters: {
     patientId?: string;
     status?: string;
-    studyType?: string;
   };
   pagination: {
     page: number;

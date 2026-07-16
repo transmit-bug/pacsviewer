@@ -31,16 +31,21 @@ interface Image {
   instanceNumber: number;
 }
 
+interface Series {
+  id: string;
+  modality: string;
+  seriesNumber: number;
+}
+
 interface Study {
   id: string;
   patientId: string;
   studyDate: string;
-  studyType: string;
-  modality: string;
   patient?: {
     name: string;
     mrn: string;
   };
+  series?: Series[];
 }
 
 interface SavedComparison {
@@ -307,7 +312,7 @@ export function ComparisonPage() {
               <h1 className="text-2xl font-bold">图像对比</h1>
               {study && (
                 <p className="text-sm text-muted-foreground">
-                  {study.patient?.name} - {study.studyType.toUpperCase()} - {study.studyDate}
+                  {study.patient?.name} - {study.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'} - {study.studyDate}
                 </p>
               )}
             </div>

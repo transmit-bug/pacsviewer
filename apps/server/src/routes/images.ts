@@ -7,7 +7,7 @@ import { eq, sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import { join } from 'path';
 import { mkdir, writeFile } from 'fs/promises';
-import { db, images, series } from '../db';
+import { db, images, series, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
 
@@ -170,6 +170,95 @@ imagesRouter.get('/search', async (c) => {
   });
 
   return c.json({ success: true, data: allImages });
+});
+
+// --- Nested annotation routes (backward compatibility) ---
+
+// GET /:id/annotations — Get annotations for this image
+imagesRouter.get('/:id/annotations', async (c) => {
+  const imageId = c.req.param('id');
+  const results = await db.query.annotations.findMany({
+    where: eq(annotations.imageId, imageId),
+    with: { user: true },
+  });
+  return c.json({ success: true, data: results });
+});
+
+// POST /:id/annotations — Create annotation on this image
+imagesRouter.post('/:id/annotations', async (c) => {
+  const imageId = c.req.param('id');
+  const body = await c.req.json();
+  const userId = (c as any).get('userId') || body.userId;
+
+  if (!userId) {
+    return c.json({ success: false, message: '未认证' }, 401);
+  }
+
+  const id = uuid();
+  const now = new Date().toISOString();
+
+  await db.insert(annotations).values({
+    id,
+    imageId,
+    studyId: body.studyId || null,
+    userId,
+    layerId: body.layerId || null,
+    type: body.type,
+    geometry: typeof body.geometry === 'string' ? body.geometry : JSON.stringify(body.geometry),
+    style: typeof body.style === 'string' ? body.style : JSON.stringify(body.style),
+    label: body.label || null,
+    notes: body.notes || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const created = await db.query.annotations.findFirst({
+    where: eq(annotations.id, id),
+    with: { user: true },
+  });
+
+  return c.json({ success: true, data: created }, 201);
+});
+
+// --- Nested layer routes (backward compatibility) ---
+
+// GET /:id/layers — Get layers for this image
+imagesRouter.get('/:id/layers', async (c) => {
+  const imageId = c.req.param('id');
+  const results = await db.query.layers.findMany({
+    where: eq(layers.imageId, imageId),
+  });
+  return c.json({ success: true, data: results });
+});
+
+// POST /:id/layers — Create layer on this image
+imagesRouter.post('/:id/layers', async (c) => {
+  const imageId = c.req.param('id');
+  const body = await c.req.json();
+
+  if (!body.name || !body.type) {
+    return c.json({ success: false, message: '缺少必填字段 (name, type)' }, 400);
+  }
+
+  const id = uuid();
+
+  await db.insert(layers).values({
+    id,
+    imageId,
+    name: body.name,
+    type: body.type,
+    visible: body.visible ?? true,
+    opacity: body.opacity ?? 1,
+    locked: body.locked ?? false,
+    sortOrder: body.sortOrder ?? 0,
+    createdAt: new Date().toISOString(),
+  });
+
+  const created = await db.query.layers.findFirst({
+    where: eq(layers.id, id),
+  });
+
+  return c.json({ success: true, data: created }, 201);
 });
 
 export default imagesRouter;

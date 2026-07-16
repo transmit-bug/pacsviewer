@@ -6,6 +6,10 @@ import App from './App';
 import './index.css';
 import './i18n';
 
+// Initialize Cornerstone.js eagerly so the first viewport is fast
+import { initCornerstone } from '@/lib/cornerstone/init';
+initCornerstone().catch((err) => console.error('[Cornerstone] Init failed:', err));
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>

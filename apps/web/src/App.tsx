@@ -8,6 +8,7 @@ import { ViewerPage } from '@/pages/ViewerPage';
 import { ReportPage } from '@/pages/ReportPage';
 import { ReportListPage } from '@/pages/ReportListPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { DevicesPage } from '@/pages/DevicesPage';
 import { ComparisonPage } from '@/pages/ComparisonPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="reports/:studyId" element={<ReportPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="devices" element={<DevicesPage />} />
       </Route>
     </Routes>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { studyApi, imageApi } from '@/services/api';
+import { studyApi, imageApi, annotationApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageViewer } from '@/components/viewer/ImageViewer';
@@ -9,20 +9,25 @@ import { Toolbar } from '@/components/viewer/Toolbar';
 import { ImageList } from '@/components/viewer/ImageList';
 import { WindowLevel } from '@/components/viewer/WindowLevel';
 import { useViewerStore } from '@/stores/viewerStore';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+interface Series {
+  id: string;
+  modality: string;
+  seriesNumber: number;
+}
 
 interface Study {
   id: string;
   patientId: string;
   studyDate: string;
-  studyType: string;
-  modality: string;
   status: string;
   patient?: {
     name: string;
     mrn: string;
   };
+  series?: Series[];
 }
 
 interface Image {
@@ -43,11 +48,13 @@ export function ViewerPage() {
   const [loading, setLoading] = useState(true);
   
   const { currentImageId, setCurrentImage } = useViewerStore();
+  const [studyAnnotations, setStudyAnnotations] = useState<any[]>([]);
 
   useEffect(() => {
     if (studyId) {
       loadStudy(studyId);
       loadImages(studyId);
+      loadStudyAnnotations(studyId);
     }
   }, [studyId]);
 
@@ -79,6 +86,15 @@ export function ViewerPage() {
     }
   };
 
+  const loadStudyAnnotations = async (id: string) => {
+    try {
+      const response = await annotationApi.getByStudy(id);
+      setStudyAnnotations(response.data || []);
+    } catch (error) {
+      console.error('Failed to load study annotations:', error);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">加载中...</div>;
   }
@@ -97,10 +113,10 @@ export function ViewerPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">
-                {study?.patient?.name || '患者'} - {study?.studyType.toUpperCase()}
+                {study?.patient?.name || '患者'} - {study?.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {study?.studyDate} | {study?.modality} | {study?.patient?.mrn}
+                {study?.studyDate} | {study?.patient?.mrn}
               </p>
             </div>
           </div>
@@ -151,7 +167,7 @@ export function ViewerPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">检查类型</span>
-                  <span>{study.studyType.toUpperCase()}</span>
+                  <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">检查日期</span>
@@ -159,7 +175,7 @@ export function ViewerPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">模态</span>
-                  <span>{study.modality}</span>
+                  <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ') || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">状态</span>
@@ -172,6 +188,35 @@ export function ViewerPage() {
                      study.status === 'diagnosed' ? '已诊断' : '待处理'}
                   </span>
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Study-level annotations */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="h-3.5 w-3.5" />
+              检查级标注
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {studyAnnotations.length === 0 ? (
+              <p className="text-xs text-muted-foreground">暂无检查级标注</p>
+            ) : (
+              <div className="space-y-2">
+                {studyAnnotations.map((ann) => (
+                  <div key={ann.id} className="rounded border p-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{ann.label || ann.type}</span>
+                      <span className="text-muted-foreground">{ann.user?.displayName || ''}</span>
+                    </div>
+                    {ann.notes && (
+                      <p className="text-muted-foreground mt-1">{ann.notes}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

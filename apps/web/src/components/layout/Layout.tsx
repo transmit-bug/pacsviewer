@@ -16,6 +16,7 @@ import {
   Users,
   FileText,
   Settings,
+  Monitor,
   LogOut,
   Menu,
   Moon,
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'nav.dashboard' },
   { path: '/patients', icon: Users, label: 'nav.patients' },
   { path: '/reports', icon: FileText, label: 'nav.reports' },
+  { path: '/devices', icon: Monitor, label: 'nav.devices' },
   { path: '/settings', icon: Settings, label: 'nav.settings' },
 ];
 

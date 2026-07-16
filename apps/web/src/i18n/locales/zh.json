@@ -8,6 +8,7 @@
     "patients": "患者管理",
     "studies": "检查记录",
     "reports": "报告",
+    "devices": "设备管理",
     "settings": "设置"
   },
   "auth": {
@@ -38,6 +39,8 @@
     "flip": "翻转",
     "windowLevel": "窗宽窗位",
     "measure": "测量",
+    "angle": "角度测量",
+    "probe": "像素探针",
     "annotate": "标注",
     "layers": "图层",
     "filters": "滤镜",

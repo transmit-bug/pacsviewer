@@ -20,13 +20,18 @@ interface Patient {
   tags: string[];
 }
 
+interface Series {
+  id: string;
+  modality: string;
+  seriesNumber: number;
+}
+
 interface Study {
   id: string;
   studyDate: string;
-  studyType: string;
-  modality: string;
   status: string;
   description?: string;
+  series?: Series[];
 }
 
 export function PatientDetailPage() {
@@ -179,9 +184,11 @@ export function PatientDetailPage() {
                     >
                       <Link to={`/viewer/${study.id}`} className="flex-1">
                         <div>
-                          <p className="font-medium">{study.studyType.toUpperCase()}</p>
+                          <p className="font-medium">
+                            {study.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}
+                          </p>
                           <p className="text-sm text-muted-foreground">
-                            {study.studyDate} | {study.modality}
+                            {study.studyDate}
                           </p>
                           {study.description && (
                             <p className="text-sm text-muted-foreground mt-1">

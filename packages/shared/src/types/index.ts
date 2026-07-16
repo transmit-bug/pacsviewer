@@ -43,18 +43,15 @@ export interface Study {
   patientId: string;
   studyDate: string;
   studyTime?: string;
-  studyType: StudyType;
-  modality: string;
   device?: string;
   physicianId?: string;
   status: 'pending' | 'in_progress' | 'diagnosed' | 'reported';
   description?: string;
   tags?: string[];
+  series?: Series[];
   createdAt: string;
   updatedAt: string;
 }
-
-export type StudyType = 'oct' | 'fundus' | 'ffa' | 'icga' | 'vf' | 'octa' | 'other';
 
 export interface Series {
   id: string;
@@ -129,7 +126,7 @@ export interface Report {
 export interface ReportTemplate {
   id: string;
   name: string;
-  type: StudyType | 'comprehensive' | 'custom';
+  type: 'oct' | 'fundus' | 'ffa' | 'icga' | 'vf' | 'octa' | 'comprehensive' | 'custom';
   description?: string;
   fields: Record<string, any>[];
   layout: Record<string, any>;

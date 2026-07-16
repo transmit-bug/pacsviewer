@@ -26,11 +26,12 @@ const patientsRouter = createCrudRouter(patients, {
       return c.json({ success: true, data: results });
     });
 
-    // GET /:id/studies - Get patient's studies
+    // GET /:id/studies - Get patient's studies (with series for modality)
     router.get('/:id/studies', async (c) => {
       const id = c.req.param('id');
       const patientStudies = await db.query.studies.findMany({
         where: eq(studies.patientId, id),
+        with: { series: true },
         orderBy: (s, { desc }) => [desc(s.studyDate)],
       });
       return c.json({ success: true, data: patientStudies });

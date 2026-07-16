@@ -119,6 +119,8 @@ export const reportApi = {
     api.put(`/reports/${id}/status`, { status }),
   getPdf: (id: string) => `/api/reports/${id}/pdf`,
   getVersions: (id: string) => api.get(`/reports/${id}/versions`),
+  getVersionDiff: (id: string, v1: number, v2: number) =>
+    api.get(`/reports/${id}/versions/diff`, { params: { v1, v2 } }),
 };
 
 export const reportTemplateApi = {
@@ -135,6 +137,11 @@ export const annotationApi = {
     api.post(`/images/${imageId}/annotations`, data),
   update: (id: string, data: any) => api.put(`/annotations/${id}`, data),
   delete: (id: string) => api.delete(`/annotations/${id}`),
+  // Study-level annotations
+  getByStudy: (studyId: string) => api.get(`/annotations/study/${studyId}`),
+  createStudyLevel: (data: any) => api.post(`/annotations`, data),
+  list: (params?: { imageId?: string; studyId?: string }) =>
+    api.get('/annotations', { params }),
 };
 
 export const layerApi = {
@@ -190,4 +197,22 @@ export const comparisonApi = {
   saveSnapshot: (id: string, image: string) =>
     api.post(`/comparisons/${id}/snapshot`, { image }),
   getSnapshotUrl: (id: string) => `/api/comparisons/${id}/snapshot`,
+};
+
+export const deviceApi = {
+  getAll: (params?: any) => api.get('/devices', { params }),
+  getById: (id: string) => api.get(`/devices/${id}`),
+  create: (data: any) => api.post('/devices', data),
+  update: (id: string, data: any) => api.put(`/devices/${id}`, data),
+  delete: (id: string) => api.delete(`/devices/${id}`),
+  getTransfers: (deviceId: string) => api.get(`/devices/${deviceId}/transfers`),
+};
+
+export const transferApi = {
+  getAll: (params?: { page?: number; pageSize?: number; status?: string; deviceId?: string }) =>
+    api.get('/transfers', { params }),
+  getById: (id: string) => api.get(`/transfers/${id}`),
+  updateStatus: (id: string, data: { status: string; processedCount?: number; errorCount?: number }) =>
+    api.put(`/transfers/${id}/status`, data),
+  retry: (id: string) => api.post(`/transfers/${id}/retry`),
 };

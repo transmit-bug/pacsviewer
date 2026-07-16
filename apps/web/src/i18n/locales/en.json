@@ -8,6 +8,7 @@
     "patients": "Patients",
     "studies": "Studies",
     "reports": "Reports",
+    "devices": "Devices",
     "settings": "Settings"
   },
   "auth": {
@@ -38,6 +39,8 @@
     "flip": "Flip",
     "windowLevel": "Window/Level",
     "measure": "Measure",
+    "angle": "Angle",
+    "probe": "Probe",
     "annotate": "Annotate",
     "layers": "Layers",
     "filters": "Filters",

@@ -381,8 +381,12 @@ export const reportVersions = sqliteTable('report_versions', {
   id: text('id').primaryKey(),
   reportId: text('report_id').references(() => reports.id).notNull(),
   version: integer('version').notNull(),
+  status: text('status', { 
+    enum: ['draft', 'pending_review', 'reviewed', 'published'] 
+  }).notNull(),
   content: text('content', { mode: 'json' }).notNull(),
   images: text('images', { mode: 'json' }).default('[]'),
+  changeNotes: text('change_notes'),
   createdBy: text('created_by').references(() => users.id).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
 });
@@ -456,3 +460,7 @@ export const insertDeviceSchema = createInsertSchema(devices);
 export const selectDeviceSchema = createSelectSchema(devices);
 export const insertInboundTransferSchema = createInsertSchema(inboundTransfers);
 export const selectInboundTransferSchema = createSelectSchema(inboundTransfers);
+export const insertAnnotationSchema = createInsertSchema(annotations);
+export const selectAnnotationSchema = createSelectSchema(annotations);
+export const insertLayerSchema = createInsertSchema(layers);
+export const selectLayerSchema = createSelectSchema(layers);

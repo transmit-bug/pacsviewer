@@ -6,7 +6,7 @@ const studiesRouter = createCrudRouter(studies, {
   name: '检查',
   queryKey: 'studies',
   createSchema: insertStudySchema,
-  with: { patient: true, physician: true },
+  with: { patient: true, physician: true, series: true },
   listWhere: (c) => {
     const patientId = c.req.query('patientId');
     return patientId ? eq(studies.patientId, patientId) : undefined;
