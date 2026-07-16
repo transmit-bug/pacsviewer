@@ -80,7 +80,7 @@ export function DevicesPage() {
   const [deviceTransfers, setDeviceTransfers] = useState<Transfer[]>([]);
   const [newDevice, setNewDevice] = useState({
     name: '',
-    type: 'OCT',
+    type: 'oct',
     manufacturer: '',
     model: '',
     serialNumber: '',
@@ -108,15 +108,9 @@ export function DevicesPage() {
 
   const handleAddDevice = async () => {
     try {
-      // Need an adapter ID - use first available or create a default
-      const adapterId = 'default';
-
-      await deviceApi.create({
-        ...newDevice,
-        adapterId,
-      });
+      await deviceApi.create(newDevice);
       setAddDialogOpen(false);
-      setNewDevice({ name: '', type: 'OCT', manufacturer: '', model: '', serialNumber: '' });
+      setNewDevice({ name: '', type: 'oct', manufacturer: '', model: '', serialNumber: '' });
       loadData();
     } catch (error) {
       console.error('Failed to add device:', error);
@@ -342,12 +336,12 @@ export function DevicesPage() {
                 value={newDevice.type}
                 onChange={(e) => setNewDevice({ ...newDevice, type: e.target.value })}
               >
-                <option value="OCT">OCT</option>
-                <option value="Fundus Camera">眼底相机</option>
-                <option value="FFA">FFA</option>
-                <option value="ICGA">ICGA</option>
-                <option value="Perimeter">视野计</option>
-                <option value="Other">其他</option>
+                <option value="oct">OCT</option>
+                <option value="fundus_camera">眼底相机</option>
+                <option value="ffa">FFA</option>
+                <option value="icga">ICGA</option>
+                <option value="vf">视野计</option>
+                <option value="other">其他</option>
               </select>
             </div>
             <div>

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Download, Search, FileText, RefreshCw } from 'lucide-react';
+import { Save, Download, Search, FileText, RefreshCw, CheckCircle } from 'lucide-react';
 import api from '@/services/api';
 
 interface LogEntry {
@@ -32,6 +32,14 @@ interface LogEntry {
   user?: { displayName: string; username: string };
 }
 
+/** Safely format a date string, returning a fallback for invalid dates */
+function formatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleString('zh-CN');
+}
+
 export function SettingsPage() {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -39,9 +47,26 @@ export function SettingsPage() {
   const [logFilters, setLogFilters] = useState({
     action: '',
     resource: '',
-    dateFrom: '',
-    dateTo: '',
   });
+
+  // Settings state
+  const [generalSettings, setGeneralSettings] = useState({
+    systemName: 'PACS Viewer',
+    language: 'zh',
+    timezone: 'Asia/Shanghai',
+  });
+  const [storageSettings, setStorageSettings] = useState({
+    storagePath: './data/images',
+    storageQuota: 100,
+  });
+  const [dicomSettings, setDicomSettings] = useState({
+    aeTitle: 'PACSVIEWER',
+    port: 11112,
+  });
+
+  // Save feedback
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   const loadLogs = async () => {
     setLogsLoading(true);
@@ -65,38 +90,110 @@ export function SettingsPage() {
     loadLogs();
   }, []);
 
-  const handleExportLogs = () => {
-    const csv = [
-      '时间,用户,操作,资源,资源ID,IP地址',
-      ...logs.map(l => [
-        l.createdAt,
-        l.user?.displayName || l.userId,
-        l.action,
-        l.resource,
-        l.resourceId || '',
-        l.ipAddress || '',
-      ].join(',')),
-    ].join('\n');
+  const handleSaveSettings = async (category: string, settings: Record<string, any>) => {
+    setSaving(category);
+    setSaveSuccess(null);
+    try {
+      // Save each setting individually
+      for (const [key, value] of Object.entries(settings)) {
+        await api.put(`/settings/${category}/${key}`, { value: String(value) });
+      }
+      setSaveSuccess(category);
+      setTimeout(() => setSaveSuccess(null), 3000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('保存设置失败');
+    } finally {
+      setSaving(null);
+    }
+  };
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportLogs = async () => {
+    try {
+      const params = new URLSearchParams({ pageSize: '1000' });
+      if (logFilters.action) params.set('action', logFilters.action);
+      if (logFilters.resource) params.set('resource', logFilters.resource);
+
+      const response = await api.get(`/audit-logs/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
+
+      const url = URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      // Fallback: export from current logs
+      const csv = [
+        '时间,用户,操作,资源,资源ID,IP地址',
+        ...logs.map((l) =>
+          [
+            l.createdAt,
+            l.user?.displayName || l.userId,
+            l.action,
+            l.resource,
+            l.resourceId || '',
+            l.ipAddress || '',
+          ].join(',')
+        ),
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const getActionBadge = (action: string) => {
-    const map: Record<string, { variant: 'success' | 'info' | 'destructive' | 'secondary' | 'warning'; label: string }> = {
-      create: { variant: 'success', label: '创建' },
-      update: { variant: 'info', label: '更新' },
+    const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+      create: { variant: 'default', label: '创建' },
+      update: { variant: 'secondary', label: '更新' },
       delete: { variant: 'destructive', label: '删除' },
+      get: { variant: 'outline', label: '查询' },
       login: { variant: 'secondary', label: '登录' },
       logout: { variant: 'secondary', label: '登出' },
     };
-    const cfg = map[action] || { variant: 'secondary' as const, label: action };
+    const cfg = map[action] || { variant: 'outline' as const, label: action };
     return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+  };
+
+  const renderSaveButton = (category: string) => {
+    const isSaving = saving === category;
+    const isSuccess = saveSuccess === category;
+
+    return (
+      <Button
+        onClick={() => {
+          if (category === 'general') handleSaveSettings(category, generalSettings);
+          if (category === 'storage') handleSaveSettings(category, storageSettings);
+          if (category === 'dicom') handleSaveSettings(category, dicomSettings);
+        }}
+        disabled={isSaving}
+      >
+        {isSuccess ? (
+          <>
+            <CheckCircle className="mr-2 h-4 w-4" />
+            已保存
+          </>
+        ) : isSaving ? (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            保存中...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            保存设置
+          </>
+        )}
+      </Button>
+    );
   };
 
   return (
@@ -116,16 +213,29 @@ export function SettingsPage() {
 
         <TabsContent value="general">
           <Card>
-            <CardHeader><CardTitle>常规设置</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>常规设置</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <Label>系统名称</Label>
-                  <Input defaultValue="PACS Viewer" className="mt-1" />
+                  <Input
+                    value={generalSettings.systemName}
+                    onChange={(e) =>
+                      setGeneralSettings({ ...generalSettings, systemName: e.target.value })
+                    }
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>语言</Label>
-                  <Select defaultValue="zh">
+                  <Select
+                    value={generalSettings.language}
+                    onValueChange={(v) =>
+                      setGeneralSettings({ ...generalSettings, language: v })
+                    }
+                  >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
@@ -137,7 +247,12 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <Label>时区</Label>
-                  <Select defaultValue="Asia/Shanghai">
+                  <Select
+                    value={generalSettings.timezone}
+                    onValueChange={(v) =>
+                      setGeneralSettings({ ...generalSettings, timezone: v })
+                    }
+                  >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
@@ -147,7 +262,7 @@ export function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button><Save className="mr-2 h-4 w-4" />保存设置</Button>
+                {renderSaveButton('general')}
               </div>
             </CardContent>
           </Card>
@@ -155,27 +270,52 @@ export function SettingsPage() {
 
         <TabsContent value="storage">
           <Card>
-            <CardHeader><CardTitle>存储设置</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>存储设置</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <Label>存储路径</Label>
-                  <Input defaultValue="./data/images" className="mt-1" />
+                  <Input
+                    value={storageSettings.storagePath}
+                    onChange={(e) =>
+                      setStorageSettings({ ...storageSettings, storagePath: e.target.value })
+                    }
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>存储配额 (GB)</Label>
-                  <Input type="number" defaultValue="100" className="mt-1" />
+                  <Input
+                    type="number"
+                    value={storageSettings.storageQuota}
+                    onChange={(e) =>
+                      setStorageSettings({
+                        ...storageSettings,
+                        storageQuota: Number(e.target.value),
+                      })
+                    }
+                    className="mt-1"
+                  />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">存储使用量</p>
-                    <p className="text-sm text-muted-foreground">已使用 25.6 GB / 100 GB</p>
+                    <p className="text-sm text-muted-foreground">
+                      已使用 25.6 GB / {storageSettings.storageQuota} GB
+                    </p>
                   </div>
                   <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="w-1/4 h-full bg-primary rounded-full" />
+                    <div
+                      className="h-full bg-primary rounded-full"
+                      style={{
+                        width: `${Math.min(100, (25.6 / storageSettings.storageQuota) * 100)}%`,
+                      }}
+                    />
                   </div>
                 </div>
-                <Button><Save className="mr-2 h-4 w-4" />保存设置</Button>
+                {renderSaveButton('storage')}
               </div>
             </CardContent>
           </Card>
@@ -183,16 +323,31 @@ export function SettingsPage() {
 
         <TabsContent value="dicom">
           <Card>
-            <CardHeader><CardTitle>DICOM 设置</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>DICOM 设置</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <Label>AE Title</Label>
-                  <Input defaultValue="PACSVIEWER" className="mt-1" />
+                  <Input
+                    value={dicomSettings.aeTitle}
+                    onChange={(e) =>
+                      setDicomSettings({ ...dicomSettings, aeTitle: e.target.value })
+                    }
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>端口</Label>
-                  <Input type="number" defaultValue="11112" className="mt-1" />
+                  <Input
+                    type="number"
+                    value={dicomSettings.port}
+                    onChange={(e) =>
+                      setDicomSettings({ ...dicomSettings, port: Number(e.target.value) })
+                    }
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>传输语法</Label>
@@ -202,7 +357,7 @@ export function SettingsPage() {
                     <p className="text-xs">JPEG/JPEG2000 将在后续版本支持</p>
                   </div>
                 </div>
-                <Button><Save className="mr-2 h-4 w-4" />保存设置</Button>
+                {renderSaveButton('dicom')}
               </div>
             </CardContent>
           </Card>
@@ -217,8 +372,10 @@ export function SettingsPage() {
                   <Download className="mr-1.5 h-3.5 w-3.5" />
                   导出 CSV
                 </Button>
-                <Button variant="outline" size="sm" onClick={loadLogs}>
-                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+                <Button variant="outline" size="sm" onClick={loadLogs} disabled={logsLoading}>
+                  <RefreshCw
+                    className={`mr-1.5 h-3.5 w-3.5 ${logsLoading ? 'animate-spin' : ''}`}
+                  />
                   刷新
                 </Button>
               </div>
@@ -231,6 +388,7 @@ export function SettingsPage() {
                     placeholder="按操作筛选 (create, update, delete, login)"
                     value={logFilters.action}
                     onChange={(e) => setLogFilters({ ...logFilters, action: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && loadLogs()}
                   />
                 </div>
                 <div className="flex-1">
@@ -238,9 +396,10 @@ export function SettingsPage() {
                     placeholder="按资源类型 (patients, studies, reports)"
                     value={logFilters.resource}
                     onChange={(e) => setLogFilters({ ...logFilters, resource: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && loadLogs()}
                   />
                 </div>
-                <Button size="sm" onClick={loadLogs}>
+                <Button size="sm" onClick={loadLogs} disabled={logsLoading}>
                   <Search className="mr-1.5 h-3.5 w-3.5" />
                   查询
                 </Button>
@@ -267,14 +426,10 @@ export function SettingsPage() {
                       {logs.map((log) => (
                         <tr key={log.id} className="hover:bg-muted/30">
                           <td className="p-2 text-muted-foreground whitespace-nowrap">
-                            {new Date(log.createdAt).toLocaleString('zh-CN')}
+                            {formatDate(log.createdAt)}
                           </td>
-                          <td className="p-2">
-                            {log.user?.displayName || log.userId}
-                          </td>
-                          <td className="p-2">
-                            {getActionBadge(log.action)}
-                          </td>
+                          <td className="p-2">{log.user?.displayName || log.userId}</td>
+                          <td className="p-2">{getActionBadge(log.action)}</td>
                           <td className="p-2">
                             {log.resource}
                             {log.resourceId && (

@@ -217,7 +217,7 @@ export const devices = sqliteTable('devices', {
   manufacturer: text('manufacturer').notNull(),
   model: text('model').notNull(),
   serialNumber: text('serial_number'),
-  adapterId: text('adapter_id').references(() => deviceAdapters.id).notNull(),
+  adapterId: text('adapter_id').references(() => deviceAdapters.id),
   connectionInfo: text('connection_info', { mode: 'json' }),
   status: text('status', {
     enum: ['online', 'offline', 'error']
@@ -468,7 +468,7 @@ export const insertReportVersionSchema = createInsertSchema(reportVersions);
 export const selectReportVersionSchema = createSelectSchema(reportVersions);
 export const insertComparisonSchema = createInsertSchema(comparisons);
 export const selectComparisonSchema = createSelectSchema(comparisons);
-export const insertDeviceSchema = createInsertSchema(devices);
+export const insertDeviceSchema = createInsertSchema(devices).omit({ id: true });
 export const selectDeviceSchema = createSelectSchema(devices);
 export const insertInboundTransferSchema = createInsertSchema(inboundTransfers);
 export const selectInboundTransferSchema = createSelectSchema(inboundTransfers);
