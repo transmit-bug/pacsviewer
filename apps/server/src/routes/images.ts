@@ -10,6 +10,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { db, images, series, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
+import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
 
 const imagesRouter = new Hono();
 
@@ -170,6 +171,85 @@ imagesRouter.get('/search', async (c) => {
   });
 
   return c.json({ success: true, data: allImages });
+});
+
+// --- Image Pyramid endpoints ---
+
+// GET /:id/pyramid/:level — Serve a specific pyramid level
+imagesRouter.get('/:id/pyramid/:level', async (c) => {
+  const id = c.req.param('id');
+  const level = c.req.param('level') as PyramidLevel;
+
+  const validLevels = ['256', '512', '1024', 'full'];
+  if (!validLevels.includes(level)) {
+    return c.json({ success: false, message: 'Invalid level. Use: 256, 512, 1024, full' }, 400);
+  }
+
+  // Generate pyramid lazily if not exists
+  try {
+    await generatePyramid(id);
+  } catch (err) {
+    console.error('Failed to generate pyramid:', err);
+    throw new NotFoundError('图像');
+  }
+
+  const filePath = getPyramidFilePath(id, level);
+  const file = Bun.file(filePath);
+
+  if (!(await file.exists())) {
+    throw new NotFoundError('金字塔层级');
+  }
+
+  return new Response(file, {
+    headers: {
+      'Content-Type': 'image/webp',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  });
+});
+
+// POST /:id/pyramid — Pre-generate all pyramid levels
+imagesRouter.post('/:id/pyramid', async (c) => {
+  const id = c.req.param('id');
+
+  try {
+    await generatePyramid(id);
+    return c.json({ success: true, message: '金字塔生成完成' });
+  } catch (err) {
+    console.error('Failed to generate pyramid:', err);
+    return c.json({ success: false, message: '生成失败' }, 500);
+  }
+});
+
+// GET /:id/pyramid/best — Serve best pyramid level for given viewport
+imagesRouter.get('/:id/pyramid/best', async (c) => {
+  const id = c.req.param('id');
+  const vw = Number(c.req.query('vw')) || 1024;
+  const vh = Number(c.req.query('vh')) || 768;
+  const zoom = Number(c.req.query('zoom')) || 1;
+
+  const level = selectPyramidLevel(vw, vh, zoom);
+
+  try {
+    await generatePyramid(id);
+  } catch {
+    throw new NotFoundError('图像');
+  }
+
+  const filePath = getPyramidFilePath(id, level);
+  const file = Bun.file(filePath);
+
+  if (!(await file.exists())) {
+    throw new NotFoundError('金字塔层级');
+  }
+
+  return new Response(file, {
+    headers: {
+      'Content-Type': 'image/webp',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Pyramid-Level': level,
+    },
+  });
 });
 
 // --- Nested annotation routes (backward compatibility) ---
