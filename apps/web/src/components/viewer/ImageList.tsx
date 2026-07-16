@@ -1,5 +1,6 @@
 import { useViewerStore } from '@/stores/viewerStore';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface ImageListProps {
   images: Array<{
@@ -16,12 +17,13 @@ export function ImageList({ images, className }: ImageListProps) {
   return (
     <div className={cn('grid grid-cols-3 gap-1 p-2', className)}>
       {images.map((image) => (
-        <button
+        <Button
           key={image.id}
+          variant="outline"
           className={cn(
-            'relative aspect-square overflow-hidden rounded border-2 transition-colors',
+            'relative aspect-square overflow-hidden p-0 h-auto w-auto',
             currentImageId === image.id
-              ? 'border-primary'
+              ? 'border-primary ring-2 ring-primary'
               : 'border-transparent hover:border-primary/50'
           )}
           onClick={() => setCurrentImage(image.id)}
@@ -37,7 +39,7 @@ export function ImageList({ images, className }: ImageListProps) {
               {image.instanceNumber}
             </div>
           )}
-        </button>
+        </Button>
       ))}
     </div>
   );

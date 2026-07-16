@@ -42,16 +42,16 @@ export function Layout() {
   const { sidebarCollapsed, toggleSidebar, theme, setTheme, language, setLanguage } = useAppStore();
 
   return (
-    <div className="flex h-screen bg-medical-bg">
+    <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <aside
         className={cn(
-          'flex flex-col border-r border-medical-border bg-medical-surface transition-all duration-300',
+          'flex flex-col border-r border-border bg-card transition-all duration-300',
           sidebarCollapsed ? 'w-16' : 'w-64'
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center justify-center border-b border-medical-border">
+        <div className="flex h-16 items-center justify-center border-b border-border">
           {sidebarCollapsed ? (
             <span className="text-xl font-bold text-primary">P</span>
           ) : (
@@ -83,7 +83,7 @@ export function Layout() {
         </nav>
 
         {/* Collapse button */}
-        <div className="border-t border-medical-border p-4">
+        <div className="border-t border-border p-4">
           <Button
             variant="ghost"
             size="sm"
@@ -98,7 +98,7 @@ export function Layout() {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-medical-border bg-medical-surface px-6">
+        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div className="flex items-center">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
               <Menu className="h-5 w-5" />

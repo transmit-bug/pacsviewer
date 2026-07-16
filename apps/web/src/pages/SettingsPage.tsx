@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Download, Search, FileText, RefreshCw } from 'lucide-react';
 import api from '@/services/api';
 
@@ -87,15 +88,15 @@ export function SettingsPage() {
   };
 
   const getActionBadge = (action: string) => {
-    const map: Record<string, { color: string; label: string }> = {
-      create: { color: 'bg-green-500/10 text-green-600', label: '创建' },
-      update: { color: 'bg-blue-500/10 text-blue-600', label: '更新' },
-      delete: { color: 'bg-red-500/10 text-red-600', label: '删除' },
-      login: { color: 'bg-purple-500/10 text-purple-600', label: '登录' },
-      logout: { color: 'bg-gray-500/10 text-gray-600', label: '登出' },
+    const map: Record<string, { variant: 'success' | 'info' | 'destructive' | 'secondary' | 'warning'; label: string }> = {
+      create: { variant: 'success', label: '创建' },
+      update: { variant: 'info', label: '更新' },
+      delete: { variant: 'destructive', label: '删除' },
+      login: { variant: 'secondary', label: '登录' },
+      logout: { variant: 'secondary', label: '登出' },
     };
-    const cfg = map[action] || { color: 'bg-gray-500/10 text-gray-600', label: action };
-    return <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>;
+    const cfg = map[action] || { variant: 'secondary' as const, label: action };
+    return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
   };
 
   return (
@@ -124,17 +125,27 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <Label>语言</Label>
-                  <select className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                  </select>
+                  <Select defaultValue="zh">
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zh">中文</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>时区</Label>
-                  <select className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="Asia/Shanghai">Asia/Shanghai</option>
-                    <option value="UTC">UTC</option>
-                  </select>
+                  <Select defaultValue="Asia/Shanghai">
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Asia/Shanghai">Asia/Shanghai</SelectItem>
+                      <SelectItem value="UTC">UTC</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button><Save className="mr-2 h-4 w-4" />保存设置</Button>
               </div>

@@ -6,9 +6,9 @@ const badgeVariants = {
   secondary: 'bg-secondary text-secondary-foreground border-secondary/20',
   destructive: 'bg-destructive/10 text-destructive border-destructive/20',
   outline: 'text-foreground border-input',
-  success: 'bg-green-500/10 text-green-600 border-green-500/20',
-  warning: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  info: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  success: 'bg-[hsl(var(--status-success)/0.1)] text-[hsl(var(--status-success))] border-[hsl(var(--status-success)/0.2)]',
+  warning: 'bg-[hsl(var(--status-warning)/0.1)] text-[hsl(var(--status-warning))] border-[hsl(var(--status-warning)/0.2)]',
+  info: 'bg-[hsl(var(--status-info)/0.1)] text-[hsl(var(--status-info))] border-[hsl(var(--status-info)/0.2)]',
 };
 
 export interface BadgeProps {

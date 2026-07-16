@@ -8,6 +8,7 @@ import { ImageViewer } from '@/components/viewer/ImageViewer';
 import { Toolbar } from '@/components/viewer/Toolbar';
 import { ImageList } from '@/components/viewer/ImageList';
 import { WindowLevel } from '@/components/viewer/WindowLevel';
+import { Badge } from '@/components/ui/badge';
 import { useViewerStore } from '@/stores/viewerStore';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -179,14 +180,10 @@ export function ViewerPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">状态</span>
-                  <span className={`px-2 py-0.5 rounded text-xs ${
-                    study.status === 'reported' ? 'bg-green-500/10 text-green-500' :
-                    study.status === 'diagnosed' ? 'bg-blue-500/10 text-blue-500' :
-                    'bg-yellow-500/10 text-yellow-500'
-                  }`}>
+                  <Badge variant={study.status === 'reported' ? 'success' : study.status === 'diagnosed' ? 'info' : 'warning'}>
                     {study.status === 'reported' ? '已报告' :
                      study.status === 'diagnosed' ? '已诊断' : '待处理'}
-                  </span>
+                  </Badge>
                 </div>
               </div>
             )}

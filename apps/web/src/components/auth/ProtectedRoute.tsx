@@ -12,8 +12,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // 等待 zustand persist 恢复完成
   if (!isHydrated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-medical-bg">
-        <div className="text-medical-text">加载中...</div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-foreground">加载中...</div>
       </div>
     );
   }

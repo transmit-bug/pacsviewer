@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Activity, Users, FileText, Image } from 'lucide-react';
 
 export function DashboardPage() {
@@ -72,7 +73,7 @@ export function DashboardPage() {
                     <p className="font-medium">报告审核 #{i}</p>
                     <p className="text-sm text-muted-foreground">患者 {i + 10}</p>
                   </div>
-                  <span className="text-sm text-yellow-500">待审核</span>
+                  <Badge variant="warning" className="text-xs">待审核</Badge>
                 </div>
               ))}
             </div>

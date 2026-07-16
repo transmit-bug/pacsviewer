@@ -8,6 +8,7 @@
 import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Move,
   ZoomIn,
@@ -54,53 +55,75 @@ export function Toolbar({ className }: ToolbarProps) {
           const isActive = activeTool === tool.id;
           const label = t(tool.labelKey, tool.label);
           return (
-            <Button
-              key={tool.id}
-              variant={isActive ? 'default' : 'ghost'}
-              size="icon"
-              onClick={() => handleToolClick(tool.id)}
-              title={label}
-            >
-              <Icon className="h-4 w-4" />
-            </Button>
+            <Tooltip key={tool.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isActive ? 'default' : 'ghost'}
+                  size="icon"
+                  onClick={() => handleToolClick(tool.id)}
+                >
+                  <Icon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
           );
         })}
 
         <div className="mx-2 h-6 w-px bg-border" />
 
         {/* Viewport operations */}
-        <Button
-          variant="ghost"
-          size="icon"
-          title="旋转 90°"
-          onClick={() => setViewport({ rotation: (viewport.rotation + 90) % 360 })}
-        >
-          <RotateCw className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="水平翻转"
-          onClick={() => setViewport({ flipH: !viewport.flipH })}
-        >
-          <FlipHorizontal className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="垂直翻转"
-          onClick={() => setViewport({ flipV: !viewport.flipV })}
-        >
-          <FlipVertical className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="适配窗口"
-          onClick={resetViewport}
-        >
-          <Maximize className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewport({ rotation: (viewport.rotation + 90) % 360 })}
+            >
+              <RotateCw className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>旋转 90°</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewport({ flipH: !viewport.flipH })}
+            >
+              <FlipHorizontal className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>水平翻转</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewport({ flipV: !viewport.flipV })}
+            >
+              <FlipVertical className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>垂直翻转</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={resetViewport}
+            >
+              <Maximize className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>适配窗口</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );
