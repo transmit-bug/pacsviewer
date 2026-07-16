@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "lsof -ti:3000,5173 | xargs kill -9 2>/dev/null; true",
     "dev": "bun run --filter '*' dev",
     "dev:server": "bun run --filter @pacsviewer/server dev",
     "dev:web": "bun run --filter @pacsviewer/web dev",
