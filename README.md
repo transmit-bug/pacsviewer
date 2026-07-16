@@ -1,109 +1,132 @@
-# PACS Viewer - 眼科影像管理系统
+<div align="center">
 
-一个基于 Web 的 PACS Viewer，专注于眼科图像处理。
+# PACS Viewer
 
-## 技术栈
+**开源眼科影像管理系统**
 
-- **前端**: React + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- **后端**: Bun + Hono + Drizzle ORM
-- **数据库**: SQLite (开发) → PostgreSQL (生产)
-- **图像处理**: Cornerstone.js + OpenCV.js + TensorFlow.js
+基于 Web 的 PACS（Picture Archiving and Communication System），专注于眼科影像的存储、查看、标注和报告生成。
+
+[![Bun](https://img.shields.io/badge/Bun-%23000000?style=flat-square&logo=bun)](https://bun.sh)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![Hono](https://img.shields.io/badge/Hono-4-FF6B35?style=flat-square)](https://hono.dev)
+[![Drizzle](https://img.shields.io/badge/Drizzle-ORM-C5F74F?style=flat-square)](https://orm.drizzle.team)
+
+</div>
+
+---
+
+## 特性
+
+- **DICOM 与常见格式** — 支持 DICOM、JPEG、PNG、TIFF、BMP 等格式的渲染与管理
+- **多模态眼科影像** — OCT、眼底彩照、FFA、ICGA、视野检查等多种模态
+- **专业影像查看器** — 基于 Cornerstone.js，支持缩放、平移、窗宽窗位调节、长度/角度测量、像素探针
+- **标注系统** — 图像级与检查级双层标注，支持多种标注类型
+- **报告工作流** — 从草稿到发布的完整审核流程，支持版本快照与模板管理
+- **设备接入框架** — 可扩展的设备适配器架构，支持 DICOM 网关（C-STORE / C-FIND / C-MOVE）
+- **对比查看** — 同一患者跨时间点的图像对比，支持并排、叠加、滑块等模式
+- **国际化** — 内置中文和英文支持
+
+## 技术架构
+
+| 层 | 技术 |
+|---|---|
+| **前端** | React 18 · Vite · Tailwind CSS · shadcn/ui · Zustand |
+| **后端** | Bun · Hono · Drizzle ORM |
+| **数据库** | SQLite（开发/单机）· PostgreSQL（生产） |
+| **图像引擎** | Cornerstone.js · Sharp · TensorFlow.js |
+| **认证** | better-auth |
+
+### Monorepo 结构
+
+```
+pacsviewer/
+├── apps/
+│   ├── web/               @pacsviewer/web       前端 SPA
+│   └── server/            @pacsviewer/server     后端 API
+├── packages/
+│   ├── shared/            @pacsviewer/shared     共享类型与工具
+│   ├── dicom/             @pacsviewer/dicom      DICOM 解析
+│   └── image-processing/  @pacsviewer/image-processing  图像处理
+├── docker/                Docker 部署配置
+└── docs/                  架构决策记录、PRD
+```
 
 ## 快速开始
 
-### 安装依赖
+### 前置要求
+
+- [Bun](https://bun.sh) >= 1.0
+
+### 安装
 
 ```bash
+git clone https://github.com/<your-org>/pacsviewer.git
+cd pacsviewer
 bun install
 ```
 
 ### 初始化数据库
 
 ```bash
-cd apps/server
-bun run db:push
-bun run db:seed
+bun run db:push    # 创建表结构
+bun run db:seed    # 插入测试数据
 ```
 
 ### 启动开发服务器
 
 ```bash
-# 启动后端
-bun run dev:server
-
-# 启动前端
-bun run dev:web
+bun run dev        # 同时启动前端和后端
 ```
 
-### 访问应用
+或分别启动：
 
-- 前端: http://localhost:5173
-- 后端 API: http://localhost:3000
-
-### 默认账号
-
-- 管理员: admin / admin123
-- 医生: doctor / doctor123
-
-## 项目结构
-
-```
-pacsviewer/
-├── apps/
-│   ├── web/                    # 前端 SPA
-│   │   ├── src/
-│   │   │   ├── components/     # UI 组件
-│   │   │   ├── hooks/          # 自定义 hooks
-│   │   │   ├── stores/         # Zustand stores
-│   │   │   ├── services/       # API 服务
-│   │   │   ├── pages/          # 页面组件
-│   │   │   └── i18n/           # 国际化
-│   │   └── public/
-│   └── server/                 # 后端服务
-│       ├── src/
-│       │   ├── routes/         # API 路由
-│       │   ├── db/             # 数据库模型和迁移
-│       │   └── middleware/     # 中间件
-│       └── drizzle/            # 数据库迁移
-├── packages/
-│   ├── shared/                 # 共享类型和工具
-│   ├── dicom/                  # DICOM 解析库
-│   └── image-processing/       # 图像处理库
-└── docker/                     # Docker 配置
+```bash
+bun run dev:server # 后端 @ http://localhost:3000
+bun run dev:web    # 前端 @ http://localhost:5173
 ```
 
-## 开发计划
+> [!NOTE]
+> 开发环境默认账号：管理员 `admin / admin123`，医生 `doctor / doctor123`
 
-### Phase 1: 基础架构与核心功能 (4-6 周)
-- [x] 项目脚手架搭建
-- [ ] 用户系统
-- [ ] 患者管理
-- [ ] 图像管理
-- [ ] 图像渲染引擎
+## 开发命令
 
-### Phase 2: 专业编辑功能 (4-6 周)
-- [ ] 测量工具
-- [ ] 标注工具
-- [ ] 图层管理
-- [ ] 图像增强
-- [ ] 图像对比
+| 命令 | 说明 |
+|------|------|
+| `bun run dev` | 启动全部开发服务 |
+| `bun run build` | 构建全部 |
+| `bun run test` | 运行测试 |
+| `bun run typecheck` | TypeScript 类型检查 |
+| `bun run lint` | 代码检查 |
+| `bun run db:generate` | 生成数据库迁移 |
+| `bun run db:push` | 推送 schema 到数据库 |
+| `bun run db:seed` | 重新播种测试数据 |
 
-### Phase 3: 报告与设备接入 (3-4 周)
-- [ ] 报告系统
-- [ ] 设备接入框架
-- [ ] DICOM 网关
+## Docker 部署
 
-### Phase 4: AI 与高级功能 (4-6 周)
-- [ ] 图像滤镜
-- [ ] 前端 AI
-- [ ] 系统管理
+```bash
+docker-compose up -d
+```
 
-### Phase 5: 生产化与优化 (2-3 周)
-- [ ] 安全加固
-- [ ] 性能优化
-- [ ] 国际化
-- [ ] 桌面应用打包
+| 服务 | 端口 |
+|------|------|
+| 前端 | `80` |
+| 后端 API | `3000` |
 
-## License
+数据持久化挂载在 `./data` 目录。
 
-MIT
+## 环境变量
+
+复制 `.env.example` 到 `.env`：
+
+```env
+PORT=3000
+DATABASE_URL=./data/pacsviewer.db
+NODE_ENV=development
+```
+
+## 文档
+
+- [领域模型](docs/domain-alignment-summary.md) — 核心实体与术语定义
+- [架构决策](docs/adr/) — ADR 记录
+- [产品需求](docs/prd/) — PRD 文档

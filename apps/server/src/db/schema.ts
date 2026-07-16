@@ -211,7 +211,9 @@ export const deviceAdaptersRelations = relations(deviceAdapters, ({ many }) => (
 export const devices = sqliteTable('devices', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  type: text('type').notNull(),  // OCT, Fundus Camera, etc.
+  type: text('type', {
+    enum: ['oct', 'fundus_camera', 'ffa', 'icga', 'vf', 'octa', 'slit_lamp', 'topographer', 'biometer', 'other']
+  }).notNull(),
   manufacturer: text('manufacturer').notNull(),
   model: text('model').notNull(),
   serialNumber: text('serial_number'),

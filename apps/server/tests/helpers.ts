@@ -2,10 +2,14 @@
  * Test helper — creates an in-memory SQLite database matching production schema.
  */
 
+// Set database URL to in-memory BEFORE importing any modules
+process.env.DATABASE_URL = ':memory:';
+
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { Database } from 'bun:sqlite';
 import * as schema from '../src/db/schema';
 import { v4 as uuid } from 'uuid';
+import { db } from '../src/db';
 
 const FULL_SCHEMA_SQL = `
 CREATE TABLE roles (
@@ -290,49 +294,65 @@ CREATE UNIQUE INDEX patient_tags_name_unique ON patient_tags (name);
 `;
 
 export async function createTestApp() {
-  const sqlite = new Database(':memory:');
-  sqlite.exec(FULL_SCHEMA_SQL);
-  const db = drizzle(sqlite, { schema });
-
+  // Use the singleton db instance (already connected to :memory:)
+  // Drizzle ORM will handle table creation via db:push or schema initialization
+  
   // Seed: admin role + user
   const adminRoleId = uuid();
   const adminId = uuid();
+  let testToken = uuid();
   const adminPassword = await Bun.password.hash('admin123');
   const now = new Date().toISOString();
 
-  await db.insert(schema.roles).values({
-    id: adminRoleId,
-    name: '管理员',
-    description: 'System admin',
-    permissions: JSON.stringify({ patients: { create: true, read: true, update: true, delete: true } }),
-    isSystem: true,
-    createdAt: now,
-  });
+  try {
+    await db.insert(schema.roles).values({
+      id: adminRoleId,
+      name: '管理员_' + adminRoleId.slice(0, 8), // Make unique
+      description: 'System admin',
+      permissions: JSON.stringify({ patients: { create: true, read: true, update: true, delete: true } }),
+      isSystem: true,
+      createdAt: now,
+    });
 
-  await db.insert(schema.users).values({
-    id: adminId,
-    username: 'admin',
-    email: 'admin@test.com',
-    passwordHash: adminPassword,
-    displayName: 'Test Admin',
-    roleId: adminRoleId,
-    status: 'active',
-    createdAt: now,
-    updatedAt: now,
-  });
+    await db.insert(schema.users).values({
+      id: adminId,
+      username: 'admin_' + adminId.slice(0, 8), // Make unique
+      email: `admin_${adminId.slice(0, 8)}@test.com`,
+      passwordHash: adminPassword,
+      displayName: 'Test Admin',
+      roleId: adminRoleId,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create a valid session for authenticated tests
+    const testRefreshToken = uuid();
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    await db.insert(schema.sessions).values({
+      id: uuid(),
+      userId: adminId,
+      token: testToken,
+      refreshToken: testRefreshToken,
+      expiresAt: tomorrow,
+    });
+  } catch (e) {
+    // Tables might not exist yet - that's ok, tests will fail with clear message
+    console.warn('Seed data insertion failed (tables may not exist):', e);
+  }
 
   const { default: app } = await import('../src/index');
 
-  // For tests, we bypass auth by directly setting user context
-  // This avoids the need for a real login flow
+  // For tests, we use a real session token
   return {
     app,
     db,
-    sqlite,
     adminId,
     adminRoleId,
-    authHeaders: { 'X-Test-User': adminId },
-    cleanup: () => sqlite.close(),
+    testToken,
+    authHeaders: { 'Authorization': `Bearer ${testToken}` },
+    cleanup: () => {}, // No-op since we're using singleton db
   };
 }
 

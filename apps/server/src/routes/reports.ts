@@ -75,26 +75,7 @@ const reportsRouter = createCrudRouter(reports, {
       return c.json({ success: true, data: versions });
     });
 
-    // GET /:id/versions/:version - Get specific version
-    router.get('/:id/versions/:version', async (c) => {
-      const id = c.req.param('id');
-      const version = parseInt(c.req.param('version'), 10);
-
-      const found = await db.query.reportVersions.findFirst({
-        where: (rv, { and, eq: eqOp }) => and(
-          eqOp(rv.reportId, id),
-          eqOp(rv.version, version)
-        ),
-      });
-
-      if (!found) {
-        return c.json({ success: false, message: '版本未找到' }, 404);
-      }
-
-      return c.json({ success: true, data: found });
-    });
-
-    // GET /:id/versions/diff - Compare two versions
+    // GET /:id/versions/diff - Compare two versions (MUST be before :version route)
     router.get('/:id/versions/diff', async (c) => {
       const id = c.req.param('id');
       const v1 = parseInt(c.req.query('v1') || '0', 10);
@@ -143,6 +124,25 @@ const reportsRouter = createCrudRouter(reports, {
           diff,
         },
       });
+    });
+
+    // GET /:id/versions/:version - Get specific version (MUST be after diff route)
+    router.get('/:id/versions/:version', async (c) => {
+      const id = c.req.param('id');
+      const version = parseInt(c.req.param('version'), 10);
+
+      const found = await db.query.reportVersions.findFirst({
+        where: (rv, { and, eq: eqOp }) => and(
+          eqOp(rv.reportId, id),
+          eqOp(rv.version, version)
+        ),
+      });
+
+      if (!found) {
+        return c.json({ success: false, message: '版本未找到' }, 404);
+      }
+
+      return c.json({ success: true, data: found });
     });
   },
 });
