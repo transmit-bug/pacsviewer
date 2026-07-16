@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   X,
 } from 'lucide-react';
+import { safeJsonParse, safeJsonArray } from '@/lib/utils';
 
 interface Report {
   id: string;
@@ -111,8 +112,9 @@ export function ReportPage() {
 
     // Initialize content with empty fields from template
     const initialContent: Record<string, any> = {};
-    if (template.fields && Array.isArray(template.fields)) {
-      template.fields.forEach((field) => {
+    const fields = safeJsonArray(template.fields);
+    if (fields.length > 0) {
+      fields.forEach((field: any) => {
         initialContent[field.key] = field.type === 'select' ? '' : '';
       });
     }
@@ -262,7 +264,8 @@ export function ReportPage() {
 
   const renderStructuredFields = () => {
     const template = getTemplate();
-    if (!template?.fields || !Array.isArray(template.fields)) {
+    const fields = safeJsonArray(template?.fields);
+    if (fields.length === 0) {
       return null;
     }
 
@@ -273,7 +276,7 @@ export function ReportPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {template.fields.map((field) => (
+            {fields.map((field: any) => (
               <div key={field.key}>
                 <Label>
                   {field.label}
@@ -485,9 +488,9 @@ export function ReportPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {report.images && report.images.length > 0 ? (
+                    {safeJsonArray(report.images).length > 0 ? (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {report.images.map((imageId, index) => (
+                        {safeJsonArray(report.images).map((imageId, index) => (
                           <div
                             key={index}
                             className="relative group rounded-md border overflow-hidden"
@@ -545,7 +548,7 @@ export function ReportPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Structured fields preview */}
-                  {getTemplate()?.fields?.map((field) => {
+                  {safeJsonArray(getTemplate()?.fields).map((field: any) => {
                     const value = report.content?.[field.key];
                     if (!value) return null;
                     return (
@@ -584,11 +587,11 @@ export function ReportPage() {
                   )}
 
                   {/* Images preview */}
-                  {report.images && report.images.length > 0 && (
+                  {safeJsonArray(report.images).length > 0 && (
                     <div>
                       <h3 className="font-medium text-lg mb-2">{t('report.imageReferences')}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {report.images.map((imageId, index) => (
+                        {safeJsonArray(report.images).map((imageId, index) => (
                           <img
                             key={index}
                             src={`/api/images/${imageId}/thumbnail`}
