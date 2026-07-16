@@ -45,7 +45,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error(error.message || '登录失败');
           }
 
-          const data = await response.json();
+          const responseData = await response.json();
+          const data = responseData.data;
           set({
             user: data.user,
             token: data.token,
@@ -85,7 +86,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error('刷新token失败');
           }
 
-          const data = await response.json();
+          const responseData = await response.json();
+          const data = responseData.data;
           set({
             token: data.token,
             refreshToken: data.refreshToken,

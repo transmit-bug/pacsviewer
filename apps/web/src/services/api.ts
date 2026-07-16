@@ -35,7 +35,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = useAuthStore.getState().refreshToken;
         const response = await axios.post('/api/auth/refresh', { refreshToken });
-        const { token, refreshToken: newRefreshToken } = response.data;
+        const { token, refreshToken: newRefreshToken } = response.data.data;
 
         // 更新 Zustand store（会自动同步到 localStorage）
         useAuthStore.setState({

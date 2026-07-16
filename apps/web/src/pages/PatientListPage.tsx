@@ -37,7 +37,8 @@ export function PatientListPage() {
     try {
       setLoading(true);
       const response = await patientApi.getAll();
-      setPatients(response.data || []);
+      // API returns paginated data: { items: [...], total, page, pageSize, totalPages }
+      setPatients(response.data?.items || []);
     } catch (error) {
       console.error('Failed to load patients:', error);
     } finally {
@@ -53,6 +54,7 @@ export function PatientListPage() {
     try {
       setLoading(true);
       const response = await patientApi.search(searchQuery);
+      // Search API returns array directly
       setPatients(response.data || []);
     } catch (error) {
       console.error('Failed to search patients:', error);
