@@ -89,7 +89,7 @@ export function ViewerPage() {
 
       if (targetSeriesId) {
         const imagesResponse = await imageApi.search({ seriesId: targetSeriesId });
-        const imageList = imagesResponse.data || [];
+        const imageList = imagesResponse.data?.items || [];
         setImages(imageList);
         if (imageList.length > 0) {
           setCurrentImage(imageList[0].id);

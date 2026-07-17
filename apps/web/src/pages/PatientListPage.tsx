@@ -31,7 +31,7 @@ interface Patient {
   gender: string;
   birthDate: string;
   phone?: string;
-  tags: string[];
+  tags?: string[] | null;
 }
 
 export function PatientListPage() {
@@ -176,7 +176,7 @@ export function PatientListPage() {
                       </div>
                     </Link>
                     <div className="flex items-center space-x-2">
-                      {patient.tags?.map((tag) => (
+                      {Array.isArray(patient.tags) && patient.tags.map((tag) => (
                         <span
                           key={tag}
                           className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"

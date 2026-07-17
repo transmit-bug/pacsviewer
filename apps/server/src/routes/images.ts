@@ -14,6 +14,41 @@ import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLe
 
 const imagesRouter = new Hono();
 
+// Search images by series (MUST be before /:id routes)
+imagesRouter.get('/search', async (c) => {
+  const seriesId = c.req.query('seriesId');
+  if (!seriesId) {
+    return c.json({ success: true, data: [] });
+  }
+
+  const page = Math.max(1, Number(c.req.query('page')) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(c.req.query('pageSize')) || 20));
+  const offset = (page - 1) * pageSize;
+
+  const allImages = await db.query.images.findMany({
+    where: eq(images.seriesId, seriesId),
+    orderBy: (i, { asc }) => [asc(i.instanceNumber)],
+    limit: pageSize,
+    offset,
+  });
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(images)
+    .where(eq(images.seriesId, seriesId));
+
+  return c.json({
+    success: true,
+    data: {
+      items: allImages,
+      total: countResult[0].count,
+      page,
+      pageSize,
+      totalPages: Math.ceil(countResult[0].count / pageSize),
+    },
+  });
+});
+
 // Upload image
 imagesRouter.post('/upload', async (c) => {
   const formData = await c.req.formData();
@@ -156,21 +191,6 @@ imagesRouter.delete('/:id', async (c) => {
     .where(eq(series.id, image.seriesId));
 
   return c.json({ success: true, message: '图像已删除' });
-});
-
-// Search images by series
-imagesRouter.get('/search', async (c) => {
-  const seriesId = c.req.query('seriesId');
-  if (!seriesId) {
-    return c.json({ success: true, data: [] });
-  }
-
-  const allImages = await db.query.images.findMany({
-    where: eq(images.seriesId, seriesId),
-    orderBy: (i, { asc }) => [asc(i.instanceNumber)],
-  });
-
-  return c.json({ success: true, data: allImages });
 });
 
 // --- Image Pyramid endpoints ---

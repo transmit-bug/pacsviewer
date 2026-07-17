@@ -12,7 +12,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun run src/db/seed.ts"
+    "db:seed": "bun run src/db/seed.ts",
+    "db:seed-hrf": "bun run scripts/seed-hrf.ts",
+    "db:seed-clean": "bun run scripts/clean-synthetic.ts",
+    "db:cleanup": "bun run scripts/cleanup-full.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

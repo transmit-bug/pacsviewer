@@ -37,7 +37,7 @@ interface Report {
   templateId: string;
   title: string;
   content: Record<string, any>;
-  images: string[];
+  images?: string[] | null;
   status: string;
   reviewerId?: string;
   reviewNotes?: string;
@@ -59,6 +59,20 @@ interface ReportTemplate {
     required?: boolean;
     options?: string[];
   }>;
+}
+
+// Helper function to safely get images array
+function getReportImages(images: string[] | null | undefined): string[] {
+  if (Array.isArray(images)) return images;
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export function ReportPage() {
@@ -149,7 +163,7 @@ export function ReportPage() {
       await reportApi.update(report.id, {
         title: report.title,
         content: report.content,
-        images: report.images,
+        images: getReportImages(report.images),
       });
     } catch (error) {
       console.error('Failed to save report:', error);
@@ -214,7 +228,7 @@ export function ReportPage() {
     if (!report || !newImageId.trim()) return;
     setReport({
       ...report,
-      images: [...(report.images || []), newImageId.trim()],
+      images: [...getReportImages(report.images), newImageId.trim()],
     });
     setNewImageId('');
     setAddImageDialogOpen(false);
@@ -222,7 +236,7 @@ export function ReportPage() {
 
   const handleRemoveImage = (index: number) => {
     if (!report) return;
-    const newImages = [...(report.images || [])];
+    const newImages = [...getReportImages(report.images)];
     newImages.splice(index, 1);
     setReport({ ...report, images: newImages });
   };
@@ -493,9 +507,9 @@ export function ReportPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {report.images && report.images.length > 0 ? (
+                    {getReportImages(report.images).length > 0 ? (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {report.images.map((imageId, index) => (
+                        {getReportImages(report.images).map((imageId, index) => (
                           <div
                             key={index}
                             className="relative group rounded-md border overflow-hidden"
@@ -592,11 +606,11 @@ export function ReportPage() {
                   )}
 
                   {/* Images preview */}
-                  {report.images && report.images.length > 0 && (
+                  {getReportImages(report.images).length > 0 && (
                     <div>
                       <h3 className="font-medium text-lg mb-2">{t('report.imageReferences')}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {report.images.map((imageId, index) => (
+                        {getReportImages(report.images).map((imageId, index) => (
                           <img
                             key={index}
                             src={`/api/images/${imageId}/thumbnail`}

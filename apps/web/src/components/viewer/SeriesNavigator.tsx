@@ -45,12 +45,15 @@ export function SeriesNavigator({
         seriesList.map(async (s: any) => {
           try {
             const imagesRes = await imageApi.search({ seriesId: s.id, pageSize: 1 });
+            // API returns { success: true, data: { items: [...], total: number, ... } }
+            const imageData = imagesRes.data;
+            const imageCount = imageData?.total || imageData?.items?.length || 0;
             return {
               id: s.id,
               seriesNumber: s.seriesNumber || 0,
               modality: s.modality || 'N/A',
               description: s.description,
-              imageCount: imagesRes.data?.total || imagesRes.data?.length || 0,
+              imageCount,
             };
           } catch {
             return {
