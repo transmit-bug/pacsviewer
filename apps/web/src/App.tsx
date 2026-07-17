@@ -13,6 +13,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { DevicesPage } from '@/pages/DevicesPage';
 import { ComparisonPage } from '@/pages/ComparisonPage';
 import { StudyCreatePage } from '@/pages/StudyCreatePage';
+import { StudyListPage } from '@/pages/StudyListPage';
 import { UserManagementPage } from '@/pages/UserManagementPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="reports" element={<ReportListPage />} />
         <Route path="reports/new" element={<ReportCreatePage />} />
         <Route path="reports/:studyId" element={<ReportPage />} />
+        <Route path="studies" element={<StudyListPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/users" element={<UserManagementPage />} />

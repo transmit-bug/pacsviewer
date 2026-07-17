@@ -64,6 +64,7 @@ CREATE TABLE studies (
   patient_id TEXT NOT NULL,
   study_date TEXT NOT NULL,
   study_time TEXT,
+  modality TEXT,
   device TEXT,
   physician_id TEXT,
   status TEXT DEFAULT 'pending' NOT NULL,
@@ -228,7 +229,7 @@ CREATE TABLE devices (
   manufacturer TEXT NOT NULL,
   model TEXT NOT NULL,
   serial_number TEXT,
-  adapter_id TEXT NOT NULL,
+  adapter_id TEXT,
   connection_info TEXT,
   status TEXT DEFAULT 'offline' NOT NULL,
   last_sync_at TEXT,
@@ -309,7 +310,13 @@ export async function createTestApp() {
       id: adminRoleId,
       name: '管理员_' + adminRoleId.slice(0, 8), // Make unique
       description: 'System admin',
-      permissions: JSON.stringify({ patients: { create: true, read: true, update: true, delete: true } }),
+      permissions: JSON.stringify({
+        patients: { create: true, read: true, update: true, delete: true },
+        studies: { create: true, read: true, update: true, delete: true },
+        reports: { create: true, read: true, update: true, delete: true, approve: true },
+        users: { create: true, read: true, update: true, delete: true },
+        settings: { read: true, update: true },
+      }),
       isSystem: true,
       createdAt: now,
     });
