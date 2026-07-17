@@ -70,7 +70,19 @@ export function createCrudRouter<T extends SQLiteTable>(
     listWhere,
     beforeCreate,
     beforeUpdate,
+    middleware,
   } = options;
+
+  // Apply middleware to all routes if provided
+  if (middleware) {
+    for (const mw of middleware) {
+      if (typeof mw === 'function') {
+        router.use('*', mw as any);
+      } else if (Array.isArray(mw)) {
+        router.use('*', ...(mw as any[]));
+      }
+    }
+  }
 
   const sortColumn = options.defaultSort?.column ?? 'createdAt';
   const sortDirection = options.defaultSort?.direction ?? 'desc';
