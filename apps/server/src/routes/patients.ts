@@ -2,12 +2,14 @@ import { Hono } from 'hono';
 import { eq, or, like, sql } from 'drizzle-orm';
 import { db, patients, studies, insertPatientSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
+import { requirePermission } from '../middleware/auth';
 
 const patientsRouter = createCrudRouter(patients, {
   name: '患者',
   queryKey: 'patients',
   createSchema: insertPatientSchema,
   with: {},
+  middleware: [[requirePermission('patients', 'create')] as any],
   routes: (router) => {
     // GET /search - Search patients
     router.get('/search', async (c) => {

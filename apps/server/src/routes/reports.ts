@@ -1,12 +1,14 @@
 import { eq, desc } from 'drizzle-orm';
 import { db, reports, reportVersions, insertReportSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
+import { requirePermission } from '../middleware/auth';
 import { v4 as uuid } from 'uuid';
 
 const reportsRouter = createCrudRouter(reports, {
   name: '报告',
   queryKey: 'reports',
   createSchema: insertReportSchema,
+  middleware: [[requirePermission('reports', 'create')] as any],
   listWhere: (c) => {
     const studyId = c.req.query('studyId');
     return studyId ? eq(reports.studyId, studyId) : undefined;

@@ -1,12 +1,14 @@
 import { eq } from 'drizzle-orm';
 import { db, users, insertUserSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
+import { requirePermission } from '../middleware/auth';
 
 const usersRouter = createCrudRouter(users, {
   name: '用户',
   queryKey: 'users',
   createSchema: insertUserSchema,
   with: { role: true },
+  middleware: [[requirePermission('users', 'create')] as any],
   beforeCreate: async (data) => {
     const passwordHash = await Bun.password.hash(data.password);
     const { password, ...rest } = data;

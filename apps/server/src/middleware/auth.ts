@@ -14,6 +14,7 @@ export async function authMiddleware(c: Context, next: Next) {
   if (!user) throw new UnauthorizedError('无效的令牌或会话已过期');
 
   c.set('user', user);
+  c.set('userId', user.id);
   await next();
 }
 

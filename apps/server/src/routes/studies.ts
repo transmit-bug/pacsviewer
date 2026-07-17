@@ -1,12 +1,14 @@
 import { eq, sql } from 'drizzle-orm';
 import { db, studies, series, insertStudySchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
+import { requirePermission } from '../middleware/auth';
 
 const studiesRouter = createCrudRouter(studies, {
   name: '检查',
   queryKey: 'studies',
   createSchema: insertStudySchema,
   with: { patient: true, physician: true, series: true },
+  middleware: [[requirePermission('studies', 'create')] as any],
   listWhere: (c) => {
     const patientId = c.req.query('patientId');
     return patientId ? eq(studies.patientId, patientId) : undefined;
