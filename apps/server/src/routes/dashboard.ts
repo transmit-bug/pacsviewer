@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { patients, studies, reports, images } from '../db/schema';
-import { count, desc, eq, gte, and } from 'drizzle-orm';
+import { patients, studies, series, reports, images } from '../db/schema';
+import { count, desc, eq, gte, or, sql } from 'drizzle-orm';
 
 const dashboard = new Hono();
 
@@ -33,7 +33,7 @@ dashboard.get('/stats', async (c) => {
       .select({ count: count() })
       .from(reports)
       .where(
-        and(
+        or(
           eq(reports.status, 'draft'),
           eq(reports.status, 'pending_review')
         )
@@ -66,7 +66,7 @@ dashboard.get('/recent-studies', async (c) => {
         id: studies.id,
         patientId: studies.patientId,
         studyDate: studies.studyDate,
-        modality: studies.modality,
+        modality: sql<string>`coalesce(${studies.modality}, (select ${series.modality} from ${series} where ${series.studyId} = ${studies.id} limit 1))`,
         status: studies.status,
         description: studies.description,
         createdAt: studies.createdAt,
