@@ -152,7 +152,9 @@ export async function refresh(refreshToken: string): Promise<{ token: string; re
  */
 export function authorize(user: AuthUser, resource: string, action: string): boolean {
   if (!user.role?.permissions) return false;
-  const permissions = JSON.parse(user.role.permissions);
+  const permissions = typeof user.role.permissions === 'string' 
+    ? JSON.parse(user.role.permissions) 
+    : user.role.permissions;
   return !!permissions[resource]?.[action];
 }
 
