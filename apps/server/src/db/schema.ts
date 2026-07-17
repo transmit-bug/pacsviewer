@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
@@ -38,7 +38,10 @@ export const sessions = sqliteTable('sessions', {
   ipAddress: text('ip_address'),
   expiresAt: text('expires_at').notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('sessions_user_id_idx').on(table.userId),
+  index('sessions_expires_at_idx').on(table.expiresAt),
+]);
 
 // Patients table
 export const patients = sqliteTable('patients', {
@@ -58,9 +61,13 @@ export const patients = sqliteTable('patients', {
   customFields: text('custom_fields', { mode: 'json' }),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('patients_name_idx').on(table.name),
+  index('patients_phone_idx').on(table.phone),
+  index('patients_created_at_idx').on(table.createdAt),
+]);
 
-// Patient tags table
+// Patient tags table - used as a tag registry; patients reference tags via their `tags` JSON field
 export const patientTags = sqliteTable('patient_tags', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
@@ -75,7 +82,7 @@ export const studies = sqliteTable('studies', {
   patientId: text('patient_id').references(() => patients.id).notNull(),
   studyDate: text('study_date').notNull(),
   studyTime: text('study_time'),
-  // studyType removed - modality is determined by child Series (DICOM standard)
+  modality: text('modality'),  // Primary modality (denormalized from series for query convenience)
   device: text('device'),
   physicianId: text('physician_id').references(() => users.id),
   status: text('status', { 
@@ -85,7 +92,13 @@ export const studies = sqliteTable('studies', {
   tags: text('tags', { mode: 'json' }).default([]),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('studies_patient_id_idx').on(table.patientId),
+  index('studies_study_date_idx').on(table.studyDate),
+  index('studies_status_idx').on(table.status),
+  index('studies_modality_idx').on(table.modality),
+  index('studies_physician_id_idx').on(table.physicianId),
+]);
 
 // Series table
 export const series = sqliteTable('series', {
@@ -97,7 +110,10 @@ export const series = sqliteTable('series', {
   bodyPart: text('body_part'),
   imageCount: integer('image_count').default(0).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('series_study_id_idx').on(table.studyId),
+  index('series_modality_idx').on(table.modality),
+]);
 
 // Images table
 export const images = sqliteTable('images', {
@@ -116,7 +132,10 @@ export const images = sqliteTable('images', {
   thumbnailPath: text('thumbnail_path'),
   metadata: text('metadata', { mode: 'json' }),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('images_series_id_idx').on(table.seriesId),
+  index('images_file_hash_idx').on(table.fileHash),
+]);
 
 // Annotations table
 export const annotations = sqliteTable('annotations', {
@@ -134,7 +153,11 @@ export const annotations = sqliteTable('annotations', {
   notes: text('notes'),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('annotations_image_id_idx').on(table.imageId),
+  index('annotations_study_id_idx').on(table.studyId),
+  index('annotations_user_id_idx').on(table.userId),
+]);
 
 // Layers table
 export const layers = sqliteTable('layers', {
@@ -147,7 +170,9 @@ export const layers = sqliteTable('layers', {
   locked: integer('locked', { mode: 'boolean' }).default(false).notNull(),
   sortOrder: integer('sort_order').default(0).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('layers_image_id_idx').on(table.imageId),
+]);
 
 // Reports table
 export const reports = sqliteTable('reports', {
@@ -167,7 +192,12 @@ export const reports = sqliteTable('reports', {
   createdBy: text('created_by').references(() => users.id).notNull(),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('reports_study_id_idx').on(table.studyId),
+  index('reports_patient_id_idx').on(table.patientId),
+  index('reports_status_idx').on(table.status),
+  index('reports_created_by_idx').on(table.createdBy),
+]);
 
 // Report templates table
 export const reportTemplates = sqliteTable('report_templates', {
@@ -217,7 +247,7 @@ export const devices = sqliteTable('devices', {
   manufacturer: text('manufacturer').notNull(),
   model: text('model').notNull(),
   serialNumber: text('serial_number'),
-  adapterId: text('adapter_id').references(() => deviceAdapters.id),
+  adapterId: text('adapter_id').references(() => deviceAdapters.id),  // nullable: device can exist without adapter
   connectionInfo: text('connection_info', { mode: 'json' }),
   status: text('status', {
     enum: ['online', 'offline', 'error']
@@ -283,7 +313,11 @@ export const auditLogs = sqliteTable('audit_logs', {
   details: text('details', { mode: 'json' }),
   ipAddress: text('ip_address'),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-});
+}, (table) => [
+  index('audit_logs_user_id_idx').on(table.userId),
+  index('audit_logs_created_at_idx').on(table.createdAt),
+  index('audit_logs_resource_idx').on(table.resource),
+]);
 
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
@@ -462,6 +496,18 @@ export const insertPatientSchema = createInsertSchema(patients);
 export const selectPatientSchema = createSelectSchema(patients);
 export const insertStudySchema = createInsertSchema(studies);
 export const selectStudySchema = createSelectSchema(studies);
+export const insertSeriesSchema = createInsertSchema(series);
+export const selectSeriesSchema = createSelectSchema(series);
+export const insertImageSchema = createInsertSchema(images);
+export const selectImageSchema = createSelectSchema(images);
+export const insertDeviceAdapterSchema = createInsertSchema(deviceAdapters);
+export const selectDeviceAdapterSchema = createSelectSchema(deviceAdapters);
+export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export const selectAuditLogSchema = createSelectSchema(auditLogs);
+export const insertReportTemplateSchema = createInsertSchema(reportTemplates);
+export const selectReportTemplateSchema = createSelectSchema(reportTemplates);
+export const insertPatientTagSchema = createInsertSchema(patientTags);
+export const selectPatientTagSchema = createSelectSchema(patientTags);
 export const insertReportSchema = createInsertSchema(reports);
 export const selectReportSchema = createSelectSchema(reports);
 export const insertReportVersionSchema = createInsertSchema(reportVersions);

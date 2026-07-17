@@ -17,6 +17,9 @@ CREATE TABLE `annotations` (
 	FOREIGN KEY (`layer_id`) REFERENCES `layers`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `annotations_image_id_idx` ON `annotations` (`image_id`);--> statement-breakpoint
+CREATE INDEX `annotations_study_id_idx` ON `annotations` (`study_id`);--> statement-breakpoint
+CREATE INDEX `annotations_user_id_idx` ON `annotations` (`user_id`);--> statement-breakpoint
 CREATE TABLE `audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -29,6 +32,9 @@ CREATE TABLE `audit_logs` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `audit_logs_user_id_idx` ON `audit_logs` (`user_id`);--> statement-breakpoint
+CREATE INDEX `audit_logs_created_at_idx` ON `audit_logs` (`created_at`);--> statement-breakpoint
+CREATE INDEX `audit_logs_resource_idx` ON `audit_logs` (`resource`);--> statement-breakpoint
 CREATE TABLE `comparisons` (
 	`id` text PRIMARY KEY NOT NULL,
 	`patient_id` text,
@@ -66,7 +72,7 @@ CREATE TABLE `devices` (
 	`manufacturer` text NOT NULL,
 	`model` text NOT NULL,
 	`serial_number` text,
-	`adapter_id` text NOT NULL,
+	`adapter_id` text,
 	`connection_info` text,
 	`status` text DEFAULT 'offline' NOT NULL,
 	`last_sync_at` text,
@@ -93,6 +99,8 @@ CREATE TABLE `images` (
 	FOREIGN KEY (`series_id`) REFERENCES `series`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `images_series_id_idx` ON `images` (`series_id`);--> statement-breakpoint
+CREATE INDEX `images_file_hash_idx` ON `images` (`file_hash`);--> statement-breakpoint
 CREATE TABLE `inbound_transfers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`device_id` text,
@@ -121,6 +129,7 @@ CREATE TABLE `layers` (
 	FOREIGN KEY (`image_id`) REFERENCES `images`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `layers_image_id_idx` ON `layers` (`image_id`);--> statement-breakpoint
 CREATE TABLE `patient_tags` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -150,6 +159,9 @@ CREATE TABLE `patients` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `patients_mrn_unique` ON `patients` (`mrn`);--> statement-breakpoint
+CREATE INDEX `patients_name_idx` ON `patients` (`name`);--> statement-breakpoint
+CREATE INDEX `patients_phone_idx` ON `patients` (`phone`);--> statement-breakpoint
+CREATE INDEX `patients_created_at_idx` ON `patients` (`created_at`);--> statement-breakpoint
 CREATE TABLE `report_templates` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -200,6 +212,10 @@ CREATE TABLE `reports` (
 	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `reports_study_id_idx` ON `reports` (`study_id`);--> statement-breakpoint
+CREATE INDEX `reports_patient_id_idx` ON `reports` (`patient_id`);--> statement-breakpoint
+CREATE INDEX `reports_status_idx` ON `reports` (`status`);--> statement-breakpoint
+CREATE INDEX `reports_created_by_idx` ON `reports` (`created_by`);--> statement-breakpoint
 CREATE TABLE `roles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -222,6 +238,8 @@ CREATE TABLE `series` (
 	FOREIGN KEY (`study_id`) REFERENCES `studies`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `series_study_id_idx` ON `series` (`study_id`);--> statement-breakpoint
+CREATE INDEX `series_modality_idx` ON `series` (`modality`);--> statement-breakpoint
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -236,11 +254,14 @@ CREATE TABLE `sessions` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `sessions_token_unique` ON `sessions` (`token`);--> statement-breakpoint
 CREATE UNIQUE INDEX `sessions_refresh_token_unique` ON `sessions` (`refresh_token`);--> statement-breakpoint
+CREATE INDEX `sessions_user_id_idx` ON `sessions` (`user_id`);--> statement-breakpoint
+CREATE INDEX `sessions_expires_at_idx` ON `sessions` (`expires_at`);--> statement-breakpoint
 CREATE TABLE `studies` (
 	`id` text PRIMARY KEY NOT NULL,
 	`patient_id` text NOT NULL,
 	`study_date` text NOT NULL,
 	`study_time` text,
+	`modality` text,
 	`device` text,
 	`physician_id` text,
 	`status` text DEFAULT 'pending' NOT NULL,
@@ -252,6 +273,11 @@ CREATE TABLE `studies` (
 	FOREIGN KEY (`physician_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `studies_patient_id_idx` ON `studies` (`patient_id`);--> statement-breakpoint
+CREATE INDEX `studies_study_date_idx` ON `studies` (`study_date`);--> statement-breakpoint
+CREATE INDEX `studies_status_idx` ON `studies` (`status`);--> statement-breakpoint
+CREATE INDEX `studies_modality_idx` ON `studies` (`modality`);--> statement-breakpoint
+CREATE INDEX `studies_physician_id_idx` ON `studies` (`physician_id`);--> statement-breakpoint
 CREATE TABLE `system_settings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`category` text NOT NULL,

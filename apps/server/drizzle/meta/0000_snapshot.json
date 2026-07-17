@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9d5e4da9-c479-45cb-a5df-43df2e8edf03",
+  "id": "d190520f-4be0-4cf6-94ad-142c913c67da",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "annotations": {
@@ -94,7 +94,29 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "annotations_image_id_idx": {
+          "name": "annotations_image_id_idx",
+          "columns": [
+            "image_id"
+          ],
+          "isUnique": false
+        },
+        "annotations_study_id_idx": {
+          "name": "annotations_study_id_idx",
+          "columns": [
+            "study_id"
+          ],
+          "isUnique": false
+        },
+        "annotations_user_id_idx": {
+          "name": "annotations_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "annotations_image_id_images_id_fk": {
           "name": "annotations_image_id_images_id_fk",
@@ -214,7 +236,29 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "audit_logs_user_id_idx": {
+          "name": "audit_logs_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "audit_logs_created_at_idx": {
+          "name": "audit_logs_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "audit_logs_resource_idx": {
+          "name": "audit_logs_resource_idx",
+          "columns": [
+            "resource"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "audit_logs_user_id_users_id_fk": {
           "name": "audit_logs_user_id_users_id_fk",
@@ -493,7 +537,7 @@
           "name": "adapter_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "connection_info": {
@@ -660,7 +704,22 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "images_series_id_idx": {
+          "name": "images_series_id_idx",
+          "columns": [
+            "series_id"
+          ],
+          "isUnique": false
+        },
+        "images_file_hash_idx": {
+          "name": "images_file_hash_idx",
+          "columns": [
+            "file_hash"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "images_series_id_series_id_fk": {
           "name": "images_series_id_series_id_fk",
@@ -863,7 +922,15 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "layers_image_id_idx": {
+          "name": "layers_image_id_idx",
+          "columns": [
+            "image_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "layers_image_id_images_id_fk": {
           "name": "layers_image_id_images_id_fk",
@@ -1063,6 +1130,27 @@
             "mrn"
           ],
           "isUnique": true
+        },
+        "patients_name_idx": {
+          "name": "patients_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "patients_phone_idx": {
+          "name": "patients_phone_idx",
+          "columns": [
+            "phone"
+          ],
+          "isUnique": false
+        },
+        "patients_created_at_idx": {
+          "name": "patients_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -1375,7 +1463,36 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "reports_study_id_idx": {
+          "name": "reports_study_id_idx",
+          "columns": [
+            "study_id"
+          ],
+          "isUnique": false
+        },
+        "reports_patient_id_idx": {
+          "name": "reports_patient_id_idx",
+          "columns": [
+            "patient_id"
+          ],
+          "isUnique": false
+        },
+        "reports_status_idx": {
+          "name": "reports_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "reports_created_by_idx": {
+          "name": "reports_created_by_idx",
+          "columns": [
+            "created_by"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "reports_study_id_studies_id_fk": {
           "name": "reports_study_id_studies_id_fk",
@@ -1572,7 +1689,22 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "series_study_id_idx": {
+          "name": "series_study_id_idx",
+          "columns": [
+            "study_id"
+          ],
+          "isUnique": false
+        },
+        "series_modality_idx": {
+          "name": "series_modality_idx",
+          "columns": [
+            "modality"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "series_study_id_studies_id_fk": {
           "name": "series_study_id_studies_id_fk",
@@ -1667,6 +1799,20 @@
             "refresh_token"
           ],
           "isUnique": true
+        },
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "sessions_expires_at_idx": {
+          "name": "sessions_expires_at_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -1714,6 +1860,13 @@
         },
         "study_time": {
           "name": "study_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "modality": {
+          "name": "modality",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -1773,7 +1926,43 @@
           "default": "'CURRENT_TIMESTAMP'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "studies_patient_id_idx": {
+          "name": "studies_patient_id_idx",
+          "columns": [
+            "patient_id"
+          ],
+          "isUnique": false
+        },
+        "studies_study_date_idx": {
+          "name": "studies_study_date_idx",
+          "columns": [
+            "study_date"
+          ],
+          "isUnique": false
+        },
+        "studies_status_idx": {
+          "name": "studies_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "studies_modality_idx": {
+          "name": "studies_modality_idx",
+          "columns": [
+            "modality"
+          ],
+          "isUnique": false
+        },
+        "studies_physician_id_idx": {
+          "name": "studies_physician_id_idx",
+          "columns": [
+            "physician_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "studies_patient_id_patients_id_fk": {
           "name": "studies_patient_id_patients_id_fk",
