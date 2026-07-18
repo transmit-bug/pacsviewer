@@ -2,6 +2,8 @@ import { eq, desc } from 'drizzle-orm';
 import { db, reports, reportVersions, insertReportSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
 import { requirePermission } from '../middleware/auth';
+import { log } from '../lib/audit';
+import { AuditEvents } from '../lib/audit-events';
 import { v4 as uuid } from 'uuid';
 
 const reportsRouter = createCrudRouter(reports, {
@@ -61,6 +63,28 @@ const reportsRouter = createCrudRouter(reports, {
       await db.update(reports)
         .set(updateData)
         .where(eq(reports.id, id));
+
+      // Audit log for report status change
+      const statusEventMap: Record<string, string> = {
+        'draft': AuditEvents.REPORT_EDIT,
+        'pending_review': AuditEvents.REPORT_SUBMIT,
+        'reviewed': AuditEvents.REPORT_APPROVE,
+        'published': AuditEvents.REPORT_PUBLISH,
+      };
+      const auditEvent = statusEventMap[status as string] || AuditEvents.REPORT_EDIT;
+
+      log({
+        userId: userId || 'system',
+        action: auditEvent,
+        resource: 'report',
+        resourceId: id,
+        details: {
+          oldStatus: report?.status,
+          newStatus: status,
+          reviewNotes,
+        },
+        ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+      });
 
       return c.json({ success: true, message: '状态已更新' });
     });

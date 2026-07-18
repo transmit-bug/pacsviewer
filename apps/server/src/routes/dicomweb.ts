@@ -20,9 +20,12 @@
 
 import { Hono } from 'hono';
 import { eq, like, and, gte, lte, isNotNull } from 'drizzle-orm';
+import multipart from 'parse-multipart-data';
 import { db, studies, series, images, patients, dicomFrames } from '../db';
 import { parseDicomFile, isDicomFile, storeDicomFile, readDicomFile } from '../services/dicom';
 import { NotFoundError, ValidationError } from '../lib/errors';
+import { log } from '../lib/audit';
+import { AuditEvents } from '../lib/audit-events';
 
 const dicomwebRouter = new Hono();
 
@@ -284,6 +287,24 @@ dicomwebRouter.post('/studies', async (c) => {
         sopInstanceUid: storeResult.sopInstanceUid,
         status: storeResult.isNew ? 'success' : 'already exists',
       });
+
+      // Audit log for each successfully stored instance
+      if (storeResult.isNew) {
+        const userId = (c as any).get('userId') || 'system';
+        log({
+          userId,
+          action: AuditEvents.DICOM_STOW_RECEIVE,
+          resource: 'image',
+          resourceId: storeResult.imageId,
+          details: {
+            sopInstanceUid: storeResult.sopInstanceUid,
+            studyId: storeResult.studyId,
+            seriesId: storeResult.seriesId,
+            source: 'STOW-RS',
+          },
+          ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+        });
+      }
     } catch (err: any) {
       results.push({
         sopInstanceUid: 'unknown',
@@ -310,34 +331,66 @@ dicomwebRouter.post('/studies', async (c) => {
 // ─── Helper: Extract DICOM from multipart body ─────────────────────────────
 
 function extractDicomFromMultipart(body: Buffer, contentType: string): Buffer[] {
-  // Extract boundary from Content-Type header
-  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+  try {
+    // Use standard multipart parser for robustness
+    const boundary = multipart.getBoundary(contentType);
+    const parts = multipart.parse(body, boundary);
+
+    // Filter for DICOM content types
+    return parts
+      .filter(part => {
+        const partType = part.type?.toLowerCase() || '';
+        return (
+          partType.includes('application/dicom') ||
+          partType.includes('application/octet-stream') ||
+          // Some DICOM devices may use these content types
+          partType.includes('application/dicom+json') ||
+          // Fallback: if type is missing, check if data starts with DICOM preamble
+          (!partType && part.data.length > 132 && part.data.subarray(128, 132).toString() === 'DICM')
+        );
+      })
+      .map(part => Buffer.from(part.data));
+  } catch (err) {
+    console.error('[STOW-RS] Multipart parsing error:', err);
+    // Fallback to simple boundary-based parsing for edge cases
+    return extractDicomFromMultipartFallback(body, contentType);
+  }
+}
+
+/**
+ * Fallback multipart parser for edge cases where the standard library fails.
+ * Handles some non-standard DICOM implementations.
+ */
+function extractDicomFromMultipartFallback(body: Buffer, contentType: string): Buffer[] {
+  const boundaryMatch = contentType.match(/boundary=([^\s;"']+)/);
   if (!boundaryMatch) return [];
 
-  const boundary = boundaryMatch[1];
+  const boundary = boundaryMatch[1].replace(/^["']|["']$/g, '');
   const boundaryBuf = Buffer.from(`--${boundary}`);
 
   const results: Buffer[] = [];
   let pos = 0;
 
   while (pos < body.length) {
-    // Find boundary
     const boundaryPos = body.indexOf(boundaryBuf, pos);
     if (boundaryPos === -1) break;
 
-    // Find end of headers (double CRLF)
     const headersEnd = body.indexOf('\r\n\r\n', boundaryPos);
     if (headersEnd === -1) break;
 
     const headers = body.subarray(boundaryPos + boundaryBuf.length, headersEnd).toString();
 
-    // Check if this part contains DICOM data
-    if (headers.includes('application/dicom')) {
-      // Find next boundary
+    // Check for DICOM content type or missing type (assume DICOM)
+    const isDicom =
+      headers.includes('application/dicom') ||
+      headers.includes('application/octet-stream') ||
+      !headers.includes('Content-Type:');
+
+    if (isDicom) {
       const nextBoundary = body.indexOf(boundaryBuf, headersEnd + 4);
       if (nextBoundary !== -1) {
-        // Remove trailing CRLF before boundary
         let dataEnd = nextBoundary;
+        // Remove trailing CRLF before boundary
         if (body[dataEnd - 2] === 0x0d && body[dataEnd - 1] === 0x0a) {
           dataEnd -= 2;
         }

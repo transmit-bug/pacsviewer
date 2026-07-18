@@ -7,3 +7,6 @@ export type { DicomParseResult, DicomMetadata, PatientMeta, StudyMeta, SeriesMet
 
 export { storeDicomFile, getDicomFilePath, readDicomFile } from './storage';
 export type { StoreResult } from './storage';
+
+export { generateDicomThumbnail, getThumbnailPath } from './thumbnail';
+export type { ThumbnailResult } from './thumbnail';

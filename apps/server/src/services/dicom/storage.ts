@@ -16,8 +16,22 @@ import {
 } from '../../db/schema';
 import type { DicomMetadata, DicomParseResult } from './parser';
 import { parseDicomFile, isDicomFile } from './parser';
+import { generateDicomThumbnail } from './thumbnail';
 
 const DICOM_STORE_DIR = join(process.cwd(), 'data', 'dicom');
+
+/**
+ * Sanitize DICOM UID for safe use in file paths.
+ * While DICOM UIDs should only contain digits and dots,
+ * defensive sanitization prevents issues with malformed data.
+ */
+function sanitizeUid(uid: string): string {
+  if (!uid) return 'unknown';
+  // Replace any character that's not alphanumeric, dot, dash, or underscore
+  const sanitized = uid.replace(/[^a-zA-Z0-9._-]/g, '_');
+  // Truncate to reasonable length (filesystem limits)
+  return sanitized.substring(0, 128);
+}
 
 export interface StoreResult {
   imageId: string;
@@ -63,7 +77,19 @@ export async function storeDicomFile(parseResult: DicomParseResult): Promise<Sto
   // 5. Store file to disk
   const filePath = await storeFile(study.studyInstanceUid, seriesMeta.seriesInstanceUid, image.sopInstanceUid, buffer);
 
-  // 6. Create Image record
+  // 6. Generate thumbnail (fire-and-forget, don't block storage)
+  let thumbnailPath: string | null = null;
+  try {
+    const thumbResult = await generateDicomThumbnail(
+      buffer,
+      join(process.cwd(), 'data', 'thumbnails', `${sanitizeUid(image.sopInstanceUid)}.jpg`)
+    );
+    thumbnailPath = thumbResult ? `thumbnails/${sanitizeUid(image.sopInstanceUid)}.jpg` : null;
+  } catch (err) {
+    console.warn('[DICOM Storage] Thumbnail generation failed:', err);
+  }
+
+  // 7. Create Image record
   const imageId = uuid();
   await db.insert(images).values({
     id: imageId,
@@ -86,15 +112,16 @@ export async function storeDicomFile(parseResult: DicomParseResult): Promise<Sto
     rescaleIntercept: image.rescaleIntercept,
     photometricInterpretation: image.photometricInterpretation,
     numberOfFrames: image.numberOfFrames,
+    thumbnailPath,
     metadata: parseResult.dataset,
   });
 
-  // 7. Update series image count
+  // 8. Update series image count
   await db.update(series)
     .set({ imageCount: await getImageCount(seriesId) })
     .where(eq(series.id, seriesId));
 
-  // 8. Store per-frame metadata for multi-frame DICOM
+  // 9. Store per-frame metadata for multi-frame DICOM
   if (parseResult.frames.length > 0) {
     const frameRows = parseResult.frames.map((frame) => ({
       id: uuid(),
@@ -208,15 +235,19 @@ async function storeFile(
   sopUid: string,
   buffer: Buffer,
 ): Promise<string> {
-  const dir = join(DICOM_STORE_DIR, studyUid, seriesUid);
+  const safeStudyUid = sanitizeUid(studyUid);
+  const safeSeriesUid = sanitizeUid(seriesUid);
+  const safeSopUid = sanitizeUid(sopUid);
+
+  const dir = join(DICOM_STORE_DIR, safeStudyUid, safeSeriesUid);
   await mkdir(dir, { recursive: true });
 
-  const filename = `${sopUid}.dcm`;
+  const filename = `${safeSopUid}.dcm`;
   const filePath = join(dir, filename);
   await writeFile(filePath, buffer);
 
   // Return relative path from data/dicom/
-  return join(studyUid, seriesUid, filename);
+  return join(safeStudyUid, safeSeriesUid, filename);
 }
 
 /**

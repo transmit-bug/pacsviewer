@@ -534,6 +534,74 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+// Worklist Items table (DICOM Modality Worklist)
+export const worklistItems = sqliteTable('worklist_items', {
+  id: text('id').primaryKey(),
+  patientId: text('patient_id').references(() => patients.id),
+  patientName: text('patient_name').notNull(),
+  patientBirthDate: text('patient_birth_date'),
+  patientSex: text('patient_sex'),
+  accessionNumber: text('accession_number').notNull(),
+  scheduledProcedureStepId: text('scheduled_procedure_step_id'),
+  modality: text('modality').notNull(),
+  scheduledStationName: text('scheduled_station_name'),
+  scheduledProcedureStepStartDate: text('scheduled_procedure_step_start_date').notNull(),
+  scheduledProcedureStepStartTime: text('scheduled_procedure_step_start_time'),
+  requestedProcedureDescription: text('requested_procedure_description'),
+  referringPhysicianName: text('referring_physician_name'),
+  status: text('status', { enum: ['scheduled', 'in_progress', 'completed', 'cancelled'] }).default('scheduled').notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  index('worklist_date_idx').on(table.scheduledProcedureStepStartDate),
+  index('worklist_modality_idx').on(table.modality),
+  index('worklist_status_idx').on(table.status),
+  index('worklist_accession_idx').on(table.accessionNumber),
+]);
+
+export const worklistItemsRelations = relations(worklistItems, ({ one }) => ({
+  patient: one(patients, {
+    fields: [worklistItems.patientId],
+    references: [patients.id],
+  }),
+}));
+
+// Follow-up Records table
+export const followUpRecords = sqliteTable('follow_up_records', {
+  id: text('id').primaryKey(),
+  patientId: text('patient_id').references(() => patients.id).notNull(),
+  baselineStudyId: text('baseline_study_id').references(() => studies.id).notNull(),
+  comparisonStudyId: text('comparison_study_id').references(() => studies.id).notNull(),
+  measurements: text('measurements', { mode: 'json' }).notNull().default([]),
+  notes: text('notes'),
+  createdBy: text('created_by').references(() => users.id).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  index('followup_patient_idx').on(table.patientId),
+  index('followup_baseline_idx').on(table.baselineStudyId),
+  index('followup_comparison_idx').on(table.comparisonStudyId),
+]);
+
+export const followUpRecordsRelations = relations(followUpRecords, ({ one }) => ({
+  patient: one(patients, {
+    fields: [followUpRecords.patientId],
+    references: [patients.id],
+  }),
+  baselineStudy: one(studies, {
+    fields: [followUpRecords.baselineStudyId],
+    references: [studies.id],
+  }),
+  comparisonStudy: one(studies, {
+    fields: [followUpRecords.comparisonStudyId],
+    references: [studies.id],
+  }),
+  creator: one(users, {
+    fields: [followUpRecords.createdBy],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
@@ -571,3 +639,7 @@ export const insertLayerSchema = createInsertSchema(layers);
 export const selectLayerSchema = createSelectSchema(layers);
 export const insertSystemSettingsSchema = createInsertSchema(systemSettings);
 export const selectSystemSettingsSchema = createSelectSchema(systemSettings);
+export const insertWorklistItemSchema = createInsertSchema(worklistItems).omit({ id: true });
+export const selectWorklistItemSchema = createSelectSchema(worklistItems);
+export const insertFollowUpRecordSchema = createInsertSchema(followUpRecords).omit({ id: true });
+export const selectFollowUpRecordSchema = createSelectSchema(followUpRecords);

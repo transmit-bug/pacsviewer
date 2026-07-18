@@ -17,6 +17,7 @@ export interface AuditEntry {
   resourceId?: string;
   details?: Record<string, unknown>;
   ipAddress?: string;
+  userAgent?: string;
 }
 
 export interface AuditQueryOptions {
@@ -50,6 +51,36 @@ export function log(entry: AuditEntry): void {
     console.error('[Audit] Failed to write audit log:', err);
   });
 }
+
+/**
+ * Convenience functions for common audit events.
+ */
+export const audit = {
+  /** Log a read/view action */
+  view(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+    log({ userId, action: 'view', resource, resourceId, details });
+  },
+
+  /** Log a create action */
+  create(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+    log({ userId, action: 'create', resource, resourceId, details });
+  },
+
+  /** Log an update action */
+  update(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+    log({ userId, action: 'update', resource, resourceId, details });
+  },
+
+  /** Log a delete action */
+  delete(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+    log({ userId, action: 'delete', resource, resourceId, details });
+  },
+
+  /** Log an export/download action */
+  export(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+    log({ userId, action: 'export', resource, resourceId, details });
+  },
+};
 
 /**
  * Query audit logs with filtering and pagination.

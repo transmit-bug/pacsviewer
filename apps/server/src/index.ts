@@ -22,8 +22,11 @@ import dicomRouter from './routes/dicom';
 import dicomwebRouter from './routes/dicomweb';
 import settingsRouter from './routes/settings';
 import dashboardRouter from './routes/dashboard';
+import worklistRouter from './routes/worklist';
+import followUpRouter from './routes/follow-up';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
+import { startDicomServer } from './dicom/server';
 
 const app = new Hono();
 
@@ -74,6 +77,14 @@ app.route('/api/dicom', dicomRouter);
 app.route('/dicomweb', dicomwebRouter);
 app.route('/api/settings', settingsRouter);
 app.route('/api/dashboard', dashboardRouter);
+app.route('/api/worklist', worklistRouter);
+app.route('/api/follow-up', followUpRouter);
+
+// Start DICOM SCP server (separate TCP port)
+const dicomPort = Number(process.env.DICOM_PORT) || 11112;
+startDicomServer({ port: dicomPort }).catch(err => {
+  console.error('[DICOM] Failed to start DICOM server:', err);
+});
 
 export default {
   port: Number(process.env.PORT) || 3000,

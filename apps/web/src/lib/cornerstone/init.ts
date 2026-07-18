@@ -30,6 +30,8 @@ import {
   CrosshairsTool,
 } from '@cornerstonejs/tools';
 import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
+import cornerstoneCharls from '@cornerstonejs/codec-charls';
+import cornerstoneOpenjpeg from '@cornerstonejs/codec-openjpeg';
 import { useAuthStore } from '@/stores/authStore';
 
 let initialized = false;
@@ -43,6 +45,16 @@ export const VIEWPORT_ID_PREFIX = 'viewport-';
  */
 export async function initCornerstone(): Promise<void> {
   if (initialized) return;
+
+  // Initialize DICOM codecs first (must happen before core init)
+  // These handle JPEG-LS (lossless) and JPEG2000 compressed DICOM images
+  try {
+    cornerstoneCharls.init?.();
+    cornerstoneOpenjpeg.init?.();
+    console.log('[Cornerstone] DICOM codecs initialized (JPEG-LS, JPEG2000)');
+  } catch (err) {
+    console.warn('[Cornerstone] Some codecs failed to initialize:', err);
+  }
 
   // Initialize core and tools
   await csInit();
