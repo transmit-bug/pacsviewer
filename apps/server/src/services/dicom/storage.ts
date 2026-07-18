@@ -12,7 +12,7 @@ import { v4 as uuid } from 'uuid';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db';
 import {
-  patients, studies, series, images,
+  patients, studies, series, images, dicomFrames,
 } from '../../db/schema';
 import type { DicomMetadata, DicomParseResult } from './parser';
 import { parseDicomFile, isDicomFile } from './parser';
@@ -93,6 +93,24 @@ export async function storeDicomFile(parseResult: DicomParseResult): Promise<Sto
   await db.update(series)
     .set({ imageCount: await getImageCount(seriesId) })
     .where(eq(series.id, seriesId));
+
+  // 8. Store per-frame metadata for multi-frame DICOM
+  if (parseResult.frames.length > 0) {
+    const frameRows = parseResult.frames.map((frame) => ({
+      id: uuid(),
+      imageId,
+      frameIndex: frame.frameIndex,
+      frameType: frame.frameType || null,
+      instanceNumber: frame.instanceNumber ?? null,
+      temporalPositionIdentifier: frame.temporalPositionIdentifier ?? null,
+      frameAcquisitionDateTime: frame.frameAcquisitionDateTime || null,
+      sliceLocation: frame.sliceLocation ?? null,
+      imagePositionPatient: frame.imagePositionPatient || null,
+      imageOrientationPatient: frame.imageOrientationPatient || null,
+      metadata: frame.metadata || null,
+    }));
+    await db.insert(dicomFrames).values(frameRows);
+  }
 
   return {
     imageId,
@@ -236,7 +254,9 @@ function parseGender(sex: string): 'male' | 'female' | 'other' {
 }
 
 function formatDate(dicomDate: string): string | null {
-  if (!dicomDate || dicomDate.length < 8) return null;
-  // DICOM date format: YYYYMMDD
-  return `${dicomDate.substring(0, 4)}-${dicomDate.substring(4, 6)}-${dicomDate.substring(6, 8)}`;
+  if (!dicomDate) return null;
+  // DICOM date format: YYYYMMDD (but may have dots or dashes)
+  const cleaned = dicomDate.replace(/[^0-9]/g, '');
+  if (cleaned.length < 8) return null;
+  return `${cleaned.substring(0, 4)}-${cleaned.substring(4, 6)}-${cleaned.substring(6, 8)}`;
 }

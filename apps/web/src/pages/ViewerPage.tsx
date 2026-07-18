@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageViewer } from '@/components/viewer/ImageViewer';
 import { Toolbar } from '@/components/viewer/Toolbar';
+import { AnnotationToolbar } from '@/components/viewer/AnnotationToolbar';
+import { CinePlayer } from '@/components/viewer/CinePlayer';
 import { ImageList } from '@/components/viewer/ImageList';
 import { WindowLevel } from '@/components/viewer/WindowLevel';
 import { DicomTagViewer } from '@/components/viewer/DicomTagViewer';
@@ -197,12 +199,24 @@ export function ViewerPage() {
           </CardContent>
         </Card>
 
-        {/* Image canvas */}
-        <Card className="flex-1">
-          <CardContent className="p-0 h-full">
-            <ImageViewer imageId={currentImageId || ''} />
-          </CardContent>
-        </Card>
+        {/* Annotation toolbar - side panel */}
+        <div className="flex gap-4 flex-1">
+          <Card className="w-16 shrink-0">
+            <CardContent className="p-1">
+              <AnnotationToolbar />
+            </CardContent>
+          </Card>
+
+          {/* Image canvas */}
+          <Card className="flex-1">
+            <CardContent className="p-0 h-full">
+              <ImageViewer imageId={currentImageId || ''} imageFormat={images.find(i => i.id === currentImageId)?.format} />
+            </CardContent>
+          </Card>
+
+          {/* Cine Player (multi-frame navigation) */}
+          <CinePlayer className="mt-2" />
+        </div>
 
         {/* Image info */}
         <Card className="mt-4">

@@ -164,4 +164,110 @@ annotationsRouter.delete('/:id', async (c) => {
   return c.json({ success: true, message: '标注已删除' });
 });
 
+// POST /sync — Batch sync annotations for an image
+// Replaces all annotations for the given imageId with the provided set
+annotationsRouter.post('/sync', async (c) => {
+  const body = await c.req.json();
+  const { imageId, annotations: newAnnotations } = body;
+
+  if (!imageId) {
+    return c.json({ success: false, message: '必须指定 imageId' }, 400);
+  }
+
+  if (!Array.isArray(newAnnotations)) {
+    return c.json({ success: false, message: 'annotations 必须是数组' }, 400);
+  }
+
+  const userId = (c as any).get('userId') || body.userId;
+  if (!userId) {
+    return c.json({ success: false, message: '未认证' }, 401);
+  }
+
+  const now = new Date().toISOString();
+
+  // Delete existing annotations for this image
+  await db.delete(annotations).where(eq(annotations.imageId, imageId));
+
+  // Insert new annotations
+  if (newAnnotations.length > 0) {
+    const rows = newAnnotations.map((ann: any) => ({
+      id: ann.id || crypto.randomUUID(),
+      imageId,
+      studyId: ann.studyId || null,
+      userId,
+      layerId: ann.layerId || null,
+      type: mapToolNameToType(ann.toolName),
+      geometry: JSON.stringify({
+        toolName: ann.toolName,
+        handles: ann.data?.handles || [],
+        cachedStats: ann.data?.cachedStats,
+      }),
+      style: JSON.stringify(ann.style || { color: '#ffff00', lineWidth: 2 }),
+      label: ann.data?.label || ann.data?.text || null,
+      notes: null,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    await db.insert(annotations).values(rows);
+  }
+
+  return c.json({
+    success: true,
+    data: { imageId, count: newAnnotations.length },
+  });
+});
+
+// GET /image/:imageId — Get annotations for an image (with Cornerstone format)
+annotationsRouter.get('/image/:imageId', async (c) => {
+  const imageId = c.req.param('imageId');
+
+  const results = await db.query.annotations.findMany({
+    where: eq(annotations.imageId, imageId),
+    with: { user: true },
+  });
+
+  // Convert to SerializedAnnotation format
+  const serialized = results.map((r) => {
+    const geometry = typeof r.geometry === 'string' ? JSON.parse(r.geometry) : r.geometry;
+    const style = typeof r.style === 'string' ? JSON.parse(r.style) : r.style;
+
+    return {
+      id: r.id,
+      toolName: geometry.toolName || r.type,
+      data: {
+        handles: geometry.handles || [],
+        cachedStats: geometry.cachedStats,
+        label: r.label,
+        text: r.label,
+      },
+      style,
+    };
+  });
+
+  return c.json({ success: true, data: serialized });
+});
+
+/**
+ * Map Cornerstone tool names to our annotation type enum.
+ */
+function mapToolNameToType(toolName: string): 'measurement' | 'arrow' | 'text' | 'freehand' | 'roi' | 'highlight' {
+  switch (toolName) {
+    case 'Length':
+    case 'Angle':
+    case 'Probe':
+      return 'measurement';
+    case 'ArrowAnnotate':
+      return 'arrow';
+    case 'EllipticalROI':
+    case 'RectangleROI':
+    case 'FreehandROI':
+    case 'SplineROI':
+    case 'PlanarFreehandROI':
+      return 'roi';
+    default:
+      return 'highlight';
+  }
+}
+
 export default annotationsRouter;

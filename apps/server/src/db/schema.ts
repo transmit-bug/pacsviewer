@@ -152,6 +152,28 @@ export const images = sqliteTable('images', {
   index('images_sop_instance_uid_idx').on(table.sopInstanceUid),
 ]);
 
+// DICOM Frames table — stores per-frame metadata for multi-frame DICOM images
+export const dicomFrames = sqliteTable('dicom_frames', {
+  id: text('id').primaryKey(),
+  imageId: text('image_id').references(() => images.id).notNull(),
+  frameIndex: integer('frame_index').notNull(),             // 0-based frame index
+  frameType: text('frame_type'),                             // e.g. 'ORIGINAL\\PRIMARY'
+  instanceNumber: integer('instance_number'),
+  // Temporal info (for FFA/ICGA time series)
+  temporalPositionIdentifier: integer('temporal_position'),
+  frameAcquisitionDateTime: text('frame_acquisition_datetime'),
+  // Spatial info (for OCT B-scan volume)
+  sliceLocation: real('slice_location'),                     // mm from reference
+  imagePositionPatient: text('image_position_patient', { mode: 'json' }),   // [x, y, z]
+  imageOrientationPatient: text('image_orientation_patient', { mode: 'json' }), // [row cosines, col cosines]
+  // Per-frame metadata from PerFrameFunctionalGroupsSequence
+  metadata: text('metadata', { mode: 'json' }),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  uniqueIndex('dicom_frames_image_idx').on(table.imageId, table.frameIndex),
+  index('dicom_frames_image_id_idx').on(table.imageId),
+]);
+
 // Annotations table
 export const annotations = sqliteTable('annotations', {
   id: text('id').primaryKey(),
@@ -384,6 +406,14 @@ export const imagesRelations = relations(images, ({ one, many }) => ({
   }),
   layers: many(layers),
   annotations: many(annotations),
+  frames: many(dicomFrames),
+}));
+
+export const dicomFramesRelations = relations(dicomFrames, ({ one }) => ({
+  image: one(images, {
+    fields: [dicomFrames.imageId],
+    references: [images.id],
+  }),
 }));
 
 export const layersRelations = relations(layers, ({ one, many }) => ({
@@ -535,6 +565,8 @@ export const insertInboundTransferSchema = createInsertSchema(inboundTransfers);
 export const selectInboundTransferSchema = createSelectSchema(inboundTransfers);
 export const insertAnnotationSchema = createInsertSchema(annotations);
 export const selectAnnotationSchema = createSelectSchema(annotations);
+export const insertDicomFrameSchema = createInsertSchema(dicomFrames).omit({ id: true });
+export const selectDicomFrameSchema = createSelectSchema(dicomFrames);
 export const insertLayerSchema = createInsertSchema(layers);
 export const selectLayerSchema = createSelectSchema(layers);
 export const insertSystemSettingsSchema = createInsertSchema(systemSettings);

@@ -19,8 +19,8 @@
  */
 
 import { Hono } from 'hono';
-import { eq, like, and, gte, lte } from 'drizzle-orm';
-import { db, studies, series, images, patients } from '../db';
+import { eq, like, and, gte, lte, isNotNull } from 'drizzle-orm';
+import { db, studies, series, images, patients, dicomFrames } from '../db';
 import { parseDicomFile, isDicomFile, storeDicomFile, readDicomFile } from '../services/dicom';
 import { NotFoundError, ValidationError } from '../lib/errors';
 
@@ -57,6 +57,11 @@ dicomwebRouter.get('/studies', async (c) => {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+  // Only return studies with DICOM UIDs (excludes seed data)
+  const finalWhere = where 
+    ? and(where, isNotNull(studies.studyInstanceUid))
+    : isNotNull(studies.studyInstanceUid);
+
   const results = await db
     .select({
       studyInstanceUid: studies.studyInstanceUid,
@@ -70,7 +75,7 @@ dicomwebRouter.get('/studies', async (c) => {
     })
     .from(studies)
     .leftJoin(patients, eq(studies.patientId, patients.id))
-    .where(where)
+    .where(finalWhere)
     .limit(limit)
     .offset(offset);
 
@@ -188,6 +193,51 @@ dicomwebRouter.get('/studies/:studyUid/series/:seriesUid/instances/:instanceUid/
   const metadata = image.metadata as Record<string, any> || {};
 
   return c.json([metadata]);
+});
+
+// ─── WADO-RS: Retrieve Frames ────────────────────────────────────────────────
+dicomwebRouter.get('/studies/:studyUid/series/:seriesUid/instances/:instanceUid/frames/:frameIndex', async (c) => {
+  const instanceUid = c.req.param('instanceUid');
+  const frameIndex = Number(c.req.param('frameIndex'));
+
+  const image = await db.query.images.findFirst({
+    where: eq(images.sopInstanceUid, instanceUid),
+  });
+  if (!image) throw new NotFoundError('Instance');
+
+  // Return frame-level metadata
+  const frame = await db.query.dicomFrames.findFirst({
+    where: and(
+      eq(dicomFrames.imageId, image.id),
+      eq(dicomFrames.frameIndex, frameIndex),
+    ),
+  });
+
+  if (!frame) throw new NotFoundError('Frame');
+
+  return c.json(frame);
+});
+
+// ─── API: Get all frames for an image ────────────────────────────────────────
+dicomwebRouter.get('/images/:imageId/frames', async (c) => {
+  const imageId = c.req.param('imageId');
+
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, imageId),
+    columns: { id: true, numberOfFrames: true },
+  });
+  if (!image) throw new NotFoundError('Image');
+
+  const frames = await db.query.dicomFrames.findMany({
+    where: eq(dicomFrames.imageId, imageId),
+    orderBy: (f, { asc }) => [asc(f.frameIndex)],
+  });
+
+  return c.json({
+    imageId,
+    numberOfFrames: image.numberOfFrames,
+    frames,
+  });
 });
 
 // ─── STOW-RS: Store DICOM Instances ────────────────────────────────────────

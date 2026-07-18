@@ -20,6 +20,11 @@ import {
   FlipHorizontal,
   FlipVertical,
   Maximize,
+  ArrowUpRight,
+  Circle,
+  Square,
+  Pencil,
+  Spline,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -27,12 +32,17 @@ interface ToolbarProps {
 }
 
 const TOOLS = [
-  { id: 'pan', icon: Move, labelKey: 'viewer.pan', label: '平移' },
-  { id: 'zoom', icon: ZoomIn, labelKey: 'viewer.zoom', label: '缩放' },
-  { id: 'windowLevel', icon: SlidersHorizontal, labelKey: 'viewer.windowLevel', label: '窗宽窗位' },
-  { id: 'length', icon: Ruler, labelKey: 'viewer.measure', label: '长度测量' },
-  { id: 'angle', icon: CornerDownRight, labelKey: 'viewer.angle', label: '角度测量' },
-  { id: 'probe', icon: Crosshair, labelKey: 'viewer.probe', label: '像素探针' },
+  { id: 'pan', icon: Move, labelKey: 'viewer.pan' as const, label: '平移' },
+  { id: 'zoom', icon: ZoomIn, labelKey: 'viewer.zoom' as const, label: '缩放' },
+  { id: 'windowLevel', icon: SlidersHorizontal, labelKey: 'viewer.windowLevel' as const, label: '窗宽窗位' },
+  { id: 'length', icon: Ruler, labelKey: 'viewer.measure' as const, label: '长度测量' },
+  { id: 'angle', icon: CornerDownRight, labelKey: 'viewer.angle' as const, label: '角度测量' },
+  { id: 'probe', icon: Crosshair, labelKey: 'viewer.probe' as const, label: '像素探针' },
+  { id: 'arrow', icon: ArrowUpRight, labelKey: null as null, label: '箭头标注' },
+  { id: 'ellipticalROI', icon: Circle, labelKey: null as null, label: '椭圆 ROI' },
+  { id: 'rectangleROI', icon: Square, labelKey: null as null, label: '矩形 ROI' },
+  { id: 'freehand', icon: Pencil, labelKey: null as null, label: '自由画笔' },
+  { id: 'spline', icon: Spline, labelKey: null as null, label: '样条曲线' },
 ] as const;
 
 export function Toolbar({ className }: ToolbarProps) {
@@ -53,7 +63,7 @@ export function Toolbar({ className }: ToolbarProps) {
         {TOOLS.map((tool) => {
           const Icon = tool.icon;
           const isActive = activeTool === tool.id;
-          const label = t(tool.labelKey, tool.label);
+          const label = tool.labelKey ? t(tool.labelKey, tool.label) : tool.label;
           return (
             <Tooltip key={tool.id}>
               <TooltipTrigger asChild>

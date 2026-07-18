@@ -15,6 +15,8 @@ export interface DicomParseResult {
   dataset: Record<string, any>;
   /** Extracted metadata at all four levels */
   metadata: DicomMetadata;
+  /** Per-frame metadata for multi-frame DICOM (empty for single-frame) */
+  frames: DicomFrame[];
   /** File hash (SHA-256) */
   hash: string;
   /** Raw DICOM buffer (for storage) */
@@ -75,6 +77,19 @@ export interface ImageMeta {
   numberOfFrames: number;
   laterality: string;
   imageType: string[];
+}
+
+/** Per-frame metadata extracted from PerFrameFunctionalGroupsSequence */
+export interface DicomFrame {
+  frameIndex: number;
+  frameType?: string;
+  instanceNumber?: number;
+  temporalPositionIdentifier?: number;
+  frameAcquisitionDateTime?: string;
+  sliceLocation?: number;
+  imagePositionPatient?: [number, number, number];
+  imageOrientationPatient?: number[];
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -229,6 +244,77 @@ function extractMetadata(dataset: Record<string, any>): DicomMetadata {
 }
 
 /**
+ * Extract per-frame metadata from PerFrameFunctionalGroupsSequence.
+ * Returns empty array for single-frame images.
+ */
+function extractFrames(dataset: Record<string, any>, numberOfFrames: number): DicomFrame[] {
+  if (numberOfFrames <= 1) return [];
+
+  const frames: DicomFrame[] = [];
+
+  // Try to get PerFrameFunctionalGroupsSequence
+  const perFrameKey = keywordToTagKey('PerFrameFunctionalGroupsSequence');
+  const perFrameSeq = perFrameKey ? dataset[perFrameKey]?.Value : undefined;
+
+  for (let i = 0; i < numberOfFrames; i++) {
+    const frame: DicomFrame = { frameIndex: i };
+
+    if (perFrameSeq && perFrameSeq[i]) {
+      const groups = perFrameSeq[i];
+
+      // FrameType
+      const frameContentKey = keywordToTagKey('FrameContentSequence');
+      if (frameContentKey && groups[frameContentKey]?.Value?.[0]) {
+        const content = groups[frameContentKey].Value[0];
+        frame.frameType = content['00089007']?.Value?.[0] || undefined;
+        frame.temporalPositionIdentifier = content['00209128']?.Value?.[0] || undefined;
+        frame.frameAcquisitionDateTime = content['00189074']?.Value?.[0] || undefined;
+      }
+
+      // PlanePositionPatientSequence → ImagePositionPatient
+      const planePosKey = keywordToTagKey('PlanePositionPatientSequence');
+      if (planePosKey && groups[planePosKey]?.Value?.[0]) {
+        const planePos = groups[planePosKey].Value[0];
+        const ippKey = keywordToTagKey('ImagePositionPatient');
+        if (ippKey && planePos[ippKey]?.Value) {
+          frame.imagePositionPatient = planePos[ippKey].Value.map(Number) as [number, number, number];
+        }
+      }
+
+      // PlaneOrientationPatientSequence → ImageOrientationPatient
+      const planeOrientKey = keywordToTagKey('PlaneOrientationPatientSequence');
+      if (planeOrientKey && groups[planeOrientKey]?.Value?.[0]) {
+        const planeOrient = groups[planeOrientKey].Value[0];
+        const iopKey = keywordToTagKey('ImageOrientationPatient');
+        if (iopKey && planeOrient[iopKey]?.Value) {
+          frame.imageOrientationPatient = planeOrient[iopKey].Value.map(Number);
+        }
+      }
+
+      // PixelMeasuresSequence → SliceLocation (derived from ImagePositionPatient)
+      const pixelMeasuresKey = keywordToTagKey('PixelMeasuresSequence');
+      if (pixelMeasuresKey && groups[pixelMeasuresKey]?.Value?.[0]) {
+        const measures = groups[pixelMeasuresKey].Value[0];
+        const slKey = keywordToTagKey('SliceLocation');
+        if (slKey && measures[slKey]?.Value?.[0] !== undefined) {
+          frame.sliceLocation = Number(measures[slKey].Value[0]);
+        }
+      }
+
+      // Store raw metadata for this frame
+      frame.metadata = groups;
+    } else {
+      // No PerFrameFunctionalGroupsSequence — generate basic frame info
+      frame.frameType = 'ORIGINAL\\PRIMARY';
+    }
+
+    frames.push(frame);
+  }
+
+  return frames;
+}
+
+/**
  * Parse a DICOM file buffer and extract all metadata.
  */
 export function parseDicomFile(buffer: Buffer): DicomParseResult {
@@ -241,11 +327,12 @@ export function parseDicomFile(buffer: Buffer): DicomParseResult {
 
   const dataset = dicomData.dict;
   const metadata = extractMetadata(dataset);
+  const frames = extractFrames(dataset, metadata.image.numberOfFrames);
 
   // Calculate file hash
   const hash = createHash('sha256').update(buffer).digest('hex');
 
-  return { dataset, metadata, hash, buffer };
+  return { dataset, metadata, frames, hash, buffer };
 }
 
 /**

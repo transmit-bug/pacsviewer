@@ -15,6 +15,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['@cornerstonejs/dicom-image-loader'],
+  },
   server: {
     port: 5173,
     proxy: {
@@ -22,6 +25,10 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true,
+      },
+      '/dicomweb': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
       },
     },
   },

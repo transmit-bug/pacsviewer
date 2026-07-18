@@ -6,8 +6,29 @@
  * Non-DICOM images (PNG/JPG) loaded via custom HTTP loader.
  */
 
-import { init as csInit, RenderingEngine, imageLoader } from '@cornerstonejs/core';
-import { init as toolsInit, addTool, WindowLevelTool, PanTool, ZoomTool, LengthTool, AngleTool, ProbeTool, ArrowAnnotateTool, EllipticalROITool, RectangleROITool, StackScrollTool } from '@cornerstonejs/tools';
+import {
+  init as csInit,
+  RenderingEngine,
+  imageLoader,
+} from '@cornerstonejs/core';
+import {
+  init as toolsInit,
+  addTool,
+  WindowLevelTool,
+  PanTool,
+  ZoomTool,
+  LengthTool,
+  AngleTool,
+  ProbeTool,
+  ArrowAnnotateTool,
+  EllipticalROITool,
+  RectangleROITool,
+  PlanarFreehandROITool,
+  SplineROITool,
+  StackScrollTool,
+  MagnifyTool,
+  CrosshairsTool,
+} from '@cornerstonejs/tools';
 import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -45,7 +66,11 @@ export async function initCornerstone(): Promise<void> {
   addTool(ArrowAnnotateTool);
   addTool(EllipticalROITool);
   addTool(RectangleROITool);
+  addTool(PlanarFreehandROITool);
+  addTool(SplineROITool);
   addTool(StackScrollTool);
+  addTool(MagnifyTool);
+  addTool(CrosshairsTool);
 
   // Register custom HTTP image loader for non-DICOM images (PNG, JPG)
   imageLoader.registerImageLoader('http', loadImageViaHttp);
@@ -133,6 +158,10 @@ export function getRenderingEngine(): RenderingEngine | null {
  *
  * - DICOM images: wadouri:/api/images/{id}/file (full DICOM parsing with metadata)
  * - Non-DICOM images: http://localhost:PORT/api/images/{id}/file (canvas-based)
+ *
+ * Note: Use window.location.origin for both schemes so requests go through
+ * the Vite dev proxy (or same-origin in production), ensuring auth headers
+ * are sent correctly and CORS is avoided.
  */
 export function toCornerstoneImageId(imageId: string, format?: string): string {
   const base = `/api/images/${imageId}/file`;
@@ -143,8 +172,9 @@ export function toCornerstoneImageId(imageId: string, format?: string): string {
     return `wadouri:${window.location.origin}${base}`;
   }
 
-  // Fallback: plain HTTP for PNG/JPG
-  return `http://${window.location.hostname}:${window.location.port || '3000'}${base}`;
+  // For PNG/JPG: use origin-relative URL so it goes through the Vite proxy
+  // (dev) or same-origin (prod). The custom http image loader sends auth headers.
+  return `${window.location.origin}${base}`;
 }
 
 /**

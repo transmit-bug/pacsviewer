@@ -114,6 +114,10 @@ export const imageApi = {
   export: (params: any) => api.post('/images/export', params),
 };
 
+export const dicomwebApi = {
+  getFrames: (imageId: string) => api.get(`/dicomweb/images/${imageId}/frames`),
+};
+
 export const reportApi = {
   getAll: (params?: any) => api.get('/reports', { params }),
   getById: (id: string) => api.get(`/reports/${id}`),
@@ -147,6 +151,11 @@ export const annotationApi = {
   createStudyLevel: (data: any) => api.post(`/annotations`, data),
   list: (params?: { imageId?: string; studyId?: string }) =>
     api.get('/annotations', { params }),
+  // Cornerstone annotation sync (batch)
+  sync: (imageId: string, annotations: any[]) =>
+    api.post('/annotations/sync', { imageId, annotations }),
+  // Get annotations in SerializedAnnotation format
+  getForImage: (imageId: string) => api.get(`/annotations/image/${imageId}`),
 };
 
 export const layerApi = {

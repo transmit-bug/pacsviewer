@@ -28,5 +28,8 @@
     "better-sqlite3": "^12.11.1",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "pinyin-match": "^1.2.10"
   }
 }

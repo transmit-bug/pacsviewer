@@ -16,6 +16,13 @@ import {
   LengthTool,
   AngleTool,
   ProbeTool,
+  ArrowAnnotateTool,
+  EllipticalROITool,
+  RectangleROITool,
+  PlanarFreehandROITool,
+  SplineROITool,
+  StackScrollTool,
+  MagnifyTool,
 } from '@cornerstonejs/tools';
 import { initCornerstone, getRenderingEngine, toCornerstoneImageId, RENDERING_ENGINE_ID, VIEWPORT_ID_PREFIX } from '@/lib/cornerstone/init';
 import { useViewerStore } from '@/stores/viewerStore';
@@ -39,6 +46,12 @@ const TOOL_MAP: Record<string, string> = {
   length: LengthTool.toolName,
   angle: AngleTool.toolName,
   probe: ProbeTool.toolName,
+  arrow: ArrowAnnotateTool.toolName,
+  ellipticalROI: EllipticalROITool.toolName,
+  rectangleROI: RectangleROITool.toolName,
+  freehand: PlanarFreehandROITool.toolName,
+  spline: SplineROITool.toolName,
+  magnify: MagnifyTool.toolName,
 };
 
 export function CornerstoneViewport({
@@ -50,7 +63,7 @@ export function CornerstoneViewport({
   const elementRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { activeTool } = useViewerStore();
+  const { activeTool, setDicomMetadata, currentFrame, setTotalFrames, totalFrames } = useViewerStore();
 
   // Initialize Cornerstone and set up the viewport
   useEffect(() => {
@@ -88,6 +101,13 @@ export function CornerstoneViewport({
           toolGroup.addTool(LengthTool.toolName);
           toolGroup.addTool(AngleTool.toolName);
           toolGroup.addTool(ProbeTool.toolName);
+          toolGroup.addTool(ArrowAnnotateTool.toolName);
+          toolGroup.addTool(EllipticalROITool.toolName);
+          toolGroup.addTool(RectangleROITool.toolName);
+          toolGroup.addTool(PlanarFreehandROITool.toolName);
+          toolGroup.addTool(SplineROITool.toolName);
+          toolGroup.addTool(StackScrollTool.toolName);
+          toolGroup.addTool(MagnifyTool.toolName);
 
           // Set default active tools
           toolGroup.setToolActive(PanTool.toolName, {
@@ -95,6 +115,10 @@ export function CornerstoneViewport({
           });
           toolGroup.setToolActive(ZoomTool.toolName, {
             bindings: [{ mouseButton: ToolEnums.MouseBindings.Secondary }],
+          });
+          // Mouse wheel: stack scroll for multi-frame
+          toolGroup.setToolActive(StackScrollTool.toolName, {
+            bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
           });
         }
 
@@ -110,7 +134,34 @@ export function CornerstoneViewport({
           const viewport = renderingEngine.getViewport(viewportId) as any;
 
           if (viewport) {
-            await viewport.setStack([csImageId]);
+            // For DICOM images, try to load as multi-frame stack
+            if (imageFormat === 'dicom') {
+              try {
+                const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
+                if (resp.ok) {
+                  const frameData = await resp.json();
+                  const nFrames = frameData.numberOfFrames || 1;
+                  if (nFrames > 1) {
+                    const base = toCornerstoneImageId(imageId, imageFormat);
+                    const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
+                    await viewport.setStack(imageIds);
+                    setTotalFrames(nFrames);
+                  } else {
+                    await viewport.setStack([csImageId]);
+                    setTotalFrames(1);
+                  }
+                } else {
+                  await viewport.setStack([csImageId]);
+                  setTotalFrames(1);
+                }
+              } catch {
+                await viewport.setStack([csImageId]);
+                setTotalFrames(1);
+              }
+            } else {
+              await viewport.setStack([csImageId]);
+              setTotalFrames(1);
+            }
             viewport.render();
           }
           setIsLoading(false);
@@ -149,8 +200,63 @@ export function CornerstoneViewport({
       try {
         setIsLoading(true);
         const csImageId = toCornerstoneImageId(imageId, imageFormat);
-        await viewport.setStack([csImageId]);
+
+        // For DICOM images, try to load as multi-frame stack
+        if (imageFormat === 'dicom') {
+          try {
+            const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
+            if (resp.ok) {
+              const frameData = await resp.json();
+              const nFrames = frameData.numberOfFrames || 1;
+              if (nFrames > 1) {
+                const base = toCornerstoneImageId(imageId, imageFormat);
+                const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
+                await viewport.setStack(imageIds);
+                setTotalFrames(nFrames);
+              } else {
+                await viewport.setStack([csImageId]);
+                setTotalFrames(1);
+              }
+            } else {
+              await viewport.setStack([csImageId]);
+              setTotalFrames(1);
+            }
+          } catch {
+            await viewport.setStack([csImageId]);
+            setTotalFrames(1);
+          }
+        } else {
+          await viewport.setStack([csImageId]);
+          setTotalFrames(1);
+        }
         viewport.render();
+
+        // Extract DICOM metadata from the loaded Cornerstone image
+        try {
+          const image = viewport.getImage?.();
+          if (image) {
+            setDicomMetadata({
+              pixelSpacing: image.rowPixelSpacing && image.columnPixelSpacing
+                ? [image.rowPixelSpacing, image.columnPixelSpacing]
+                : null,
+              windowCenter: image.windowCenter ?? null,
+              windowWidth: image.windowWidth ?? null,
+              rescaleSlope: image.slope ?? 1,
+              rescaleIntercept: image.intercept ?? 0,
+              rows: image.rows ?? 0,
+              columns: image.columns ?? 0,
+              bitsAllocated: image.bitsAllocated ?? 8,
+              photometricInterpretation: image.photometricInterpretation ?? '',
+              numberOfFrames: image.numberOfFrames ?? 1,
+              modality: (image.data?.string?.('x00080060')) ?? '',
+              laterality: (image.data?.string?.('x00200062')) ?? '',
+            });
+          }
+        } catch {
+          // Non-DICOM images won't have metadata — that's fine
+          setDicomMetadata(null);
+        }
+
         setIsLoading(false);
       } catch (err) {
         console.error('[CornerstoneViewport] Failed to load image:', err);
@@ -160,7 +266,7 @@ export function CornerstoneViewport({
     };
 
     loadNewImage();
-  }, [imageId, viewportId]);
+  }, [imageId, viewportId, imageFormat, setDicomMetadata]);
 
   // Update active tool
   useEffect(() => {
@@ -180,6 +286,24 @@ export function CornerstoneViewport({
       bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
     });
   }, [activeTool]);
+
+  // Navigate to frame when currentFrame changes (from CinePlayer)
+  useEffect(() => {
+    if (totalFrames <= 1) return;
+
+    const renderingEngine = getRenderingEngine();
+    if (!renderingEngine) return;
+
+    const viewport = renderingEngine.getViewport(viewportId) as any;
+    if (!viewport) return;
+
+    try {
+      viewport.setImageIdIndex(currentFrame);
+      viewport.render();
+    } catch {
+      // Silently ignore if viewport doesn't support setImageIdIndex
+    }
+  }, [currentFrame, totalFrames, viewportId]);
 
   return (
     <div className={cn('relative w-full h-full bg-black', className)}>

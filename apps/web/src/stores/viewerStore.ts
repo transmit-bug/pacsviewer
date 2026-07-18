@@ -28,19 +28,45 @@ interface Layer {
   locked: boolean;
 }
 
+/**
+ * DICOM metadata extracted from the loaded image.
+ * Used for measurement calibration (pixelSpacing) and display parameters.
+ */
+export interface DicomImageMetadata {
+  pixelSpacing: [number, number] | null;  // [row, col] in mm
+  windowCenter: number | number[] | null;
+  windowWidth: number | number[] | null;
+  rescaleSlope: number;
+  rescaleIntercept: number;
+  rows: number;
+  columns: number;
+  bitsAllocated: number;
+  photometricInterpretation: string;
+  numberOfFrames: number;
+  modality: string;
+  laterality: string;
+}
+
+export type PlaybackMode = 'loop' | 'once' | 'pingpong';
+
 interface ViewerState {
   currentImageId: string | null;
+  dicomMetadata: DicomImageMetadata | null;
   viewport: ViewportState;
   activeTool: string;
   annotations: Annotation[];
   layers: Layer[];
+  // Multi-frame state
   isPlaying: boolean;
   currentFrame: number;
   totalFrames: number;
+  playbackFPS: number;
+  playbackMode: PlaybackMode;
 }
 
 interface ViewerActions {
   setCurrentImage: (id: string) => void;
+  setDicomMetadata: (meta: DicomImageMetadata | null) => void;
   setViewport: (viewport: Partial<ViewportState>) => void;
   resetViewport: () => void;
   setActiveTool: (tool: string) => void;
@@ -50,9 +76,16 @@ interface ViewerActions {
   addLayer: (layer: Layer) => void;
   updateLayer: (id: string, data: Partial<Layer>) => void;
   removeLayer: (id: string) => void;
+  // Multi-frame actions
   setPlaying: (playing: boolean) => void;
   setCurrentFrame: (frame: number) => void;
   setTotalFrames: (total: number) => void;
+  setPlaybackFPS: (fps: number) => void;
+  setPlaybackMode: (mode: PlaybackMode) => void;
+  nextFrame: () => void;
+  prevFrame: () => void;
+  firstFrame: () => void;
+  lastFrame: () => void;
 }
 
 const defaultViewport: ViewportState = {
@@ -66,17 +99,23 @@ const defaultViewport: ViewportState = {
   invert: false,
 };
 
-export const useViewerStore = create<ViewerState & ViewerActions>((set) => ({
+export const useViewerStore = create<ViewerState & ViewerActions>((set, get) => ({
   currentImageId: null,
+  dicomMetadata: null,
   viewport: { ...defaultViewport },
   activeTool: 'pan',
   annotations: [],
   layers: [],
+  // Multi-frame
   isPlaying: false,
   currentFrame: 0,
   totalFrames: 0,
+  playbackFPS: 10,
+  playbackMode: 'loop',
 
   setCurrentImage: (id) => set({ currentImageId: id }),
+
+  setDicomMetadata: (meta) => set({ dicomMetadata: meta }),
 
   setViewport: (viewport) =>
     set((state) => ({
@@ -126,4 +165,27 @@ export const useViewerStore = create<ViewerState & ViewerActions>((set) => ({
   setCurrentFrame: (frame) => set({ currentFrame: frame }),
 
   setTotalFrames: (total) => set({ totalFrames: total }),
+
+  setPlaybackFPS: (fps) => set({ playbackFPS: Math.max(1, Math.min(30, fps)) }),
+
+  setPlaybackMode: (mode) => set({ playbackMode: mode }),
+
+  nextFrame: () => {
+    const { currentFrame, totalFrames } = get();
+    if (totalFrames <= 1) return;
+    set({ currentFrame: (currentFrame + 1) % totalFrames });
+  },
+
+  prevFrame: () => {
+    const { currentFrame, totalFrames } = get();
+    if (totalFrames <= 1) return;
+    set({ currentFrame: (currentFrame - 1 + totalFrames) % totalFrames });
+  },
+
+  firstFrame: () => set({ currentFrame: 0 }),
+
+  lastFrame: () => {
+    const { totalFrames } = get();
+    set({ currentFrame: Math.max(0, totalFrames - 1) });
+  },
 }));

@@ -3,7 +3,7 @@
  */
 
 export { parseDicomFile, isDicomFile } from './parser';
-export type { DicomParseResult, DicomMetadata, PatientMeta, StudyMeta, SeriesMeta, ImageMeta } from './parser';
+export type { DicomParseResult, DicomMetadata, PatientMeta, StudyMeta, SeriesMeta, ImageMeta, DicomFrame } from './parser';
 
 export { storeDicomFile, getDicomFilePath, readDicomFile } from './storage';
 export type { StoreResult } from './storage';
