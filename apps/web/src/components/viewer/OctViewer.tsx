@@ -14,7 +14,6 @@ import { CornerstoneViewport } from '@/components/viewer/CornerstoneViewport';
 import { CinePlayer } from '@/components/viewer/CinePlayer';
 import { OctWindowPresets } from '@/components/viewer/OctWindowPresets';
 import { EnFacePreview } from '@/components/viewer/EnFacePreview';
-import { ThicknessMap } from '@/components/viewer/ThicknessMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -143,31 +142,13 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
 
       {/* Thickness Map Panel (when enabled) */}
       {showThicknessMap && totalFrames > 1 && (
-        <ThicknessMap
-          data={new Float32Array(100 * 100)} // Placeholder - would be generated from actual OCT data
-          width={100}
-          height={100}
-          colorMap={colorMap}
-          showGrid={showETDRS}
-          showStats={true}
-          stats={{
-            centerThickness: 245,
-            averageThickness: 312,
-            minThickness: 238,
-            maxThickness: 380,
-            etdrsRegions: [
-              { name: '中心', averageThickness: 245 },
-              { name: '内上方', averageThickness: 318 },
-              { name: '内鼻侧', averageThickness: 325 },
-              { name: '内下方', averageThickness: 310 },
-              { name: '内颞侧', averageThickness: 322 },
-              { name: '外上方', averageThickness: 285 },
-              { name: '外鼻侧', averageThickness: 290 },
-              { name: '外下方', averageThickness: 278 },
-              { name: '外颞侧', averageThickness: 282 },
-            ],
-          }}
-        />
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground text-center py-4">
+              厚度图需要从 OCT 体积数据生成。请使用 OCT 工具菜单中的「生成厚度图」功能。
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

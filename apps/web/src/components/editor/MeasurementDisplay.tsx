@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useViewerStore } from '@/stores/viewerStore';
+import { useViewerStore, type Annotation } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
   calculateEllipseArea,
   calculateRectangleArea,
   hasValidPixelSpacing,
+  lengthUnitToAreaUnit,
   type LengthUnit,
 } from '@/utils/measurement';
 
@@ -42,7 +43,7 @@ export function MeasurementDisplay({ className }: MeasurementDisplayProps) {
   /**
    * Extract measurement value from annotation geometry
    */
-  const getMeasurementValue = (annotation: any): string => {
+  const getMeasurementValue = (annotation: Annotation): string => {
     const { type, geometry } = annotation;
 
     try {
@@ -60,13 +61,14 @@ export function MeasurementDisplay({ className }: MeasurementDisplayProps) {
         }
 
         case 'area': {
+          const areaUnit = lengthUnitToAreaUnit(unit);
           if (geometry?.radiusX !== undefined && geometry?.radiusY !== undefined) {
             // Ellipse
             const result = calculateEllipseArea(
               geometry.radiusX,
               geometry.radiusY,
               pixelSpacing,
-              `${unit}²` as any
+              areaUnit
             );
             return result.displayText;
           }
@@ -76,7 +78,7 @@ export function MeasurementDisplay({ className }: MeasurementDisplayProps) {
               geometry.width,
               geometry.height,
               pixelSpacing,
-              `${unit}²` as any
+              areaUnit
             );
             return result.displayText;
           }

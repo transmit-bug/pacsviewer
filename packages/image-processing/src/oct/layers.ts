@@ -24,6 +24,7 @@ import {
   findGradientPeaks,
   smoothBoundary,
 } from '../utils/edge-detection';
+import { accumulateETDRSRegions, type ETDRSRegion } from '../utils/etdrs';
 
 /** Retinal layer identifiers */
 export type LayerId =
@@ -301,15 +302,6 @@ export function calculateLayerThickness(
 /**
  * Generate ETDRS thickness map from layer boundaries.
  *
- * ETDRS 9 regions:
- *   ┌─────┬─────┬─────┐
- *   │  1  │  2  │  3  │
- *   ├─────┼─────┼─────┤
- *   │  4  │  5  │  6  │  (center = 1mm, inner = 3mm, outer = 6mm)
- *   ├─────┼─────┼─────┤
- *   │  7  │  8  │  9  │
- *   └─────┴─────┴─────┘
- *
  * @param thicknessMap - 2D thickness array
  * @param mapWidth - Map width
  * @param mapHeight - Map height
@@ -321,78 +313,6 @@ export function generateETDRSRegions(
   mapWidth: number,
   mapHeight: number,
   pixelSpacing: PixelSpacing
-): Array<{ name: string; averageThickness: number }> {
-  const centerX = mapWidth / 2;
-  const centerY = mapHeight / 2;
-  const lateralToMm = pixelSpacing.lateral;
-
-  // ETDRS ring radii in pixels
-  const innerRadius = 1.5 / lateralToMm; // 3mm diameter = 1.5mm radius
-  const outerRadius = 3.0 / lateralToMm; // 6mm diameter = 3mm radius
-
-  // Accumulate thickness values per region
-  const regions: Map<string, { sum: number; count: number }> = new Map();
-  const regionNames = [
-    '中心', '内上方', '内鼻侧', '内下方', '内颞侧',
-    '外上方', '外鼻侧', '外下方', '外颞侧',
-  ];
-  for (const name of regionNames) {
-    regions.set(name, { sum: 0, count: 0 });
-  }
-
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      const dx = (x - centerX) * lateralToMm;
-      const dy = (y - centerY) * lateralToMm;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const thickness = thicknessMap[y * mapWidth + x];
-
-      if (thickness <= 0) continue;
-
-      let region: string;
-
-      if (dist <= innerRadius) {
-        region = '中心';
-      } else if (dist <= outerRadius) {
-        // Determine octant
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        if (angle >= -45 && angle < 45) {
-          region = '内鼻侧';
-        } else if (angle >= 45 && angle < 135) {
-          region = '内上方';
-        } else if (angle >= -135 && angle < -45) {
-          region = '内下方';
-        } else {
-          region = '内颞侧';
-        }
-      } else {
-        // Outside outer ring - use outer regions
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        if (angle >= -45 && angle < 45) {
-          region = '外鼻侧';
-        } else if (angle >= 45 && angle < 135) {
-          region = '外上方';
-        } else if (angle >= -135 && angle < -45) {
-          region = '外下方';
-        } else {
-          region = '外颞侧';
-        }
-      }
-
-      const r = regions.get(region);
-      if (r) {
-        r.sum += thickness;
-        r.count++;
-      }
-    }
-  }
-
-  // Calculate averages
-  return regionNames.map((name) => {
-    const r = regions.get(name)!;
-    return {
-      name,
-      averageThickness: r.count > 0 ? r.sum / r.count : 0,
-    };
-  });
+): ETDRSRegion[] {
+  return accumulateETDRSRegions(thicknessMap, mapWidth, mapHeight, pixelSpacing);
 }

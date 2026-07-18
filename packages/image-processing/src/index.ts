@@ -71,7 +71,7 @@ export async function generateThumbnail(
  */
 export async function processImage(
   buffer: Buffer,
-  filename: string,
+  _filename: string,
 ): Promise<{
   hash: string;
   metadata: ImageMetadata;
@@ -85,6 +85,18 @@ export async function processImage(
 
   return { hash, metadata, thumbnail };
 }
+
+// ─── Shared Utilities ────────────────────────────────────────────────────────
+
+// ETDRS grid utilities
+export {
+  accumulateETDRSRegions,
+  getETDRSRegion,
+  ETDRS_REGION_NAMES,
+  COLOR_MAPS,
+  type ETDRSRegion,
+  type ETDRSPixelSpacing,
+} from './utils/etdrs';
 
 // ─── OCT Image Processing ────────────────────────────────────────────────────
 
@@ -115,7 +127,6 @@ export {
   generateThicknessMap,
   generateEnfaceProjection,
   renderThicknessMap,
-  COLOR_MAPS,
   type ThicknessMapData,
   type ThicknessStats,
   type ThicknessType,

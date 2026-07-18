@@ -11,7 +11,7 @@ interface ViewportState {
   invert: boolean;
 }
 
-interface Annotation {
+export interface Annotation {
   id: string;
   type: string;
   geometry: Record<string, any>;

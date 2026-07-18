@@ -5,11 +5,38 @@
  * to physical units (mm, μm, cm).
  */
 
-/** Pixel spacing from DICOM metadata [row, column] in mm */
+/**
+ * Pixel spacing from DICOM metadata [row, column] in mm.
+ * This matches the DICOM standard format.
+ */
 export type PixelSpacing = [number, number];
+
+/**
+ * OCT pixel spacing with named components.
+ * Used by the image-processing package for OCT-specific calculations.
+ */
+export interface OCTPixelSpacing {
+  axial: number;  // mm/pixel in depth direction
+  lateral: number; // mm/pixel in lateral direction
+}
 
 export type LengthUnit = 'mm' | 'cm' | 'μm';
 export type AreaUnit = 'mm²' | 'cm²' | 'μm²';
+
+/**
+ * Convert DICOM PixelSpacing tuple to OCTPixelSpacing object.
+ * DICOM format: [rowSpacing, columnSpacing]
+ */
+export function toOCTPixelSpacing(spacing: PixelSpacing): OCTPixelSpacing {
+  return { axial: spacing[0], lateral: spacing[1] };
+}
+
+/**
+ * Convert OCTPixelSpacing object to DICOM PixelSpacing tuple.
+ */
+export function toDICOMPixelSpacing(spacing: OCTPixelSpacing): PixelSpacing {
+  return [spacing.axial, spacing.lateral];
+}
 
 /** Conversion factors to mm */
 const TO_MM: Record<LengthUnit, number> = {
@@ -239,4 +266,16 @@ export function hasValidPixelSpacing(
     pixelSpacing[0] > 0 &&
     pixelSpacing[1] > 0
   );
+}
+
+/**
+ * Convert a length unit to its corresponding area unit.
+ */
+export function lengthUnitToAreaUnit(unit: LengthUnit): AreaUnit {
+  const map: Record<LengthUnit, AreaUnit> = {
+    'mm': 'mm²',
+    'cm': 'cm²',
+    'μm': 'μm²',
+  };
+  return map[unit];
 }

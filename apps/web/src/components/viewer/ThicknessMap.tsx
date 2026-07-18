@@ -8,10 +8,11 @@
  * - Export to PNG
  */
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Grid3X3, BarChart3 } from 'lucide-react';
+import { Download, BarChart3 } from 'lucide-react';
+import { COLOR_MAPS } from '@pacsviewer/image-processing';
 
 interface ThicknessMapProps {
   /** Thickness data (Float32Array, row-major) */
@@ -44,32 +45,6 @@ interface ThicknessMapProps {
   className?: string;
 }
 
-// Color map functions
-const COLOR_MAPS = {
-  jet: (t: number): [number, number, number] => {
-    const r = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * t - 0.5))));
-    const g = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * (1 - Math.abs(t - 0.5))))));
-    const b = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * (1 - t) - 0.5))));
-    return [r, g, b];
-  },
-  hot: (t: number): [number, number, number] => {
-    const r = Math.min(255, Math.round(255 * Math.min(1, t * 3)));
-    const g = Math.min(255, Math.round(255 * Math.max(0, Math.min(1, t * 3 - 1))));
-    const b = Math.min(255, Math.round(255 * Math.max(0, Math.min(1, t * 3 - 2))));
-    return [r, g, b];
-  },
-  viridis: (t: number): [number, number, number] => {
-    const r = Math.round(68 + t * (253 - 68));
-    const g = Math.round(1 + t * (231 - 1));
-    const b = Math.round(84 + (1 - t) * (168 - 84));
-    return [Math.min(255, r), Math.min(255, g), Math.min(255, b)];
-  },
-  gray: (t: number): [number, number, number] => {
-    const v = Math.round(t * 255);
-    return [v, v, v];
-  },
-};
-
 export function ThicknessMap({
   data,
   width,
@@ -87,7 +62,7 @@ export function ThicknessMap({
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
 
   // Find min/max for normalization
-  const { min, max } = useCallback(() => {
+  const { min, max } = useMemo(() => {
     let autoMin = Infinity;
     let autoMax = -Infinity;
     for (let i = 0; i < data.length; i++) {
@@ -97,7 +72,7 @@ export function ThicknessMap({
       }
     }
     return { min: autoMin === Infinity ? 0 : autoMin, max: autoMax === -Infinity ? 100 : autoMax };
-  }, [data])();
+  }, [data]);
 
   // Draw heatmap
   const draw = useCallback(() => {

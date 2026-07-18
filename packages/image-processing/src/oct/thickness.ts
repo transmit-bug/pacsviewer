@@ -5,7 +5,8 @@
  * Supports multiple thickness metrics (total retinal thickness, RNFL, etc.)
  */
 
-import { detectRetinalLayers, type LayerId, type RetinalLayerBoundary, type PixelSpacing } from './layers';
+import { detectRetinalLayers, type LayerId, type PixelSpacing } from './layers';
+import { accumulateETDRSRegions, COLOR_MAPS } from '../utils/etdrs';
 
 /** Thickness map data structure */
 export interface ThicknessMapData {
@@ -153,7 +154,7 @@ function calculateThicknessStats(
   const centerThickness = data[centerY * width + centerX] || 0;
 
   // Generate ETDRS regions
-  const etdrsRegions = generateSimpleETDRS(data, width, height, pixelSpacing);
+  const etdrsRegions = accumulateETDRSRegions(data, width, height, pixelSpacing);
 
   return {
     centerThickness,
@@ -164,74 +165,6 @@ function calculateThicknessStats(
     maxPosition: maxPos,
     etdrsRegions,
   };
-}
-
-/**
- * Simplified ETDRS region generation for statistics.
- */
-function generateSimpleETDRS(
-  data: Float32Array,
-  width: number,
-  height: number,
-  pixelSpacing: PixelSpacing
-): Array<{ name: string; averageThickness: number }> {
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const lateralToMm = pixelSpacing.lateral;
-
-  const innerRadius = 1.5 / lateralToMm;
-  const outerRadius = 3.0 / lateralToMm;
-
-  const regions: Map<string, { sum: number; count: number }> = new Map();
-  const regionNames = [
-    '中心', '内上方', '内鼻侧', '内下方', '内颞侧',
-    '外上方', '外鼻侧', '外下方', '外颞侧',
-  ];
-
-  for (const name of regionNames) {
-    regions.set(name, { sum: 0, count: 0 });
-  }
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const val = data[y * width + x];
-      if (val <= 0) continue;
-
-      const dx = (x - centerX) * lateralToMm;
-      const dy = (y - centerY) * lateralToMm;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      let region: string;
-
-      if (dist <= innerRadius) {
-        region = '中心';
-      } else if (dist <= outerRadius) {
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        if (angle >= -45 && angle < 45) region = '内鼻侧';
-        else if (angle >= 45 && angle < 135) region = '内上方';
-        else if (angle >= -135 && angle < -45) region = '内下方';
-        else region = '内颞侧';
-      } else {
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-        if (angle >= -45 && angle < 45) region = '外鼻侧';
-        else if (angle >= 45 && angle < 135) region = '外上方';
-        else if (angle >= -135 && angle < -45) region = '外下方';
-        else region = '外颞侧';
-      }
-
-      const r = regions.get(region)!;
-      r.sum += val;
-      r.count++;
-    }
-  }
-
-  return regionNames.map((name) => {
-    const r = regions.get(name)!;
-    return {
-      name,
-      averageThickness: r.count > 0 ? r.sum / r.count : 0,
-    };
-  });
 }
 
 /**
@@ -292,35 +225,6 @@ export function generateEnfaceProjection(
 
   return result;
 }
-
-/**
- * Color maps for thickness visualization
- */
-export const COLOR_MAPS = {
-  jet: (t: number): [number, number, number] => {
-    const r = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * t - 0.5))));
-    const g = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * (1 - Math.abs(t - 0.5))))));
-    const b = Math.min(255, Math.max(0, Math.round(255 * Math.min(1, 1.5 * (1 - t) - 0.5))));
-    return [r, g, b];
-  },
-  hot: (t: number): [number, number, number] => {
-    const r = Math.min(255, Math.round(255 * Math.min(1, t * 3)));
-    const g = Math.min(255, Math.round(255 * Math.max(0, Math.min(1, t * 3 - 1))));
-    const b = Math.min(255, Math.round(255 * Math.max(0, Math.min(1, t * 3 - 2))));
-    return [r, g, b];
-  },
-  viridis: (t: number): [number, number, number] => {
-    // Simplified viridis approximation
-    const r = Math.round(68 + t * (253 - 68));
-    const g = Math.round(1 + t * (231 - 1));
-    const b = Math.round(84 + (1 - t) * (168 - 84));
-    return [Math.min(255, r), Math.min(255, g), Math.min(255, b)];
-  },
-  gray: (t: number): [number, number, number] => {
-    const v = Math.round(t * 255);
-    return [v, v, v];
-  },
-};
 
 /**
  * Render thickness map as RGBA pixel data for Canvas.
