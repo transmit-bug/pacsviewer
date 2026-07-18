@@ -110,16 +110,26 @@ export function PatientFormPage() {
       return;
     }
 
+    // Prepare form data - convert empty strings to null for optional fields
+    const submitData = {
+      ...formData,
+      birthDate: formData.birthDate || null,
+      phone: formData.phone || null,
+      email: formData.email || null,
+      address: formData.address || null,
+      notes: formData.notes || null,
+    };
+
     try {
       setSaving(true);
       if (isEdit) {
-        await patientApi.update(id!, formData);
+        await patientApi.update(id!, submitData);
         toast({
           title: '更新成功',
           description: '患者信息已更新。',
         });
       } else {
-        await patientApi.create(formData);
+        await patientApi.create(submitData);
         toast({
           title: '创建成功',
           description: '新患者已创建。',
@@ -229,12 +239,29 @@ export function PatientFormPage() {
               {/* 出生日期 */}
               <div className="space-y-2">
                 <Label htmlFor="birthDate">{t('patient.birthDate')}</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={formData.birthDate}
-                  onChange={(e) => handleChange('birthDate', e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={formData.birthDate}
+                    onChange={(e) => handleChange('birthDate', e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="flex-1"
+                  />
+                  {formData.birthDate && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleChange('birthDate', '')}
+                    >
+                      清除
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  可选，不填则不记录出生日期
+                </p>
               </div>
 
               {/* 电话 */}

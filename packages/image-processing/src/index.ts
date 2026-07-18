@@ -85,3 +85,38 @@ export async function processImage(
 
   return { hash, metadata, thumbnail };
 }
+
+// ─── OCT Image Processing ────────────────────────────────────────────────────
+
+// Edge detection utilities
+export {
+  gaussianBlur,
+  sobelEdgeDetection,
+  cannyEdgeDetection,
+  nonMaxSuppression,
+  hysteresisThreshold,
+  findGradientPeaks,
+  smoothBoundary,
+} from './utils/edge-detection';
+
+// OCT layer detection
+export {
+  detectRetinalLayers,
+  calculateLayerThickness,
+  generateETDRSRegions,
+  type LayerId,
+  type RetinalLayerBoundary,
+  type PixelSpacing,
+  type LayerDetectionOptions,
+} from './oct/layers';
+
+// OCT thickness map
+export {
+  generateThicknessMap,
+  generateEnfaceProjection,
+  renderThicknessMap,
+  COLOR_MAPS,
+  type ThicknessMapData,
+  type ThicknessStats,
+  type ThicknessType,
+} from './oct/thickness';

@@ -49,7 +49,7 @@ export const patients = sqliteTable('patients', {
   mrn: text('mrn').notNull().unique(),
   name: text('name').notNull(),
   gender: text('gender', { enum: ['male', 'female', 'other'] }).notNull(),
-  birthDate: text('birth_date').notNull(),
+  birthDate: text('birth_date'),
   phone: text('phone'),
   email: text('email'),
   idCard: text('id_card'),
