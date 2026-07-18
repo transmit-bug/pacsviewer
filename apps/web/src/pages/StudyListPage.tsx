@@ -54,7 +54,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export function StudyListPage() {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

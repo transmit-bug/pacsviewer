@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { reportApi, reportTemplateApi, patientApi } from '@/services/api';
+import { reportApi, reportTemplateApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { ArrowLeft, FileText } from 'lucide-react';
+import { PatientCombobox } from '@/components/patient/PatientCombobox';
 
 interface ReportTemplate {
   id: string;
@@ -22,37 +22,28 @@ interface ReportTemplate {
   }>;
 }
 
-interface Patient {
-  id: string;
-  mrn: string;
-  name: string;
-}
+
 
 export function ReportCreatePage() {
   const navigate = useNavigate();
 
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [selectedPatient, setSelectedPatient] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadTemplates();
   }, []);
 
-  const loadData = async () => {
+  const loadTemplates = async () => {
     try {
       setLoading(true);
-      const [templatesRes, patientsRes] = await Promise.all([
-        reportTemplateApi.getAll(),
-        patientApi.getAll(),
-      ]);
+      const templatesRes = await reportTemplateApi.getAll();
       setTemplates(templatesRes.data?.items || templatesRes.data || []);
-      setPatients(patientsRes.data?.items || patientsRes.data || []);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Failed to load templates:', error);
     } finally {
       setLoading(false);
     }
@@ -150,22 +141,11 @@ export function ReportCreatePage() {
           <CardTitle>选择患者</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="patient">患者</Label>
-            <select
-              id="patient"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-            >
-              <option value="">请选择患者...</option>
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name} ({patient.mrn})
-                </option>
-              ))}
-            </select>
-          </div>
+          <PatientCombobox
+            value={selectedPatient}
+            onChange={setSelectedPatient}
+            placeholder="选择患者..."
+          />
         </CardContent>
       </Card>
 

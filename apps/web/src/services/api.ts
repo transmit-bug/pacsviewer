@@ -75,7 +75,8 @@ export const patientApi = {
   create: (data: any) => api.post('/patients', data),
   update: (id: string, data: any) => api.put(`/patients/${id}`, data),
   delete: (id: string) => api.delete(`/patients/${id}`),
-  search: (query: string) => api.get('/patients/search', { params: { q: query } }),
+  search: (query: string, limit?: number) => api.get('/patients/search', { params: { q: query, ...(limit && { limit }) } }),
+  getRecent: (limit?: number) => api.get('/patients/recent', { params: { limit } }),
   getStudies: (id: string) => api.get(`/patients/${id}/studies`),
   getTimeline: (id: string) => api.get(`/patients/${id}/timeline`),
 };
