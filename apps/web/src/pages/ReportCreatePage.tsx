@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { ArrowLeft, FileText } from 'lucide-react';
-import { PatientCombobox } from '@/components/patient/PatientCombobox';
+import { PatientSelector } from '@/components/patient';
 
 interface ReportTemplate {
   id: string;
@@ -141,10 +141,9 @@ export function ReportCreatePage() {
           <CardTitle>选择患者</CardTitle>
         </CardHeader>
         <CardContent>
-          <PatientCombobox
+          <PatientSelector
             value={selectedPatient}
             onChange={setSelectedPatient}
-            placeholder="选择患者..."
           />
         </CardContent>
       </Card>
