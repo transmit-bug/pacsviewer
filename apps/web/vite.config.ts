@@ -29,7 +29,7 @@ export default defineConfig({
   plugins: [
     react(),
     nodePolyfills({
-      include: ['events', 'buffer', 'stream', 'util', 'process'],
+      include: ['events', 'buffer', 'stream', 'util', 'process', 'zlib'],
     }),
     commonjs(),
     cornerstoneCodecPlugin(),
