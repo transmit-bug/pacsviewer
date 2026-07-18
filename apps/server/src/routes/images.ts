@@ -15,6 +15,57 @@ import { parseDicomFile, isDicomFile, storeDicomFile } from '../services/dicom';
 
 const imagesRouter = new Hono();
 
+// ── Dev fallback config ─────────────────────────────────────────────────────
+// When enabled, missing image files serve a placeholder instead of 404.
+// Enabled by default in non-production. Remove this entire block for production.
+// Opt-out: set DEV_FALLBACK_IMAGE=false
+const DEV_FALLBACK_ENABLED =
+  process.env.NODE_ENV !== 'production' &&
+  process.env.DEV_FALLBACK_IMAGE !== 'false';
+
+// Fallback images: synthetic fundus images for development
+const FALLBACK_DIR = join(process.cwd(), 'data', 'images');
+const FALLBACK_IMAGES = [
+  join(FALLBACK_DIR, '_fundus_normal.png'),
+  join(FALLBACK_DIR, '_fundus_dr.png'),
+];
+const FALLBACK_THUMBNAILS = [
+  join(FALLBACK_DIR, '_fundus_normal_thumb.jpeg'),
+  join(FALLBACK_DIR, '_fundus_dr_thumb.jpeg'),
+];
+
+function pickFallbackImage(paths: string[]): string {
+  // Deterministic pick based on current time (changes every 10 seconds)
+  const index = Math.floor(Date.now() / 10000) % paths.length;
+  return paths[index];
+}
+
+async function serveFileOrFallback(filePath: string, contentType: string, fallbackPaths: string[]): Promise<Response> {
+  const file = Bun.file(filePath);
+  if (await file.exists()) {
+    return new Response(file, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000',
+      },
+    });
+  }
+  if (DEV_FALLBACK_ENABLED) {
+    const fallbackPath = pickFallbackImage(fallbackPaths);
+    const fallback = Bun.file(fallbackPath);
+    if (await fallback.exists()) {
+      return new Response(fallback, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'no-cache',
+          'X-Dev-Fallback': 'true',
+        },
+      });
+    }
+  }
+  throw new NotFoundError('文件');
+}
+
 // Search images by series (MUST be before /:id routes)
 imagesRouter.get('/search', async (c) => {
   const seriesId = c.req.query('seriesId');
@@ -168,29 +219,11 @@ imagesRouter.get('/:id/file', async (c) => {
   if (image.format === 'dicom') {
     const { getDicomFilePath } = await import('../services/dicom');
     const filePath = getDicomFilePath(image.filePath);
-    const file = Bun.file(filePath);
-
-    if (!(await file.exists())) throw new NotFoundError('文件');
-
-    return new Response(file, {
-      headers: {
-        'Content-Type': 'application/dicom',
-        'Cache-Control': 'public, max-age=31536000',
-      },
-    });
+    return serveFileOrFallback(filePath, 'application/dicom', FALLBACK_IMAGES);
   }
 
   const filePath = join(process.cwd(), 'data', 'images', image.filePath);
-  const file = Bun.file(filePath);
-
-  if (!(await file.exists())) throw new NotFoundError('文件');
-
-  return new Response(file, {
-    headers: {
-      'Content-Type': `image/${image.format}`,
-      'Cache-Control': 'public, max-age=31536000',
-    },
-  });
+  return serveFileOrFallback(filePath, `image/${image.format}`, FALLBACK_IMAGES);
 });
 
 // Get DICOM metadata (tags)
@@ -242,16 +275,7 @@ imagesRouter.get('/:id/thumbnail', async (c) => {
   if (!image?.thumbnailPath) throw new NotFoundError('缩略图');
 
   const thumbnailPath = join(process.cwd(), 'data', 'images', image.thumbnailPath);
-  const file = Bun.file(thumbnailPath);
-
-  if (!(await file.exists())) throw new NotFoundError('缩略图文件');
-
-  return new Response(file, {
-    headers: {
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'public, max-age=31536000',
-    },
-  });
+  return serveFileOrFallback(thumbnailPath, 'image/jpeg', FALLBACK_THUMBNAILS);
 });
 
 // Delete image
