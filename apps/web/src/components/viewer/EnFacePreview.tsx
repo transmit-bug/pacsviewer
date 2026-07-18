@@ -29,7 +29,7 @@ interface EnFacePreviewProps {
 }
 
 export function EnFacePreview({
-  sliceLocations,
+  sliceLocations: _sliceLocations, // used for future slice position display
   currentFrame,
   totalFrames,
   onFrameSelect,

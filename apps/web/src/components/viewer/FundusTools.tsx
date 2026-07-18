@@ -20,7 +20,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   Circle,
   Minus,
-  Target,
   Trash2,
   ChevronDown,
   ChevronUp,
@@ -39,7 +38,6 @@ export function FundusTools({ className }: FundusToolsProps) {
     cupDiscMeasurements,
     avRatioMeasurements,
     lesions,
-    removeLesion,
     clearAll,
   } = useFundusStore();
 
