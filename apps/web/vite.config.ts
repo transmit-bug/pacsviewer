@@ -25,11 +25,39 @@ function cornerstoneCodecPlugin() {
   };
 }
 
+// Custom plugin to shim zlib for dicom-parser
+function zlibShimPlugin() {
+  return {
+    name: 'zlib-shim',
+    transform(code: string, id: string) {
+      // Replace require('zlib') in dicom-parser with pako shim
+      if (id.includes('dicom-parser') && id.includes('dicomParser')) {
+        // Inject pako as a global and create a zlib-compatible shim
+        const shimCode = `
+          var __zlib_shim = (function() {
+            if (typeof window !== 'undefined' && window.__pako) {
+              return {
+                inflateRawSync: window.__pako.inflateRaw,
+                inflateSync: window.__pako.inflate
+              };
+            }
+            return undefined;
+          })();
+        `;
+        // Inject the shim before the module code
+        return shimCode + code.replace(/require\(['"]zlib['"]\)/g, '__zlib_shim');
+      }
+      return null;
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     react(),
+    zlibShimPlugin(),
     nodePolyfills({
-      include: ['events', 'buffer', 'stream', 'util', 'process', 'zlib'],
+      include: ['events', 'buffer', 'stream', 'util', 'process'],
     }),
     commonjs(),
     cornerstoneCodecPlugin(),
@@ -40,6 +68,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    include: ['dicom-parser'],
     exclude: [
       '@cornerstonejs/dicom-image-loader',
       '@cornerstonejs/codec-libjpeg-turbo-8bit',

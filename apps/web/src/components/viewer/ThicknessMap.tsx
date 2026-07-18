@@ -12,7 +12,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, BarChart3 } from 'lucide-react';
-import { COLOR_MAPS } from '@pacsviewer/image-processing';
+import { COLOR_MAPS } from '@pacsviewer/image-processing/browser';
 
 interface ThicknessMapProps {
   /** Thickness data (Float32Array, row-major) */
