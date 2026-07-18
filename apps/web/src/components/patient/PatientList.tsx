@@ -1,18 +1,7 @@
 import { Loader2, Users } from 'lucide-react';
 import { PatientCard } from './PatientCard';
 import { cn } from '@/lib/utils';
-
-interface Patient {
-  id: string;
-  mrn: string;
-  name: string;
-  gender?: string;
-  birthDate?: string;
-  lastStudy?: {
-    studyDate: string;
-    modality?: string;
-  };
-}
+import type { Patient } from '@/hooks/usePatientSearch';
 
 interface PatientListProps {
   patients: Patient[];
@@ -35,7 +24,7 @@ export function PatientList({
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-5 w-5 animate-spin mr-2 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">加载中...</span>
+        <span className="text-sm text-muted-foreground">搜索中...</span>
       </div>
     );
   }
@@ -51,7 +40,7 @@ export function PatientList({
 
   return (
     <div className={cn('overflow-y-auto', maxHeight)}>
-      <div className="space-y-1 p-1">
+      <div className="space-y-0.5">
         {patients.map((patient) => (
           <PatientCard
             key={patient.id}

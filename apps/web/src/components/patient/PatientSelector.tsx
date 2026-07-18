@@ -37,12 +37,10 @@ export function PatientSelector({
     ? [...searchResults, ...recentPatients].find((p) => p.id === value)
     : null;
 
-  // 初始加载最近患者
   useEffect(() => {
     loadRecent();
   }, [loadRecent]);
 
-  // 处理搜索
   const handleSearch = useCallback(
     (query: string) => {
       if (query.trim()) {
@@ -52,7 +50,6 @@ export function PatientSelector({
     [search]
   );
 
-  // 处理选择
   const handleSelect = useCallback(
     (patientId: string) => {
       onChange(patientId);
@@ -62,17 +59,16 @@ export function PatientSelector({
     [onChange]
   );
 
-  // 清除选择
   const handleClear = useCallback(() => {
     onChange('');
     setSearchQuery('');
   }, [onChange]);
 
-  // 显示的患者列表
+  // 显示的患者列表：有搜索词显示搜索结果，否则显示最近就诊
   const displayPatients = searchQuery.trim() ? searchResults : recentPatients;
   const isLoading = searchQuery.trim() ? searchLoading : recentLoading;
 
-  // 已选状态显示
+  // 已选状态 - 卡片展示
   if (selectedPatient && !isExpanded) {
     return (
       <div className="space-y-2">
@@ -95,7 +91,8 @@ export function PatientSelector({
                     {selectedPatient.mrn}
                     {selectedPatient.gender && (
                       <span>
-                        · {selectedPatient.gender === 'male' ? '男' : '女'}
+                        {' · '}
+                        {selectedPatient.gender === 'male' ? '男' : '女'}
                       </span>
                     )}
                   </p>
@@ -121,7 +118,7 @@ export function PatientSelector({
     );
   }
 
-  // 展开状态 - 搜索和列表
+  // 展开状态 - 搜索 + 列表
   return (
     <div className="space-y-2">
       <Card className={cn(error && 'border-destructive')}>
@@ -135,11 +132,9 @@ export function PatientSelector({
             autoFocus
           />
 
-          {!searchQuery.trim() && (
-            <p className="text-xs text-muted-foreground px-1">
-              最近就诊
-            </p>
-          )}
+          <div className="text-xs text-muted-foreground px-1">
+            {searchQuery.trim() ? '搜索结果' : '最近就诊'}
+          </div>
 
           <PatientList
             patients={displayPatients}

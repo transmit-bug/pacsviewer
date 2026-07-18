@@ -18,14 +18,13 @@ export function PatientSearchInput({
   onChange,
   onSearch,
   loading = false,
-  placeholder = '输入姓名、病历号或拼音搜索...',
+  placeholder = '输入姓名、病历号或拼音...',
   disabled = false,
   autoFocus = false,
 }: PatientSearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // 防抖搜索
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
@@ -42,14 +41,12 @@ export function PatientSearchInput({
     [onChange, onSearch]
   );
 
-  // 清除输入
   const handleClear = useCallback(() => {
     onChange('');
     onSearch('');
     inputRef.current?.focus();
   }, [onChange, onSearch]);
 
-  // 回车立即搜索
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
@@ -82,10 +79,7 @@ export function PatientSearchInput({
         placeholder={placeholder}
         disabled={disabled}
         autoFocus={autoFocus}
-        className={cn(
-          'pl-9 pr-9',
-          loading && 'pr-12'
-        )}
+        className={cn('pl-9 pr-9', loading && 'pr-12')}
       />
       {loading && (
         <Loader2 className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
