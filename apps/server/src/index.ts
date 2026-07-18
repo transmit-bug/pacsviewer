@@ -19,6 +19,7 @@ import layersRouter from './routes/layers';
 import devicesRouter from './routes/devices';
 import transfersRouter from './routes/transfers';
 import dicomRouter from './routes/dicom';
+import dicomwebRouter from './routes/dicomweb';
 import settingsRouter from './routes/settings';
 import dashboardRouter from './routes/dashboard';
 import { authMiddleware } from './middleware/auth';
@@ -70,6 +71,7 @@ app.route('/api/layers', layersRouter);
 app.route('/api/devices', devicesRouter);
 app.route('/api/transfers', transfersRouter);
 app.route('/api/dicom', dicomRouter);
+app.route('/dicomweb', dicomwebRouter);
 app.route('/api/settings', settingsRouter);
 app.route('/api/dashboard', dashboardRouter);
 

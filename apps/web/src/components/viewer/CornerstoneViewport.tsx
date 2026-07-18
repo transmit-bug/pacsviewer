@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 
 interface CornerstoneViewportProps {
   imageId: string;
+  imageFormat?: string;  // 'dicom' | 'jpeg' | 'png' etc.
   viewportId?: string;
   className?: string;
 }
@@ -42,6 +43,7 @@ const TOOL_MAP: Record<string, string> = {
 
 export function CornerstoneViewport({
   imageId,
+  imageFormat,
   viewportId = `${VIEWPORT_ID_PREFIX}main`,
   className,
 }: CornerstoneViewportProps) {
@@ -104,7 +106,7 @@ export function CornerstoneViewport({
           setIsLoading(true);
           setError(null);
 
-          const csImageId = toCornerstoneImageId(imageId);
+          const csImageId = toCornerstoneImageId(imageId, imageFormat);
           const viewport = renderingEngine.getViewport(viewportId) as any;
 
           if (viewport) {
@@ -146,7 +148,7 @@ export function CornerstoneViewport({
 
       try {
         setIsLoading(true);
-        const csImageId = toCornerstoneImageId(imageId);
+        const csImageId = toCornerstoneImageId(imageId, imageFormat);
         await viewport.setStack([csImageId]);
         viewport.render();
         setIsLoading(false);

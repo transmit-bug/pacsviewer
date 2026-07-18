@@ -11,6 +11,7 @@ import { db, images, series, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
+import { parseDicomFile, isDicomFile, storeDicomFile } from '../services/dicom';
 
 const imagesRouter = new Hono();
 
@@ -47,6 +48,40 @@ imagesRouter.get('/search', async (c) => {
       totalPages: Math.ceil(countResult[0].count / pageSize),
     },
   });
+});
+
+// Upload DICOM file
+imagesRouter.post('/upload-dicom', async (c) => {
+  const formData = await c.req.formData();
+  const file = formData.get('file') as File;
+
+  if (!file) throw new ValidationError('请选择 DICOM 文件');
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Check if it's a DICOM file
+  if (!isDicomFile(buffer)) {
+    throw new ValidationError('不是有效的 DICOM 文件');
+  }
+
+  // Parse DICOM metadata
+  const parseResult = parseDicomFile(buffer);
+
+  // Store file and create database records
+  const result = await storeDicomFile(parseResult);
+
+  return c.json({
+    success: true,
+    data: {
+      imageId: result.imageId,
+      patientId: result.patientId,
+      studyId: result.studyId,
+      seriesId: result.seriesId,
+      sopInstanceUid: result.sopInstanceUid,
+      isNew: result.isNew,
+      metadata: parseResult.metadata,
+    },
+  }, result.isNew ? 201 : 200);
 });
 
 // Upload image
@@ -129,6 +164,22 @@ imagesRouter.get('/:id/file', async (c) => {
 
   if (!image) throw new NotFoundError('图像');
 
+  // DICOM files are stored in the dicom store, not images dir
+  if (image.format === 'dicom') {
+    const { getDicomFilePath } = await import('../services/dicom');
+    const filePath = getDicomFilePath(image.filePath);
+    const file = Bun.file(filePath);
+
+    if (!(await file.exists())) throw new NotFoundError('文件');
+
+    return new Response(file, {
+      headers: {
+        'Content-Type': 'application/dicom',
+        'Cache-Control': 'public, max-age=31536000',
+      },
+    });
+  }
+
   const filePath = join(process.cwd(), 'data', 'images', image.filePath);
   const file = Bun.file(filePath);
 
@@ -140,6 +191,45 @@ imagesRouter.get('/:id/file', async (c) => {
       'Cache-Control': 'public, max-age=31536000',
     },
   });
+});
+
+// Get DICOM metadata (tags)
+imagesRouter.get('/:id/dicom-metadata', async (c) => {
+  const id = c.req.param('id');
+  const image = await db.query.images.findFirst({
+    where: eq(images.id, id),
+  });
+
+  if (!image) throw new NotFoundError('图像');
+
+  if (image.format !== 'dicom' || !image.metadata) {
+    return c.json({ success: true, data: null, message: '非 DICOM 图像' });
+  }
+
+  // Parse the stored DICOM metadata into a tag list
+  const dataset = image.metadata as Record<string, any>;
+  const tags = Object.entries(dataset).map(([tag, entry]: [string, any]) => {
+    const vr = entry?.vr || '??';
+    const value = entry?.Value;
+    let displayValue: string;
+
+    if (value === undefined || value === null) {
+      displayValue = '';
+    } else if (Array.isArray(value)) {
+      displayValue = value.map(v => {
+        if (typeof v === 'object' && v !== null && 'Alphabetic' in v) return v.Alphabetic;
+        return String(v);
+      }).join('\\');
+    } else if (typeof value === 'object' && 'Alphabetic' in value) {
+      displayValue = value.Alphabetic;
+    } else {
+      displayValue = String(value);
+    }
+
+    return { tag, vr, value: displayValue };
+  });
+
+  return c.json({ success: true, data: tags });
 });
 
 // Get thumbnail

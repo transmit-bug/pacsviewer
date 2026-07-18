@@ -10,10 +10,11 @@ import { cn } from '@/lib/utils';
 
 interface ImageViewerProps {
   imageId: string;
+  imageFormat?: string;  // 'dicom' | 'jpeg' | 'png' etc.
   className?: string;
 }
 
-export function ImageViewer({ imageId, className }: ImageViewerProps) {
+export function ImageViewer({ imageId, imageFormat, className }: ImageViewerProps) {
   if (!imageId) {
     return (
       <div className={cn('flex items-center justify-center w-full h-full bg-black', className)}>
@@ -22,5 +23,5 @@ export function ImageViewer({ imageId, className }: ImageViewerProps) {
     );
   }
 
-  return <CornerstoneViewport imageId={imageId} className={className} />;
+  return <CornerstoneViewport imageId={imageId} imageFormat={imageFormat} className={className} />;
 }

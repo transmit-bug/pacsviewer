@@ -96,12 +96,16 @@ export const imageApi = {
     api.post('/images/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  uploadDicom: (formData: FormData) =>
+    api.post('/images/upload-dicom', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   uploadBatch: (formData: FormData) =>
     api.post('/images/upload/batch', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   getById: (id: string) => api.get(`/images/${id}`),
-  getMetadata: (id: string) => api.get(`/images/${id}/metadata`),
+  getMetadata: (id: string) => api.get(`/images/${id}/dicom-metadata`),
   getFile: (id: string) => `/api/images/${id}/file`,
   getThumbnail: (id: string) => `/api/images/${id}/thumbnail`,
   delete: (id: string) => api.delete(`/images/${id}`),

@@ -21,6 +21,7 @@
     "@hono/node-server": "^1.0.0",
     "@pacsviewer/image-processing": "workspace:*",
     "better-auth": "^0.2.0",
+    "dcmjs": "^0.52.0",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.0.0",

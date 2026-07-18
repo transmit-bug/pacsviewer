@@ -2,10 +2,13 @@
  * Cornerstone.js initialization and configuration.
  *
  * Sets up the rendering engine, tool service, and image loaders.
+ * DICOM files loaded via wadouri: scheme (cornerstoneWADOImageLoader).
+ * Non-DICOM images (PNG/JPG) loaded via custom HTTP loader.
  */
 
 import { init as csInit, RenderingEngine, imageLoader } from '@cornerstonejs/core';
-import { init as toolsInit, addTool, WindowLevelTool, PanTool, ZoomTool, LengthTool, AngleTool, ProbeTool } from '@cornerstonejs/tools';
+import { init as toolsInit, addTool, WindowLevelTool, PanTool, ZoomTool, LengthTool, AngleTool, ProbeTool, ArrowAnnotateTool, EllipticalROITool, RectangleROITool, StackScrollTool } from '@cornerstonejs/tools';
+import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
 
 let initialized = false;
 let renderingEngine: RenderingEngine | null = null;
@@ -23,28 +26,36 @@ export async function initCornerstone(): Promise<void> {
   await csInit();
   await toolsInit();
 
+  // Initialize DICOM image loader (registers wadouri: and wadors: schemes)
+  dicomImageLoader.init({
+    maxWebWorkers: navigator.hardwareConcurrency || 2,
+  });
+
   // Create rendering engine
   renderingEngine = new RenderingEngine(RENDERING_ENGINE_ID);
 
-  // Register tools with the tool service
+  // Register tools
   addTool(WindowLevelTool);
   addTool(PanTool);
   addTool(ZoomTool);
   addTool(LengthTool);
   addTool(AngleTool);
   addTool(ProbeTool);
+  addTool(ArrowAnnotateTool);
+  addTool(EllipticalROITool);
+  addTool(RectangleROITool);
+  addTool(StackScrollTool);
 
-  // Register custom HTTP image loader for non-DICOM images
+  // Register custom HTTP image loader for non-DICOM images (PNG, JPG)
   imageLoader.registerImageLoader('http', loadImageViaHttp);
   imageLoader.registerImageLoader('https', loadImageViaHttp);
 
   initialized = true;
-  console.log('[Cornerstone] Initialized');
+  console.log('[Cornerstone] Initialized with DICOM loader');
 }
 
 /**
  * Custom image loader for regular images (PNG, JPG) via HTTP.
- * Converts to cornerstone Image format.
  */
 function loadImageViaHttp(imageId: string): { promise: Promise<any> } {
   const promise = new Promise((resolve, reject) => {
@@ -108,9 +119,27 @@ export function getRenderingEngine(): RenderingEngine | null {
 }
 
 /**
- * Convert our image ID to a Cornerstone imageId.
- * For regular images: http://localhost:3000/api/images/{id}/file
+ * Build a Cornerstone imageId for an image stored on the server.
+ *
+ * - DICOM images: wadouri:/api/images/{id}/file (full DICOM parsing with metadata)
+ * - Non-DICOM images: http://localhost:PORT/api/images/{id}/file (canvas-based)
  */
-export function toCornerstoneImageId(imageId: string): string {
-  return `http://localhost:${location.port || '3000'}/api/images/${imageId}/file`;
+export function toCornerstoneImageId(imageId: string, format?: string): string {
+  const base = `/api/images/${imageId}/file`;
+
+  if (format === 'dicom') {
+    // wadouri: scheme → cornerstoneWADOImageLoader handles DICOM parsing,
+    // extracts PixelSpacing, WindowCenter/Width, RescaleSlope/Intercept, etc.
+    return `wadouri:${window.location.origin}${base}`;
+  }
+
+  // Fallback: plain HTTP for PNG/JPG
+  return `http://${window.location.hostname}:${window.location.port || '3000'}${base}`;
+}
+
+/**
+ * Build a DICOM wadouri imageId directly from a DICOMweb WADO-RS URL.
+ */
+export function toWadoRsImageId(studyUid: string, seriesUid: string, instanceUid: string): string {
+  return `wadouri:${window.location.origin}/dicomweb/studies/${studyUid}/series/${seriesUid}/instances/${instanceUid}`;
 }

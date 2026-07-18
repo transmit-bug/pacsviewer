@@ -80,6 +80,8 @@ export const patientTags = sqliteTable('patient_tags', {
 export const studies = sqliteTable('studies', {
   id: text('id').primaryKey(),
   patientId: text('patient_id').references(() => patients.id).notNull(),
+  studyInstanceUid: text('study_instance_uid').unique(),  // DICOM StudyInstanceUID
+  accessionNumber: text('accession_number'),              // DICOM AccessionNumber
   studyDate: text('study_date').notNull(),
   studyTime: text('study_time'),
   modality: text('modality'),  // Primary modality (denormalized from series for query convenience)
@@ -104,6 +106,7 @@ export const studies = sqliteTable('studies', {
 export const series = sqliteTable('series', {
   id: text('id').primaryKey(),
   studyId: text('study_id').references(() => studies.id).notNull(),
+  seriesInstanceUid: text('series_instance_uid').unique(),  // DICOM SeriesInstanceUID
   seriesNumber: integer('series_number').notNull(),
   seriesDescription: text('series_description'),
   modality: text('modality').notNull(),
@@ -119,6 +122,9 @@ export const series = sqliteTable('series', {
 export const images = sqliteTable('images', {
   id: text('id').primaryKey(),
   seriesId: text('series_id').references(() => series.id).notNull(),
+  sopInstanceUid: text('sop_instance_uid').unique(),       // DICOM SOPInstanceUID
+  sopClassUid: text('sop_class_uid'),                     // DICOM SOPClassUID
+  transferSyntaxUid: text('transfer_syntax_uid'),         // DICOM TransferSyntaxUID
   instanceNumber: integer('instance_number').notNull(),
   filePath: text('file_path').notNull(),
   fileSize: integer('file_size').notNull(),
@@ -129,12 +135,21 @@ export const images = sqliteTable('images', {
   width: integer('width').notNull(),
   height: integer('height').notNull(),
   bitsAllocated: integer('bits_allocated').default(8).notNull(),
+  // DICOM display parameters
+  pixelSpacing: text('pixel_spacing', { mode: 'json' }),          // [row, col] in mm
+  windowCenter: text('window_center', { mode: 'json' }),          // number | number[]
+  windowWidth: text('window_width', { mode: 'json' }),            // number | number[]
+  rescaleSlope: real('rescale_slope').default(1),
+  rescaleIntercept: real('rescale_intercept').default(0),
+  photometricInterpretation: text('photometric_interpretation'),  // MONOCHROME1/2, RGB, YBR_FULL, etc.
+  numberOfFrames: integer('number_of_frames').default(1),
   thumbnailPath: text('thumbnail_path'),
-  metadata: text('metadata', { mode: 'json' }),
+  metadata: text('metadata', { mode: 'json' }),                   // Full DICOM JSON metadata
   createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
 }, (table) => [
   index('images_series_id_idx').on(table.seriesId),
   index('images_file_hash_idx').on(table.fileHash),
+  index('images_sop_instance_uid_idx').on(table.sopInstanceUid),
 ]);
 
 // Annotations table
