@@ -5,8 +5,8 @@ import { studyApi, imageApi, annotationApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageViewer } from '@/components/viewer/ImageViewer';
-import { Toolbar } from '@/components/viewer/Toolbar';
-import { AnnotationToolbar } from '@/components/viewer/AnnotationToolbar';
+import { ViewportToolbar } from '@/components/viewer/Toolbar';
+import { ImageToolsToolbar } from '@/components/viewer/AnnotationToolbar';
 import { CinePlayer } from '@/components/viewer/CinePlayer';
 import { ImageList } from '@/components/viewer/ImageList';
 import { WindowLevel } from '@/components/viewer/WindowLevel';
@@ -192,18 +192,18 @@ export function ViewerPage() {
           </div>
         </div>
 
-        {/* Toolbar */}
+        {/* 视图工具栏 */}
         <Card className="mb-4">
           <CardContent className="p-2">
-            <Toolbar />
+            <ViewportToolbar />
           </CardContent>
         </Card>
 
-        {/* Annotation toolbar - side panel */}
+        {/* 图像工具栏 */}
         <div className="flex gap-4 flex-1">
           <Card className="w-16 shrink-0">
             <CardContent className="p-1">
-              <AnnotationToolbar />
+              <ImageToolsToolbar />
             </CardContent>
           </Card>
 

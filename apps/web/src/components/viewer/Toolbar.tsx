@@ -1,140 +1,97 @@
 /**
- * Toolbar — Cornerstone.js tool selection bar.
+ * ViewportToolbar — 视图操作工具栏
  *
- * Provides the 6 tools specified in the PRD:
- * Zoom, Pan, WindowLevel, Length, Angle, Probe
+ * 提供视图控制工具：
+ * - 导航工具：平移、缩放、窗宽窗位
+ * - 变换工具：旋转、翻转、适配窗口
+ *
+ * 水平工具栏，所有工具直接显示
  */
 
-import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ToolbarGroup } from './ToolbarGroup';
+import type { ToolConfig, ToolGroupConfig } from './ToolGroupPopover';
 import {
   Move,
   ZoomIn,
   SlidersHorizontal,
-  Ruler,
-  CornerDownRight,
-  Crosshair,
   RotateCw,
   FlipHorizontal,
   FlipVertical,
   Maximize,
-  ArrowUpRight,
-  Circle,
-  Square,
-  Pencil,
-  Spline,
 } from 'lucide-react';
 
-interface ToolbarProps {
+interface ViewportToolbarProps {
   className?: string;
 }
 
-const TOOLS = [
-  { id: 'pan', icon: Move, labelKey: 'viewer.pan' as const, label: '平移' },
-  { id: 'zoom', icon: ZoomIn, labelKey: 'viewer.zoom' as const, label: '缩放' },
-  { id: 'windowLevel', icon: SlidersHorizontal, labelKey: 'viewer.windowLevel' as const, label: '窗宽窗位' },
-  { id: 'length', icon: Ruler, labelKey: 'viewer.measure' as const, label: '长度测量' },
-  { id: 'angle', icon: CornerDownRight, labelKey: 'viewer.angle' as const, label: '角度测量' },
-  { id: 'probe', icon: Crosshair, labelKey: 'viewer.probe' as const, label: '像素探针' },
-  { id: 'arrow', icon: ArrowUpRight, labelKey: null as null, label: '箭头标注' },
-  { id: 'ellipticalROI', icon: Circle, labelKey: null as null, label: '椭圆 ROI' },
-  { id: 'rectangleROI', icon: Square, labelKey: null as null, label: '矩形 ROI' },
-  { id: 'freehand', icon: Pencil, labelKey: null as null, label: '自由画笔' },
-  { id: 'spline', icon: Spline, labelKey: null as null, label: '样条曲线' },
-] as const;
+/** 视图工具栏配置 */
+const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[] })[] = [
+  {
+    id: 'navigation',
+    icon: Move,
+    label: '导航',
+    tools: [
+      { id: 'pan', icon: Move, label: '平移' },
+      { id: 'zoom', icon: ZoomIn, label: '缩放' },
+      { id: 'windowLevel', icon: SlidersHorizontal, label: '窗宽窗位' },
+    ],
+  },
+  {
+    id: 'transform',
+    icon: RotateCw,
+    label: '变换',
+    tools: [
+      { id: 'rotate', icon: RotateCw, label: '旋转 90°' },
+      { id: 'flipH', icon: FlipHorizontal, label: '水平翻转' },
+      { id: 'flipV', icon: FlipVertical, label: '垂直翻转' },
+      { id: 'fit', icon: Maximize, label: '适配窗口' },
+    ],
+  },
+];
 
-export function Toolbar({ className }: ToolbarProps) {
-  const { t } = useTranslation();
+export function ViewportToolbar({ className }: ViewportToolbarProps) {
   const { activeTool, setActiveTool, viewport, setViewport, resetViewport } = useViewerStore();
 
   const handleToolClick = (toolId: string) => {
-    if (toolId === 'fit') {
-      resetViewport();
-      return;
+    switch (toolId) {
+      case 'rotate':
+        setViewport({ rotation: (viewport.rotation + 90) % 360 });
+        break;
+      case 'flipH':
+        setViewport({ flipH: !viewport.flipH });
+        break;
+      case 'flipV':
+        setViewport({ flipV: !viewport.flipV });
+        break;
+      case 'fit':
+        resetViewport();
+        break;
+      default:
+        setActiveTool(toolId);
     }
-    setActiveTool(toolId);
   };
 
   return (
     <div className={className}>
       <div className="flex items-center space-x-1">
-        {TOOLS.map((tool) => {
-          const Icon = tool.icon;
-          const isActive = activeTool === tool.id;
-          const label = tool.labelKey ? t(tool.labelKey, tool.label) : tool.label;
-          return (
-            <Tooltip key={tool.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isActive ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => handleToolClick(tool.id)}
-                >
-                  <Icon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-
-        <div className="mx-2 h-6 w-px bg-border" />
-
-        {/* Viewport operations */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setViewport({ rotation: (viewport.rotation + 90) % 360 })}
-            >
-              <RotateCw className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>旋转 90°</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setViewport({ flipH: !viewport.flipH })}
-            >
-              <FlipHorizontal className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>水平翻转</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setViewport({ flipV: !viewport.flipV })}
-            >
-              <FlipVertical className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>垂直翻转</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={resetViewport}
-            >
-              <Maximize className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>适配窗口</TooltipContent>
-        </Tooltip>
+        {TOOL_GROUPS.map((group, index) => (
+          <div key={group.id} className="flex items-center">
+            {index > 0 && <div className="mx-2 h-6 w-px bg-border" />}
+            <ToolbarGroup
+              groupIcon={group.icon}
+              groupLabel={group.label}
+              tools={group.tools}
+              activeToolId={activeTool}
+              onToolClick={handleToolClick}
+              displayMode="direct"
+              toolbarDirection="horizontal"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
 }
+
+

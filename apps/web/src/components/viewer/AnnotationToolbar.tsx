@@ -1,23 +1,19 @@
 /**
- * AnnotationToolbar — Cornerstone-native annotation toolbar.
+ * ImageToolsToolbar — 图像工具工具栏
  *
- * Replaces the Canvas 2D AnnotationTools.tsx and MeasurementTools.tsx.
- * All tools use Cornerstone's built-in annotation API with world coordinates.
- *
- * Features:
- * - Measurement tools (Length, Angle, Probe)
- * - ROI tools (Elliptical, Rectangle, Freehand, Spline)
- * - Annotation tools (Arrow, Text)
- * - Annotation list with delete
- * - Export annotations
+ * 提供图像分析工具：
+ * - 测量工具：长度、角度、探针
+ * - 标注工具：箭头
+ * - ROI工具：椭圆、矩形、自由画笔、样条曲线
+ * - 操作：列表、导出、清除（折叠显示）
  */
 
 import { useState } from 'react';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import { ToolbarGroup } from './ToolbarGroup';
+import type { ToolConfig, ToolGroupConfig } from './ToolGroupPopover';
 import {
   Ruler,
   CornerDownRight,
@@ -31,31 +27,57 @@ import {
   Download,
   List,
   X,
+  Layers,
 } from 'lucide-react';
 
-interface AnnotationToolbarProps {
+interface ImageToolsToolbarProps {
   className?: string;
 }
 
-/** Tool groups for the annotation toolbar */
-const MEASUREMENT_TOOLS = [
-  { id: 'length', icon: Ruler, label: '长度测量' },
-  { id: 'angle', icon: CornerDownRight, label: '角度测量' },
-  { id: 'probe', icon: Crosshair, label: '像素探针' },
-] as const;
+/** 图像工具组配置 */
+const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direct' | 'collapsed' })[] = [
+  {
+    id: 'measurement',
+    icon: Ruler,
+    label: '测量',
+    displayMode: 'direct',
+    tools: [
+      { id: 'length', icon: Ruler, label: '长度测量' },
+      { id: 'angle', icon: CornerDownRight, label: '角度测量' },
+      { id: 'probe', icon: Crosshair, label: '像素探针' },
+    ],
+  },
+  {
+    id: 'annotation',
+    icon: ArrowUpRight,
+    label: '标注',
+    displayMode: 'direct',
+    tools: [
+      { id: 'arrow', icon: ArrowUpRight, label: '箭头标注' },
+    ],
+  },
+  {
+    id: 'roi',
+    icon: Circle,
+    label: 'ROI',
+    displayMode: 'direct',
+    tools: [
+      { id: 'ellipticalROI', icon: Circle, label: '椭圆 ROI' },
+      { id: 'rectangleROI', icon: Square, label: '矩形 ROI' },
+      { id: 'freehand', icon: Pencil, label: '自由画笔' },
+      { id: 'spline', icon: Spline, label: '样条曲线' },
+    ],
+  },
+  {
+    id: 'action',
+    icon: Layers,
+    label: '操作',
+    displayMode: 'collapsed',
+    tools: [], // 动态生成
+  },
+];
 
-const ROI_TOOLS = [
-  { id: 'ellipticalROI', icon: Circle, label: '椭圆 ROI' },
-  { id: 'rectangleROI', icon: Square, label: '矩形 ROI' },
-  { id: 'freehand', icon: Pencil, label: '自由画笔' },
-  { id: 'spline', icon: Spline, label: '样条曲线' },
-] as const;
-
-const ANNOTATION_TOOLS = [
-  { id: 'arrow', icon: ArrowUpRight, label: '箭头标注' },
-] as const;
-
-export function AnnotationToolbar({ className }: AnnotationToolbarProps) {
+export function ImageToolsToolbar({ className }: ImageToolsToolbarProps) {
   const { activeTool, setActiveTool } = useViewerStore();
   const { measurements, annotations, removeAnnotation, clearAll } = useMeasurementStore();
   const [showList, setShowList] = useState(false);
@@ -64,110 +86,54 @@ export function AnnotationToolbar({ className }: AnnotationToolbarProps) {
     setActiveTool(toolId === activeTool ? 'pan' : toolId);
   };
 
-  const renderToolGroup = (
-    tools: ReadonlyArray<{ id: string; icon: any; label: string }>,
-    label: string,
-  ) => (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground px-1">{label}</p>
-      <div className="flex flex-wrap gap-1">
-        {tools.map((tool) => {
-          const Icon = tool.icon;
-          const isActive = activeTool === tool.id;
-          return (
-            <Tooltip key={tool.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isActive ? 'default' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleToolClick(tool.id)}
-                >
-                  <Icon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{tool.label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const handleActionClick = (actionId: string) => {
+    switch (actionId) {
+      case 'list':
+        setShowList(!showList);
+        break;
+      case 'export':
+        const data = JSON.stringify(measurements, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `measurements-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        break;
+      case 'clear':
+        clearAll();
+        break;
+    }
+  };
+
+  // 动态生成操作工具组
+  const actionTools: ToolConfig[] = [
+    { id: 'list', icon: List, label: '标注列表', badgeCount: annotations.length },
+    { id: 'export', icon: Download, label: '导出测量结果', disabled: measurements.length === 0 },
+    { id: 'clear', icon: Trash2, label: '清除全部', variant: 'destructive', disabled: annotations.length === 0 },
+  ];
 
   return (
     <div className={className}>
-      <div className="flex flex-col gap-3 p-2">
-        {/* Tool buttons */}
-        {renderToolGroup(MEASUREMENT_TOOLS, '测量')}
-        <div className="h-px bg-border" />
-        {renderToolGroup(ROI_TOOLS, 'ROI')}
-        <div className="h-px bg-border" />
-        {renderToolGroup(ANNOTATION_TOOLS, '标注')}
+      <div className="flex flex-col gap-1 p-2">
+        {TOOL_GROUPS.map((group, index) => (
+          <div key={group.id}>
+            {index > 0 && <div className="h-px bg-border my-1" />}
+            <ToolbarGroup
+              groupIcon={group.icon}
+              groupLabel={group.label}
+              tools={group.id === 'action' ? actionTools : group.tools}
+              activeToolId={activeTool}
+              onToolClick={group.id === 'action' ? handleActionClick : handleToolClick}
+              displayMode={group.displayMode}
+              toolbarDirection="vertical"
+              badgeCount={group.id === 'action' ? annotations.length : undefined}
+            />
+          </div>
+        ))}
 
-        {/* Actions */}
-        <div className="h-px bg-border" />
-        <div className="flex gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowList(!showList)}
-              >
-                <List className="h-4 w-4" />
-                {annotations.length > 0 && (
-                  <Badge variant="secondary" className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">
-                    {annotations.length}
-                  </Badge>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>标注列表</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={clearAll}
-                disabled={annotations.length === 0}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>清除全部</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => {
-                  // Export measurements as JSON
-                  const data = JSON.stringify(measurements, null, 2);
-                  const blob = new Blob([data], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `measurements-${Date.now()}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                disabled={measurements.length === 0}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>导出测量结果</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Annotation list panel */}
+        {/* 标注列表面板 */}
         {showList && (
           <div className="border rounded-md p-2 max-h-64 overflow-y-auto space-y-1">
             <div className="flex items-center justify-between mb-2">
@@ -204,3 +170,5 @@ export function AnnotationToolbar({ className }: AnnotationToolbarProps) {
     </div>
   );
 }
+
+
