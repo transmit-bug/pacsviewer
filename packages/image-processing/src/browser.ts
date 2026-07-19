@@ -14,3 +14,32 @@ export {
   type ETDRSRegion,
   type ETDRSPixelSpacing,
 } from './utils/etdrs';
+
+// Edge detection utilities
+export {
+  gaussianBlur,
+  sobelEdgeDetection,
+  findGradientPeaks,
+  smoothBoundary,
+} from './utils/edge-detection';
+
+// OCT retinal layer detection
+export {
+  detectRetinalLayers,
+  calculateLayerThickness,
+  generateETDRSRegions,
+  type LayerId,
+  type RetinalLayerBoundary,
+  type PixelSpacing,
+  type LayerDetectionOptions,
+} from './oct/layers';
+
+// OCT thickness map generation
+export {
+  generateThicknessMap,
+  generateEnfaceProjection,
+  renderThicknessMap,
+  type ThicknessMapData,
+  type ThicknessStats,
+  type ThicknessType,
+} from './oct/thickness';

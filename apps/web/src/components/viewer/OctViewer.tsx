@@ -10,15 +10,18 @@
  */
 
 import { useOctNavigation } from '@/hooks/useOctNavigation';
+import { useOctThicknessMap } from '@/hooks/useOctThicknessMap';
 import { CornerstoneViewport } from '@/components/viewer/CornerstoneViewport';
 import { CinePlayer } from '@/components/viewer/CinePlayer';
 import { OctWindowPresets } from '@/components/viewer/OctWindowPresets';
 import { EnFacePreview } from '@/components/viewer/EnFacePreview';
+import { ThicknessMap } from '@/components/viewer/ThicknessMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
-import { Layers, Grid3X3 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Layers, Grid3X3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { ThicknessType } from '@pacsviewer/image-processing/browser';
 
 interface OctViewerProps {
   imageId: string;
@@ -37,6 +40,25 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
   const [showThicknessMap, setShowThicknessMap] = useState(false);
   const [colorMap, setColorMap] = useState<'jet' | 'hot' | 'viridis' | 'gray'>('jet');
   const [showETDRS, setShowETDRS] = useState(true);
+
+  // Thickness map integration
+  const {
+    thicknessData,
+    isGenerating,
+    error: thicknessError,
+    generate: generateThicknessMap,
+    thicknessType,
+    setThicknessType,
+  } = useOctThicknessMap({ imageId, thicknessType: 'total' });
+
+  const handleToggleThicknessMap = useCallback(() => {
+    const next = !showThicknessMap;
+    setShowThicknessMap(next);
+    // Auto-generate when first enabling and no data exists
+    if (next && !thicknessData && !isGenerating) {
+      generateThicknessMap();
+    }
+  }, [showThicknessMap, thicknessData, isGenerating, generateThicknessMap]);
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
@@ -102,10 +124,15 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
                 variant={showThicknessMap ? 'default' : 'outline'}
                 size="sm"
                 className="text-xs"
-                onClick={() => setShowThicknessMap(!showThicknessMap)}
+                onClick={handleToggleThicknessMap}
+                disabled={isGenerating}
               >
-                <Layers className="h-3 w-3 mr-1" />
-                厚度图
+                {isGenerating ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Layers className="h-3 w-3 mr-1" />
+                )}
+                {isGenerating ? '生成中...' : '厚度图'}
               </Button>
               {showThicknessMap && (
                 <div className="flex gap-1">
@@ -141,14 +168,81 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
       </div>
 
       {/* Thickness Map Panel (when enabled) */}
-      {showThicknessMap && totalFrames > 1 && (
-        <Card>
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground text-center py-4">
-              厚度图需要从 OCT 体积数据生成。请使用 OCT 工具菜单中的「生成厚度图」功能。
-            </p>
-          </CardContent>
-        </Card>
+      {showThicknessMap && (
+        <>
+          {/* Thickness type selector */}
+          <Card>
+            <CardContent className="p-2">
+              <div className="flex flex-wrap gap-1">
+                {([
+                  ['total', '全层'],
+                  ['retinal', '视网膜'],
+                  ['rnfl', 'RNFL'],
+                  ['gcl_ipl', 'GCL+IPL'],
+                  ['inl', 'INL'],
+                  ['opl', 'OPL'],
+                  ['onl', 'ONL'],
+                  ['photoreceptor', '感光细胞'],
+                ] as const).map(([type, label]) => (
+                  <button
+                    key={type}
+                    className={`px-2 py-1 text-[10px] rounded transition-colors ${
+                      thicknessType === type
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                    }`}
+                    onClick={() => {
+                      setThicknessType(type as ThicknessType);
+                      generateThicknessMap();
+                    }}
+                    disabled={isGenerating}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Thickness map visualization */}
+          {isGenerating && (
+            <Card>
+              <CardContent className="p-6 flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">正在生成厚度图...</span>
+              </CardContent>
+            </Card>
+          )}
+
+          {thicknessError && !isGenerating && (
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-xs text-destructive text-center">
+                  {thicknessError}
+                </p>
+                <div className="flex justify-center mt-2">
+                  <Button variant="outline" size="sm" onClick={generateThicknessMap}>
+                    重试
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {thicknessData && !isGenerating && (
+            <ThicknessMap
+              data={thicknessData.data}
+              width={thicknessData.width}
+              height={thicknessData.height}
+              colorMap={colorMap}
+              showGrid={showETDRS}
+              showStats={true}
+              stats={thicknessData.stats}
+              displayWidth={400}
+              displayHeight={300}
+            />
+          )}
+        </>
       )}
     </div>
   );

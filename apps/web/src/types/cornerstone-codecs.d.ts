@@ -20,3 +20,12 @@ declare module '@cornerstonejs/codec-openjpeg' {
   const codec: OpenjpegCodec;
   export default codec;
 }
+
+declare module '@cornerstonejs/codec-libjpeg-turbo-8bit' {
+  interface LibjpegTurboCodec {
+    ready?: Promise<any>;
+    decode?: (buffer: Buffer, info: any) => Buffer;
+  }
+  const codec: LibjpegTurboCodec;
+  export default codec;
+}

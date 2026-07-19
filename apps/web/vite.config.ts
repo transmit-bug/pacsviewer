@@ -25,27 +25,29 @@ function cornerstoneCodecPlugin() {
   };
 }
 
-// Custom plugin to shim zlib for dicom-parser
+/**
+ * Custom plugin to shim zlib for dicom-parser.
+ *
+ * dicom-parser's UMD bundle calls require('zlib') in CJS mode, which fails
+ * in browsers. This plugin replaces those calls with a pako-based shim and
+ * injects a pako import so the global `pako` variable is available for
+ * dicom-parser's built-in browser deflated transfer syntax support.
+ */
 function zlibShimPlugin() {
   return {
     name: 'zlib-shim',
     transform(code: string, id: string) {
-      // Replace require('zlib') in dicom-parser with pako shim
       if (id.includes('dicom-parser') && id.includes('dicomParser')) {
-        // Inject pako as a global and create a zlib-compatible shim
+        // Replace require('zlib') with a pako-based shim
         const shimCode = `
-          var __zlib_shim = (function() {
-            if (typeof window !== 'undefined' && window.__pako) {
-              return {
-                inflateRawSync: window.__pako.inflateRaw,
-                inflateSync: window.__pako.inflate
-              };
-            }
-            return undefined;
-          })();
-        `;
-        // Inject the shim before the module code
-        return shimCode + code.replace(/require\(['"]zlib['"]\)/g, '__zlib_shim');
+import __pako from 'pako';
+if (typeof window !== 'undefined') { window.pako = __pako; }
+var __zlib_shim = { inflateRawSync: __pako.inflateRaw, inflateSync: __pako.inflate };
+`;
+        return (
+          shimCode +
+          code.replace(/require\(['"]zlib['"]\)/g, '__zlib_shim')
+        );
       }
       return null;
     },

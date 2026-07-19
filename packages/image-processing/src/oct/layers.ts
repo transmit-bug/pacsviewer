@@ -92,7 +92,7 @@ export function detectRetinalLayers(
   pixels: Uint8Array,
   width: number,
   height: number,
-  pixelSpacing: PixelSpacing,
+  _pixelSpacing: PixelSpacing, // reserved for future spatial-aware detection; currently unused
   options: LayerDetectionOptions = {}
 ): RetinalLayerBoundary[] {
   const {
