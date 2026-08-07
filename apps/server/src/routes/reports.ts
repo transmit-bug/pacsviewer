@@ -11,6 +11,10 @@ const reportsRouter = createCrudRouter(reports, {
   queryKey: 'reports',
   createSchema: insertReportSchema,
   middleware: [[requirePermission('reports', 'create')] as any],
+  beforeCreate: (data, c) => {
+    const userId = (c as any).get('userId');
+    return { ...data, createdBy: data.createdBy || userId || 'system' };
+  },
   listWhere: (c) => {
     const studyId = c.req.query('studyId');
     return studyId ? eq(reports.studyId, studyId) : undefined;

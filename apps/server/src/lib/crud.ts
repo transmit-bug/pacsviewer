@@ -131,6 +131,9 @@ export function createCrudRouter<T extends SQLiteTable>(
     });
   });
 
+  // Register custom routes FIRST (before /:id, so /search etc. don't get caught)
+  if (routes) routes(router);
+
   // GET /:id - Get by ID
   router.get('/:id', async (c: Context) => {
     const id = c.req.param('id');
@@ -199,9 +202,6 @@ export function createCrudRouter<T extends SQLiteTable>(
     await db.delete(table).where(eq(idCol, id));
     return c.json({ success: true, message: `${name}已删除` });
   });
-
-  // Register custom routes
-  if (routes) routes(router);
 
   return router;
 }

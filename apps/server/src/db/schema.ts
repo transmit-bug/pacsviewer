@@ -605,7 +605,7 @@ export const followUpRecordsRelations = relations(followUpRecords, ({ one }) => 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
-export const insertPatientSchema = createInsertSchema(patients);
+export const insertPatientSchema = createInsertSchema(patients).omit({ id: true, createdAt: true, updatedAt: true });
 export const selectPatientSchema = createSelectSchema(patients);
 export const insertStudySchema = createInsertSchema(studies).omit({ id: true });
 export const selectStudySchema = createSelectSchema(studies);
@@ -621,7 +621,7 @@ export const insertReportTemplateSchema = createInsertSchema(reportTemplates).om
 export const selectReportTemplateSchema = createSelectSchema(reportTemplates);
 export const insertPatientTagSchema = createInsertSchema(patientTags).omit({ id: true });
 export const selectPatientTagSchema = createSelectSchema(patientTags);
-export const insertReportSchema = createInsertSchema(reports);
+export const insertReportSchema = createInsertSchema(reports).omit({ id: true, createdAt: true, updatedAt: true, createdBy: true });
 export const selectReportSchema = createSelectSchema(reports);
 export const insertReportVersionSchema = createInsertSchema(reportVersions);
 export const selectReportVersionSchema = createSelectSchema(reportVersions);

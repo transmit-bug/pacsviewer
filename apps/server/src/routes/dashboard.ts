@@ -45,10 +45,13 @@ dashboard.get('/stats', async (c) => {
       .from(images);
 
     return c.json({
-      todayStudies: todayStudyCount?.count || 0,
-      totalPatients: patientCount?.count || 0,
-      pendingReports: pendingReportCount?.count || 0,
-      totalImages: imageCount?.count || 0,
+      success: true,
+      data: {
+        todayStudies: todayStudyCount?.count || 0,
+        totalPatients: patientCount?.count || 0,
+        pendingReports: pendingReportCount?.count || 0,
+        totalImages: imageCount?.count || 0,
+      }
     });
   } catch (error) {
     console.error('Failed to get dashboard stats:', error);
@@ -75,7 +78,7 @@ dashboard.get('/recent-studies', async (c) => {
       .orderBy(desc(studies.createdAt))
       .limit(limit);
 
-    return c.json(recentStudies);
+    return c.json({ success: true, data: recentStudies });
   } catch (error) {
     console.error('Failed to get recent studies:', error);
     return c.json({ error: 'Failed to get recent studies' }, 500);
@@ -101,7 +104,8 @@ dashboard.get('/pending-tasks', async (c) => {
       .limit(limit);
 
     return c.json({
-      reports: pendingReports,
+      success: true,
+      data: { reports: pendingReports }
     });
   } catch (error) {
     console.error('Failed to get pending tasks:', error);
