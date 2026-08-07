@@ -1,4 +1,5 @@
 import { useViewerStore } from '@/stores/viewerStore';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -13,6 +14,7 @@ interface ImageListProps {
 
 export function ImageList({ images, className }: ImageListProps) {
   const { currentImageId, setCurrentImage } = useViewerStore();
+  const token = useAuthStore((s) => s.token);
 
   return (
     <div className={cn('grid grid-cols-3 gap-1 p-2', className)}>
@@ -30,7 +32,7 @@ export function ImageList({ images, className }: ImageListProps) {
         >
           {image.thumbnailPath ? (
             <img
-              src={image.thumbnailPath}
+              src={`/api/images/${image.id}/thumbnail?token=${token}`}
               alt={`Image ${image.instanceNumber}`}
               className="h-full w-full object-cover"
             />

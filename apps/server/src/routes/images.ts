@@ -11,7 +11,7 @@ import { db, images, series, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
-import { parseDicomFile, isDicomFile, storeDicomFile } from '../services/dicom';
+import { parseDicomFile, isDicomFile, storeDicomFile, getDicomFilePath } from '../services/dicom';
 
 const imagesRouter = new Hono();
 
@@ -222,6 +222,39 @@ imagesRouter.get('/:id/file', async (c) => {
     return serveFileOrFallback(filePath, 'application/dicom', FALLBACK_IMAGES);
   }
 
+  // Non-DICOM images: check if Cornerstone wants DICOM format
+  const wantDicom = c.req.query('format') === 'dicom';
+  if (wantDicom) {
+    // Convert to DICOM on-the-fly for Cornerstone
+    const filePath = join(process.cwd(), 'data', 'images', image.filePath);
+    const buffer = await Bun.file(filePath).arrayBuffer();
+
+    // Get patient/study info for DICOM metadata
+    const seriesRecord = await db.query.series.findFirst({
+      where: eq(series.id, image.seriesId),
+      with: { study: { with: { patient: true } } },
+    });
+
+    const { convertImageToDicom } = await import('../services/image-to-dicom');
+    const result = await convertImageToDicom({
+      imageBuffer: Buffer.from(buffer),
+      filename: image.filePath,
+      patientName: seriesRecord?.study?.patient?.name || 'Anonymous',
+      patientId: seriesRecord?.study?.patient?.mrn ?? undefined,
+      studyInstanceUid: seriesRecord?.study?.studyInstanceUid ?? undefined,
+      seriesInstanceUid: seriesRecord?.seriesInstanceUid ?? undefined,
+      instanceNumber: image.instanceNumber,
+    });
+
+    return new Response(result.parseResult.buffer, {
+      headers: {
+        'Content-Type': 'application/dicom',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  }
+
+  // Serve original PNG/JPG file
   const filePath = join(process.cwd(), 'data', 'images', image.filePath);
   return serveFileOrFallback(filePath, `image/${image.format}`, FALLBACK_IMAGES);
 });

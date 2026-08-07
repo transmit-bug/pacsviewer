@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { studyApi, imageApi, comparisonApi } from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,7 @@ interface SavedComparison {
 export function ComparisonPage() {
   const [searchParams] = useSearchParams();
   const studyId = searchParams.get('studyId');
+  const token = useAuthStore((s) => s.token);
 
   const [study, setStudy] = useState<Study | null>(null);
   const [images, setImages] = useState<Image[]>([]);
@@ -473,7 +475,7 @@ export function ComparisonPage() {
                   >
                     {image.thumbnailPath ? (
                       <img
-                        src={image.thumbnailPath}
+                        src={`/api/images/${image.id}/thumbnail?token=${token}`}
                         alt={`Image ${image.instanceNumber}`}
                         className="h-full w-full object-cover"
                       />

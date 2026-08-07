@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { reportApi, reportTemplateApi } from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -78,6 +79,7 @@ function getReportImages(images: string[] | null | undefined): string[] {
 export function ReportPage() {
   const { studyId } = useParams<{ studyId: string }>();
   const { t } = useTranslation();
+  const token = useAuthStore((s) => s.token);
   const [report, setReport] = useState<Report | null>(null);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -515,7 +517,7 @@ export function ReportPage() {
                             className="relative group rounded-md border overflow-hidden"
                           >
                             <img
-                              src={`/api/images/${imageId}/thumbnail`}
+                              src={`/api/images/${imageId}/thumbnail?token=${token}`}
                               alt={`Image ${index + 1}`}
                               className="w-full h-24 object-cover"
                               onError={(e) => {
@@ -613,7 +615,7 @@ export function ReportPage() {
                         {getReportImages(report.images).map((imageId, index) => (
                           <img
                             key={index}
-                            src={`/api/images/${imageId}/thumbnail`}
+                            src={`/api/images/${imageId}/thumbnail?token=${token}`}
                             alt={`Image ${index + 1}`}
                             className="w-full rounded border"
                           />

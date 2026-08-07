@@ -7,7 +7,8 @@ import { authenticate, authorize } from '../lib/auth';
 import { UnauthorizedError, ForbiddenError } from '../lib/errors';
 
 export async function authMiddleware(c: Context, next: Next) {
-  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  const token = c.req.header('Authorization')?.replace('Bearer ', '')
+    || c.req.query('token');
   if (!token) throw new UnauthorizedError();
 
   const user = await authenticate(token);

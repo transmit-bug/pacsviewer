@@ -1,8 +1,9 @@
 /**
- * CornerstoneViewport — replaces the hand-written Canvas ImageViewer.
+ * CornerstoneViewport — medical image viewer.
  *
- * Uses Cornerstone.js RenderingEngine for medical image rendering with
- * built-in support for zoom, pan, window/level, and measurement tools.
+ * All image types (DICOM, PNG, JPG) go through Cornerstone.js with CPU rendering.
+ * CPU rendering uses Canvas2D internally — reliable, no VTK/WebGL dependency.
+ * All Cornerstone tools (measurement, annotation, W/L, pan, zoom) work uniformly.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -30,15 +31,13 @@ import { cn } from '@/lib/utils';
 
 interface CornerstoneViewportProps {
   imageId: string;
-  imageFormat?: string;  // 'dicom' | 'jpeg' | 'png' etc.
+  imageFormat?: string;
   viewportId?: string;
   className?: string;
 }
 
-// Unique tool group ID
 const TOOL_GROUP_ID = 'pacsviewer-toolgroup';
 
-// Tool name mapping from our store tool IDs to Cornerstone tool names
 const TOOL_MAP: Record<string, string> = {
   pan: PanTool.toolName,
   zoom: ZoomTool.toolName,
@@ -94,7 +93,6 @@ export function CornerstoneViewport({
         if (!toolGroup) {
           toolGroup = ToolGroupManager.createToolGroup(TOOL_GROUP_ID)!;
 
-          // Add tools
           toolGroup.addTool(WindowLevelTool.toolName);
           toolGroup.addTool(PanTool.toolName);
           toolGroup.addTool(ZoomTool.toolName);
@@ -109,21 +107,22 @@ export function CornerstoneViewport({
           toolGroup.addTool(StackScrollTool.toolName);
           toolGroup.addTool(MagnifyTool.toolName);
 
-          // Set default active tools
           toolGroup.setToolActive(PanTool.toolName, {
             bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
           });
           toolGroup.setToolActive(ZoomTool.toolName, {
             bindings: [{ mouseButton: ToolEnums.MouseBindings.Secondary }],
           });
-          // Mouse wheel: stack scroll for multi-frame
           toolGroup.setToolActive(StackScrollTool.toolName, {
             bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
           });
         }
 
-        // Add viewport to tool group
         toolGroup.addViewport(viewportId, RENDERING_ENGINE_ID);
+
+        // Debug: check CPU rendering state
+        const debugVp = renderingEngine.getViewport(viewportId) as any;
+        console.log('[CV] viewport useCPURendering:', debugVp?.useCPURendering, 'type:', debugVp?.constructor?.name);
 
         // Load initial image
         if (imageId) {
@@ -134,7 +133,6 @@ export function CornerstoneViewport({
           const viewport = renderingEngine.getViewport(viewportId) as any;
 
           if (viewport) {
-            // For DICOM images, try to load as multi-frame stack
             if (imageFormat === 'dicom') {
               try {
                 const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
@@ -201,7 +199,6 @@ export function CornerstoneViewport({
         setIsLoading(true);
         const csImageId = toCornerstoneImageId(imageId, imageFormat);
 
-        // For DICOM images, try to load as multi-frame stack
         if (imageFormat === 'dicom') {
           try {
             const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
@@ -231,7 +228,7 @@ export function CornerstoneViewport({
         }
         viewport.render();
 
-        // Extract DICOM metadata from the loaded Cornerstone image
+        // Extract DICOM metadata
         try {
           const image = viewport.getImage?.();
           if (image) {
@@ -253,7 +250,6 @@ export function CornerstoneViewport({
             });
           }
         } catch {
-          // Non-DICOM images won't have metadata — that's fine
           setDicomMetadata(null);
         }
 
@@ -276,18 +272,16 @@ export function CornerstoneViewport({
     const csToolName = TOOL_MAP[activeTool];
     if (!csToolName) return;
 
-    // Deactivate all measurement/annotation tools (set passive)
     for (const toolName of Object.values(TOOL_MAP)) {
       try { toolGroup.setToolPassive(toolName); } catch { /* ignore */ }
     }
 
-    // Activate selected tool
     toolGroup.setToolActive(csToolName, {
       bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
     });
   }, [activeTool]);
 
-  // Navigate to frame when currentFrame changes (from CinePlayer)
+  // Navigate to frame (CinePlayer)
   useEffect(() => {
     if (totalFrames <= 1) return;
 
@@ -301,7 +295,7 @@ export function CornerstoneViewport({
       viewport.setImageIdIndex(currentFrame);
       viewport.render();
     } catch {
-      // Silently ignore if viewport doesn't support setImageIdIndex
+      // ignore
     }
   }, [currentFrame, totalFrames, viewportId]);
 
