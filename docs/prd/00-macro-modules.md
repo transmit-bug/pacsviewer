@@ -8,11 +8,11 @@
 
 ## Problem Statement
 
-眼科医生需要一个专业的医学影像查看和分析系统，用于查看 OCT、眼底彩照、FFA/ICGA 等眼科图像。当前缺乏一个集成了图像查看、专业编辑、报告生成、设备接入的完整解决方案，且现有系统难以对接第三方眼科设备。
+眼科医生需要一个专业的医学影像查看和分析系统，用于查看 OCT、眼底彩照、FFA/ICGA 等眼科图像。设备自带软件各自为政：无法统一查看所有模态、无法跨设备跨时间对比。当前缺乏一个集成了图像查看、专业编辑、随访对比、报告生成的完整解决方案，且现有系统难以对接第三方眼科设备。
 
 ## Solution
 
-构建一个基于 Web 的 PACS Viewer，专注于眼科图像处理，采用插件式架构支持第三方设备接入，提供专业级的图像编辑和 AI 辅助诊断能力。
+构建一个基于 Web 的 PACS Viewer，专注于眼科图像处理，部署定位为**单诊所独立部署**（Docker 单节点）。核心价值是**跨时间随访对比**：同一患者不同日期检查的并排/叠加/滑块对比与纵向趋势分析。设备接入以文件导出 + 上传 + DICOMweb 为主，C-STORE SCP（ADR-005）作为 L3 目标。AI 能力（分割/病灶识别）为**远期愿景**，以图像处理技术为主，不进入本期排期。
 
 ---
 
@@ -285,7 +285,7 @@ GET    /api/patients/statistics
 
 1. 检查管理
    - 检查创建（关联患者）
-   - 检查类型：OCT、眼底彩照、FFA、ICGA、视野、角膜地形图等
+   - 支持模态（由子 Series 决定，Study 本身无类型）：OCT、眼底彩照、FFA、ICGA、视野、角膜地形图等
    - 检查状态：待诊断、诊断中、已诊断、已报告
    - 检查备注
 
@@ -318,10 +318,10 @@ GET    /api/patients/statistics
 Study {
   id: UUID
   patient_id: FK -> Patient
+  study_instance_uid: string  // DICOM StudyInstanceUID
   study_date: date
   study_time: time
-  study_type: enum(oct, fundus, ffa, icga, vf, octa, other)
-  modality: string  // DICOM Modality
+  modality: string  // 反规范化：由子 Series 聚合（查询便捷），非权威
   device: string?
   physician_id: FK -> User?
   status: enum(pending, in_progress, diagnosed, reported)
@@ -587,6 +587,7 @@ ToolService:
 - 自定义滤镜核
 
 #### 5.5 图像分割（前端 AI）
+**状态：远期愿景，暂不排期** — 以图像处理技术为主（阈值/边缘/形态学），深度学习模型不承诺，列入愿景。
 - 基础分割
   - 阈值分割（手动/自动）
   - 区域生长
@@ -606,6 +607,7 @@ ToolService:
   - 体积估算
 
 #### 5.6 病灶自动识别（前端 AI）
+**状态：远期愿景，暂不排期** — 需真实训练数据与临床验证，不进入本期范围。
 - 病变检测
   - 糖尿病视网膜病变（DR）分级
   - 青光眼风险评估
@@ -1321,7 +1323,7 @@ GET    /api/logs/statistics
 Phase 1: M1 + M2 + M3 + M4 (基础架构 + 看图)
 Phase 2: M5 + M6 (专业编辑 + 对比)
 Phase 3: M7 + M8 (报告 + 设备接入)
-Phase 4: M5.5 + M5.6 (AI 能力)
+Phase 4 (远期): M5.5 + M5.6 (AI 能力 — 愿景，暂不排期)
 Phase 5: M9 + M10 (系统管理 + 界面优化)
 ```
 

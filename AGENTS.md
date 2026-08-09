@@ -296,3 +296,17 @@ docker build -f apps/web/Dockerfile -t pacsviewer-web .
 
 - 检查 TypeScript 类型错误: `bun run typecheck`
 - 清理构建产物: 删除各包的 `dist/` 目录
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as GitHub issues in this repo (`transmit-bug/pacsviewer`), using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles use the default label strings: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one root `CONTEXT.md` plus `docs/adr/` covers the whole repo. See `docs/agents/domain.md`.
