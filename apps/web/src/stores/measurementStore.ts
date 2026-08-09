@@ -16,15 +16,14 @@ export interface SerializedAnnotation {
   id: string;
   toolName: string;   // Length, Angle, EllipticalROI, RectangleROI, etc.
   data: {
-    handles: Array<{ x: number; y: number; z: number }>;  // world coordinates
-    cachedStats?: Record<string, any>;  // measurement results (length, area, etc.)
+    /** Verbatim Cornerstone handles object ({ points: Point3[], textBox?, ... }) — round-trip fidelity */
+    handles: Record<string, any>;
+    /** Measurement results keyed by targetId (cornerstone imageId) */
+    cachedStats?: Record<string, any>;
     label?: string;
     text?: string;   // for ArrowAnnotate
   };
-  style?: {
-    color: string;
-    lineWidth: number;
-  };
+  style?: Record<string, any>;
 }
 
 /** Display-ready measurement result */

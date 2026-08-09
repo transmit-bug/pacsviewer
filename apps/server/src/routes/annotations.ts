@@ -165,17 +165,36 @@ annotationsRouter.delete('/:id', async (c) => {
 });
 
 // POST /sync — Batch sync annotations for an image
-// Replaces all annotations for the given imageId with the provided set
+// Replaces all annotations for the given imageId with the provided set.
+//
+// Contract per annotation (Cornerstone serialization round-trip):
+//   {
+//     id?: string,
+//     toolName: string,                          // e.g. 'Length' | 'Angle' | 'EllipticalROI' ...
+//     data: {
+//       handles: { points: Point3[] },           // verbatim Cornerstone handles (points are [x,y,z])
+//       cachedStats?: Record<string, any>,       // measurement results keyed by targetId
+//       label?: string,
+//       text?: string,
+//     },
+//     style?: Record<string, any>,
+//   }
+// Malformed payloads are rejected with 400 and a reason.
 annotationsRouter.post('/sync', async (c) => {
   const body = await c.req.json();
   const { imageId, annotations: newAnnotations } = body;
 
-  if (!imageId) {
-    return c.json({ success: false, message: '必须指定 imageId' }, 400);
+  if (!imageId || typeof imageId !== 'string') {
+    return c.json({ success: false, message: 'imageId 必须是非空字符串' }, 400);
   }
 
   if (!Array.isArray(newAnnotations)) {
     return c.json({ success: false, message: 'annotations 必须是数组' }, 400);
+  }
+
+  const invalid = validateAnnotationContract(newAnnotations);
+  if (invalid) {
+    return c.json({ success: false, message: invalid }, 400);
   }
 
   const userId = (c as any).get('userId') || body.userId;
@@ -247,6 +266,59 @@ annotationsRouter.get('/image/:imageId', async (c) => {
 
   return c.json({ success: true, data: serialized });
 });
+
+/**
+ * Validate the annotation sync contract.
+ *
+ * Each annotation must match the Cornerstone serialization shape:
+ *   { toolName: string, data: { handles: { points: Point3[] }, cachedStats?: object }, ... }
+ * Points may be arrays [x,y,z] (Cornerstone native) or {x,y,z} objects.
+ *
+ * @returns an error message describing the first violation, or null when valid.
+ */
+function validateAnnotationContract(annotations: unknown[]): string | null {
+  for (let i = 0; i < annotations.length; i++) {
+    const ann = annotations[i];
+    if (!ann || typeof ann !== 'object' || Array.isArray(ann)) {
+      return `annotations[${i}] 必须是对象`;
+    }
+    const a = ann as Record<string, any>;
+
+    if (typeof a.toolName !== 'string' || !a.toolName.trim()) {
+      return `annotations[${i}].toolName 缺失或不是非空字符串`;
+    }
+    if (!a.data || typeof a.data !== 'object' || Array.isArray(a.data)) {
+      return `annotations[${i}].data 缺失或不是对象`;
+    }
+    const handles = a.data.handles;
+    if (!handles || typeof handles !== 'object' || Array.isArray(handles)) {
+      return `annotations[${i}].data.handles 缺失或不是对象`;
+    }
+    const points = (handles as Record<string, any>).points;
+    if (!Array.isArray(points) || points.length === 0) {
+      return `annotations[${i}].data.handles.points 缺失或不是非空数组`;
+    }
+    for (const p of points) {
+      const valid =
+        Array.isArray(p)
+          ? p.length >= 2 && p.slice(0, 3).every((v: any) => typeof v === 'number' && Number.isFinite(v))
+          : !!p && typeof p === 'object' && Number.isFinite((p as any).x) && Number.isFinite((p as any).y);
+      if (!valid) {
+        return `annotations[${i}].data.handles.points 包含非法坐标`;
+      }
+    }
+    if (
+      a.data.cachedStats !== undefined &&
+      (a.data.cachedStats === null || typeof a.data.cachedStats !== 'object' || Array.isArray(a.data.cachedStats))
+    ) {
+      return `annotations[${i}].data.cachedStats 必须是对象`;
+    }
+    if (a.id !== undefined && typeof a.id !== 'string') {
+      return `annotations[${i}].id 必须是字符串`;
+    }
+  }
+  return null;
+}
 
 /**
  * Map Cornerstone tool names to our annotation type enum.

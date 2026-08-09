@@ -6,8 +6,8 @@
  * All Cornerstone tools (measurement, annotation, W/L, pan, zoom) work uniformly.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { Enums } from '@cornerstonejs/core';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Enums, eventTarget } from '@cornerstonejs/core';
 import {
   ToolGroupManager,
   Enums as ToolEnums,
@@ -26,6 +26,9 @@ import {
   MagnifyTool,
 } from '@cornerstonejs/tools';
 import { initCornerstone, getRenderingEngine, toCornerstoneImageId, RENDERING_ENGINE_ID, VIEWPORT_ID_PREFIX } from '@/lib/cornerstone/init';
+import { utilities as ToolUtilities } from '@cornerstonejs/tools';
+import { serializeAnnotations, deserializeAnnotations, scheduleAutoSave, cancelAutoSave } from '@/lib/cornerstone/annotation-sync';
+import { annotationApi } from '@/services/api';
 import { useViewerStore } from '@/stores/viewerStore';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +66,85 @@ export function CornerstoneViewport({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { activeTool, setDicomMetadata, currentFrame, setTotalFrames, totalFrames } = useViewerStore();
+
+  // ─── Annotation sync (save / restore) state ───────────────────────────────
+  // True while restoring annotations so render-triggered ANNOTATION_MODIFIED
+  // events don't schedule spurious saves.
+  const restoringRef = useRef(false);
+  const currentImageIdRef = useRef<string | null>(null);
+  const currentCsImageIdRef = useRef<string | null>(null);
+
+  /** Serialize the current element's annotations and sync them to the backend. */
+  const saveAnnotations = useCallback(async (targetImageId: string) => {
+    const element = elementRef.current;
+    if (!element || !targetImageId) return;
+    try {
+      const annotations = serializeAnnotations(element);
+      await annotationApi.sync(targetImageId, annotations);
+    } catch (err) {
+      console.warn('[CornerstoneViewport] 保存标注失败:', err);
+    }
+  }, []);
+
+  /** Fetch saved annotations for an image and restore them into Cornerstone state. */
+  const restoreAnnotations = useCallback(async (targetImageId: string, csImageId: string) => {
+    const element = elementRef.current;
+    if (!element) return;
+    try {
+      const resp = (await annotationApi.getForImage(targetImageId)) as any;
+      const serialized = resp?.data;
+      if (!Array.isArray(serialized) || serialized.length === 0) return;
+
+      restoringRef.current = true;
+      const added = deserializeAnnotations(csImageId, serialized, element);
+      if (added > 0) {
+        const renderingEngine = getRenderingEngine();
+        const viewport = renderingEngine?.getViewport(viewportId) as any;
+        viewport?.render();
+        // Re-render the annotation SVG layer — viewport.render() only redraws
+        // the image; annotation rendering is driven by triggerAnnotationRender.
+        ToolUtilities.triggerAnnotationRenderForViewportIds([viewportId]);
+      }
+      // Ignore render-triggered ANNOTATION_MODIFIED events from the restore pass.
+      setTimeout(() => {
+        restoringRef.current = false;
+      }, 0);
+    } catch (err) {
+      console.warn('[CornerstoneViewport] 恢复标注失败:', err);
+    }
+  }, [viewportId]);
+
+  /** Entry point for ANNOTATION_* events: immediate or debounced save. */
+  const handleAnnotationChange = useCallback((_evt: any, debounced: boolean) => {
+    const targetImageId = currentImageIdRef.current;
+    const element = elementRef.current;
+    if (!targetImageId || !element || restoringRef.current) return;
+
+    if (debounced) {
+      scheduleAutoSave(targetImageId, element, saveAnnotations, 1500);
+    } else {
+      void saveAnnotations(targetImageId);
+    }
+  }, [saveAnnotations]);
+
+  // Subscribe to Cornerstone annotation events once. Saves happen immediately
+  // on completion/removal, debounced (1.5s) on modification.
+  useEffect(() => {
+    const onCompleted = (evt: any) => handleAnnotationChange(evt, false);
+    const onModified = (evt: any) => handleAnnotationChange(evt, true);
+    const onRemoved = (evt: any) => handleAnnotationChange(evt, false);
+
+    eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
+    eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_MODIFIED, onModified);
+    eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_REMOVED, onRemoved);
+
+    return () => {
+      eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
+      eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_MODIFIED, onModified);
+      eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_REMOVED, onRemoved);
+      cancelAutoSave();
+    };
+  }, [handleAnnotationChange]);
 
   // Initialize Cornerstone and set up the viewport
   useEffect(() => {
@@ -107,7 +189,14 @@ export function CornerstoneViewport({
           toolGroup.addTool(StackScrollTool.toolName);
           toolGroup.addTool(MagnifyTool.toolName);
 
-          toolGroup.setToolActive(PanTool.toolName, {
+          // Assign modes up-front: every tool Passive so annotation tools can
+          // render (including annotations restored on load), with the current
+          // active tool Active and pan/zoom/scroll on their dedicated buttons.
+          const initialTool = TOOL_MAP[activeTool] ?? PanTool.toolName;
+          for (const toolName of Object.values(TOOL_MAP)) {
+            try { toolGroup.setToolPassive(toolName); } catch { /* ignore */ }
+          }
+          toolGroup.setToolActive(initialTool, {
             bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
           });
           toolGroup.setToolActive(ZoomTool.toolName, {
@@ -162,6 +251,12 @@ export function CornerstoneViewport({
             }
             viewport.render();
           }
+
+          // Track current image and restore saved annotations
+          currentImageIdRef.current = imageId;
+          currentCsImageIdRef.current = csImageId;
+          void restoreAnnotations(imageId, csImageId);
+
           setIsLoading(false);
         }
       } catch (err) {
@@ -187,6 +282,9 @@ export function CornerstoneViewport({
   // Update image when imageId changes
   useEffect(() => {
     if (!imageId) return;
+
+    // Cancel any pending auto-save for the previous image
+    cancelAutoSave();
 
     const loadNewImage = async () => {
       const renderingEngine = getRenderingEngine();
@@ -228,6 +326,11 @@ export function CornerstoneViewport({
         }
         viewport.render();
 
+        // Track current image and restore saved annotations
+        currentImageIdRef.current = imageId;
+        currentCsImageIdRef.current = csImageId;
+        void restoreAnnotations(imageId, csImageId);
+
         // Extract DICOM metadata
         try {
           const image = viewport.getImage?.();
@@ -262,7 +365,7 @@ export function CornerstoneViewport({
     };
 
     loadNewImage();
-  }, [imageId, viewportId, imageFormat, setDicomMetadata]);
+  }, [imageId, viewportId, imageFormat, setDicomMetadata, restoreAnnotations]);
 
   // Update active tool
   useEffect(() => {

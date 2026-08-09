@@ -35,6 +35,24 @@ export async function computeHash(buffer: Buffer): Promise<string> {
 }
 
 /**
+ * Sharp's `metadata().depth` is a string ('uchar', 'ushort', 'float', ...) —
+ * map it to a bit depth. Falls back to the existing parseInt behavior for
+ * unknown values.
+ */
+const SHARP_DEPTH_BITS: Record<string, number> = {
+  char: 8,
+  uchar: 8,
+  short: 16,
+  ushort: 16,
+  int: 32,
+  uint: 32,
+  float: 32,
+  complex: 64,
+  double: 64,
+  dpcomplex: 128,
+};
+
+/**
  * Extract image metadata from a buffer.
  */
 export async function extractMetadata(buffer: Buffer): Promise<ImageMetadata> {
@@ -44,7 +62,9 @@ export async function extractMetadata(buffer: Buffer): Promise<ImageMetadata> {
     width: metadata.width ?? 0,
     height: metadata.height ?? 0,
     format: metadata.format ?? 'unknown',
-    bitsPerSample: metadata.depth ? parseInt(metadata.depth) : undefined,
+    bitsPerSample: metadata.depth
+      ? (SHARP_DEPTH_BITS[metadata.depth] ?? parseInt(metadata.depth))
+      : undefined,
     channels: metadata.channels,
     hasAlpha: metadata.hasAlpha,
     density: metadata.density,
