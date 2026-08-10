@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "pacsviewer",
@@ -49,6 +48,7 @@
         "@cornerstonejs/dicom-image-loader": "^5.6.2",
         "@cornerstonejs/tools": "^5.6.2",
         "@hookform/resolvers": "^3.3.0",
+        "@pacsviewer/image-processing": "workspace:*",
         "@radix-ui/react-alert-dialog": "^1.1.19",
         "@radix-ui/react-dialog": "^1.0.0",
         "@radix-ui/react-dropdown-menu": "^2.0.0",
