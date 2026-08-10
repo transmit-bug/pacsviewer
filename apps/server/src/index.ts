@@ -24,6 +24,7 @@ import settingsRouter from './routes/settings';
 import dashboardRouter from './routes/dashboard';
 import worklistRouter from './routes/worklist';
 import followUpRouter from './routes/follow-up';
+import measurementsRouter from './routes/measurements';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
 import { startDicomServer } from './dicom/server';
@@ -79,6 +80,7 @@ app.route('/api/settings', settingsRouter);
 app.route('/api/dashboard', dashboardRouter);
 app.route('/api/worklist', worklistRouter);
 app.route('/api/follow-up', followUpRouter);
+app.route('/api/measurements', measurementsRouter);
 
 // Start DICOM SCP server (separate TCP port)
 const dicomPort = Number(process.env.DICOM_PORT) || 11112;

@@ -2,13 +2,24 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ViewportState, defaultViewport } from './shared';
+import {
+  ViewportState,
+  defaultViewport,
+  drawMeasurementLines,
+  isWwWlGesture,
+  applyWlDrag,
+  ComparisonLine,
+} from './shared';
 
 type BlendMode = 'normal' | 'difference' | 'lighten' | 'darken';
 
 interface OverlayModeProps {
   imageIdA: string;
   imageIdB: string;
+  /** Measurement overlay lines (attributed to the comparison study — top layer). */
+  lines?: ComparisonLine[];
+  onDrawLine?: (line: ComparisonLine) => void;
+  measuring?: boolean;
   className?: string;
 }
 
@@ -101,7 +112,7 @@ function renderOverlayToCanvas(
   }
 }
 
-export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps) {
+export function OverlayMode({ imageIdA, imageIdB, lines = [], onDrawLine, measuring = false, className }: OverlayModeProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,9 +121,12 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
 
   const [viewport, setViewport] = useState<ViewportState>({ ...defaultViewport });
   const [opacity, setOpacity] = useState(0.5);
-  const [blendMode, setBlendMode] = useState<BlendMode>('normal');
+  // 差值混合作为默认(wayfinder #88 决策)
+  const [blendMode, setBlendMode] = useState<BlendMode>('difference');
   const [isLoading, setIsLoading] = useState(true);
   const [diffHighlight, setDiffHighlight] = useState(false);
+  const [draft, setDraft] = useState<ComparisonLine | null>(null);
+  const dragRef = useRef<{ kind: 'pan' | 'wl' | 'measure'; startX: number; startY: number; startWw: number; startWl: number; line: ComparisonLine | null } | null>(null);
 
   const loadImage = useCallback(
     (imageId: string, imgRef: React.MutableRefObject<HTMLImageElement | null>) => {
@@ -144,6 +158,7 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
   useEffect(() => {
     if (canvasRef.current && imgARef.current && imgBRef.current) {
       renderOverlayToCanvas(canvasRef.current, imgARef.current, imgBRef.current, viewport, opacity, blendMode);
+      drawMeasurementLines(canvasRef.current, [...lines, ...(draft ? [draft] : [])]);
 
       if (diffHighlight) {
         const ctx = canvasRef.current.getContext('2d');
@@ -164,24 +179,75 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
         }
       }
     }
-  }, [viewport, opacity, blendMode, diffHighlight, isLoading]);
+  }, [viewport, opacity, blendMode, diffHighlight, isLoading, lines, draft]);
+
+  const normalizePoint = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)),
+    };
+  }, []);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!canvasRef.current) return;
+      e.preventDefault();
+
+      if (measuring) {
+        const { x, y } = normalizePoint(e);
+        const line: ComparisonLine = {
+          id: `ov-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          x1: x, y1: y, x2: x, y2: y,
+          owner: 'comparison',
+        };
+        dragRef.current = { kind: 'measure', startX: e.clientX, startY: e.clientY, startWw: viewport.windowWidth, startWl: viewport.windowLevel, line };
+        const handleMove = (moveEvent: MouseEvent) => {
+          if (!dragRef.current?.line) return;
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const px = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
+          const py = Math.max(0, Math.min(1, (moveEvent.clientY - rect.top) / rect.height));
+          const updated = { ...dragRef.current.line, x2: px, y2: py };
+          dragRef.current.line = updated;
+          setDraft(updated);
+        };
+        const handleUp = () => {
+          const line = dragRef.current?.line;
+          dragRef.current = null;
+          setDraft(null);
+          if (line && onDrawLine && (Math.abs(line.x2 - line.x1) > 0.005 || Math.abs(line.y2 - line.y1) > 0.005)) {
+            onDrawLine(line);
+          }
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return;
+      }
+
       const startX = e.clientX;
       const startY = e.clientY;
       const startPan = { ...viewport.pan };
+      const startWw = viewport.windowWidth;
+      const startWl = viewport.windowLevel;
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
         const deltaX = moveEvent.clientX - startX;
         const deltaY = moveEvent.clientY - startY;
-        setViewport((prev) => ({
-          ...prev,
-          pan: {
-            x: startPan.x + deltaX / prev.zoom,
-            y: startPan.y + deltaY / prev.zoom,
-          },
-        }));
+        if (isWwWlGesture(e)) {
+          setViewport((prev) => ({ ...prev, ...applyWlDrag({ ...prev, windowWidth: startWw, windowLevel: startWl }, deltaX, deltaY) }));
+        } else {
+          setViewport((prev) => ({
+            ...prev,
+            pan: {
+              x: startPan.x + deltaX / prev.zoom,
+              y: startPan.y + deltaY / prev.zoom,
+            },
+          }));
+        }
       };
 
       const handleMouseUp = () => {
@@ -192,7 +258,7 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     },
-    [viewport]
+    [viewport, measuring, onDrawLine, normalizePoint]
   );
 
   const handleWheel = useCallback(
@@ -259,13 +325,15 @@ export function OverlayMode({ imageIdA, imageIdB, className }: OverlayModeProps)
         )}
         <canvas
           ref={canvasRef}
-          className="w-full h-full cursor-crosshair"
+          className={cn('w-full h-full', measuring ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing')}
           onMouseDown={handleMouseDown}
           onWheel={handleWheel}
+          onContextMenu={(e) => e.preventDefault()}
         />
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
           <div>{t('viewer.compare.zoom')}: {(viewport.zoom * 100).toFixed(0)}%</div>
           <div>{t('viewer.compare.blend')}: {t(BLEND_MODES.find((m) => m.value === blendMode)?.labelKey || '')}</div>
+          <div>窗宽/窗位: {viewport.windowWidth}/{viewport.windowLevel}</div>
         </div>
       </div>
     </div>

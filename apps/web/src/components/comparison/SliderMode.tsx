@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { ViewportState, defaultViewport } from './shared';
+import {
+  ViewportState,
+  defaultViewport,
+  drawMeasurementLines,
+  isWwWlGesture,
+  applyWlDrag,
+  ComparisonLine,
+} from './shared';
 
 interface SliderModeProps {
   imageIdA: string;
   imageIdB: string;
   orientation?: 'horizontal' | 'vertical';
+  /** Measurement overlay lines (attributed to the comparison study). */
+  lines?: ComparisonLine[];
+  onDrawLine?: (line: ComparisonLine) => void;
+  measuring?: boolean;
   className?: string;
 }
 
@@ -14,6 +25,9 @@ export function SliderMode({
   imageIdA,
   imageIdB,
   orientation = 'horizontal',
+  lines = [],
+  onDrawLine,
+  measuring = false,
   className,
 }: SliderModeProps) {
   const { t } = useTranslation();
@@ -25,6 +39,8 @@ export function SliderMode({
   const [viewport, setViewport] = useState<ViewportState>({ ...defaultViewport });
   const [sliderPosition, setSliderPosition] = useState(0.5);
   const [isLoading, setIsLoading] = useState(true);
+  const [draft, setDraft] = useState<ComparisonLine | null>(null);
+  const dragRef = useRef<{ kind: 'slider' | 'wl' | 'measure'; startX: number; startY: number; startWw: number; startWl: number; line: ComparisonLine | null } | null>(null);
 
   const loadImage = useCallback(
     (imageId: string, imgRef: React.MutableRefObject<HTMLImageElement | null>) => {
@@ -191,7 +207,10 @@ export function SliderMode({
       }
       ctx.putImageData(imageData, 0, 0);
     }
-  }, [viewport, sliderPosition, orientation, isLoading]);
+
+    // Measurement overlay (crisp, in canvas coords)
+    drawMeasurementLines(canvas, [...lines, ...(draft ? [draft] : [])]);
+  }, [viewport, sliderPosition, orientation, isLoading, lines, draft]);
 
   const updateSliderFromEvent = useCallback(
     (clientX: number, clientY: number) => {
@@ -212,6 +231,68 @@ export function SliderMode({
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!canvasRef.current) return;
+      e.preventDefault();
+
+      if (measuring) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+        // Attribution follows the panel half the line starts in: left/top
+        // shows the baseline image, right/bottom the comparison image.
+        const owner: 'baseline' | 'comparison' =
+          orientation === 'horizontal' ? (nx < sliderPosition ? 'baseline' : 'comparison') : (ny < sliderPosition ? 'baseline' : 'comparison');
+        const line: ComparisonLine = {
+          id: `sl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          x1: nx, y1: ny, x2: 0, y2: 0,
+          owner,
+        };
+        dragRef.current = { kind: 'measure', startX: e.clientX, startY: e.clientY, startWw: viewport.windowWidth, startWl: viewport.windowLevel, line };
+        const handleMove = (moveEvent: MouseEvent) => {
+          if (!dragRef.current?.line || !canvasRef.current) return;
+          const r = canvasRef.current.getBoundingClientRect();
+          const updated = {
+            ...dragRef.current.line,
+            x2: Math.max(0, Math.min(1, (moveEvent.clientX - r.left) / r.width)),
+            y2: Math.max(0, Math.min(1, (moveEvent.clientY - r.top) / r.height)),
+          };
+          dragRef.current.line = updated;
+          setDraft(updated);
+        };
+        const handleUp = () => {
+          const line = dragRef.current?.line;
+          dragRef.current = null;
+          setDraft(null);
+          if (line && onDrawLine && (Math.abs(line.x2 - line.x1) > 0.005 || Math.abs(line.y2 - line.y1) > 0.005)) {
+            onDrawLine(line);
+          }
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return;
+      }
+
+      if (isWwWlGesture(e)) {
+        const startWw = viewport.windowWidth;
+        const startWl = viewport.windowLevel;
+        dragRef.current = { kind: 'wl', startX: e.clientX, startY: e.clientY, startWw, startWl, line: null };
+        const handleMove = (moveEvent: MouseEvent) => {
+          const dx = moveEvent.clientX - dragRef.current!.startX;
+          const dy = moveEvent.clientY - dragRef.current!.startY;
+          setViewport((prev) => ({ ...prev, ...applyWlDrag({ ...prev, windowWidth: startWw, windowLevel: startWl }, dx, dy) }));
+        };
+        const handleUp = () => {
+          dragRef.current = null;
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return;
+      }
+
       updateSliderFromEvent(e.clientX, e.clientY);
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -226,7 +307,7 @@ export function SliderMode({
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     },
-    [updateSliderFromEvent]
+    [updateSliderFromEvent, measuring, viewport, onDrawLine, orientation, sliderPosition]
   );
 
   const handleWheel = useCallback(
@@ -250,9 +331,10 @@ export function SliderMode({
       )}
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-ew-resize"
+        className={cn('w-full h-full', measuring ? 'cursor-crosshair' : 'cursor-ew-resize')}
         onMouseDown={handleMouseDown}
         onWheel={handleWheel}
+        onContextMenu={(e) => e.preventDefault()}
       />
       <div className="absolute top-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
         A
@@ -263,6 +345,7 @@ export function SliderMode({
       <div className="absolute bottom-2 left-2 text-xs text-white/70">
         <div>{t('viewer.compare.zoom')}: {(viewport.zoom * 100).toFixed(0)}%</div>
         <div>{t('viewer.compare.sliderPosition')}: {(sliderPosition * 100).toFixed(0)}%</div>
+        <div>窗宽/窗位: {viewport.windowWidth}/{viewport.windowLevel}</div>
       </div>
     </div>
   );

@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { ViewportState, defaultViewport, renderImageToCanvas } from './shared';
+import {
+  ViewportState,
+  defaultViewport,
+  renderImageToCanvas,
+  drawMeasurementLines,
+  isWwWlGesture,
+  applyWlDrag,
+  ComparisonLine,
+} from './shared';
 
 interface SideBySideModeProps {
   imageIdA: string;
   imageIdB: string;
   orientation?: 'horizontal' | 'vertical';
-  syncScroll?: boolean;
-  syncZoom?: boolean;
+  /** When true, pan / zoom / window-level are mirrored to the other panel. */
+  syncViewport?: boolean;
+  /** When true, drag draws a measurement line attributed to the panel's owner. */
+  measuring?: boolean;
+  linesA?: ComparisonLine[];
+  linesB?: ComparisonLine[];
+  /** Called when a measurement line completes (owner set by the panel). */
+  onDrawLine?: (line: ComparisonLine) => void;
   className?: string;
 }
 
@@ -16,8 +30,11 @@ export function SideBySideMode({
   imageIdA,
   imageIdB,
   orientation = 'horizontal',
-  syncScroll = true,
-  syncZoom = true,
+  syncViewport = true,
+  measuring = false,
+  linesA = [],
+  linesB = [],
+  onDrawLine,
   className,
 }: SideBySideModeProps) {
   const { t } = useTranslation();
@@ -32,8 +49,20 @@ export function SideBySideMode({
   const [viewportB, setViewportB] = useState<ViewportState>({ ...defaultViewport });
   const [isLoadingA, setIsLoadingA] = useState(true);
   const [isLoadingB, setIsLoadingB] = useState(true);
+  // In-progress measurement line (live preview before commit).
+  const [draftA, setDraftA] = useState<ComparisonLine | null>(null);
+  const [draftB, setDraftB] = useState<ComparisonLine | null>(null);
 
   const isSyncingRef = useRef(false);
+  const dragRef = useRef<{
+    kind: 'pan' | 'wl' | 'measure';
+    startX: number;
+    startY: number;
+    startPan: { x: number; y: number };
+    startWw: number;
+    startWl: number;
+    line: ComparisonLine | null;
+  } | null>(null);
 
   const loadImage = useCallback(
     (imageId: string, imgRef: React.MutableRefObject<HTMLImageElement | null>, setLoaded: (v: boolean) => void) => {
@@ -65,74 +94,139 @@ export function SideBySideMode({
   useEffect(() => {
     if (canvasARef.current && imgARef.current) {
       renderImageToCanvas(canvasARef.current, imgARef.current, viewportA);
+      drawMeasurementLines(canvasARef.current, [...linesA, ...(draftA ? [draftA] : [])]);
     }
-  }, [viewportA, isLoadingA]);
+  }, [viewportA, isLoadingA, linesA, draftA]);
 
   useEffect(() => {
     if (canvasBRef.current && imgBRef.current) {
       renderImageToCanvas(canvasBRef.current, imgBRef.current, viewportB);
+      drawMeasurementLines(canvasBRef.current, [...linesB, ...(draftB ? [draftB] : [])]);
     }
-  }, [viewportB, isLoadingB]);
+  }, [viewportB, isLoadingB, linesB, draftB]);
+
+  /** Mirror a partial viewport update to the other panel when sync is on. */
+  const mirrorTo = useCallback(
+    (from: 'A' | 'B', patch: (prev: ViewportState) => ViewportState) => {
+      if (!syncViewport || isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      if (from === 'A') setViewportB((prev) => patch(prev));
+      else setViewportA((prev) => patch(prev));
+      isSyncingRef.current = false;
+    },
+    [syncViewport]
+  );
+
+  const normalizePoint = useCallback((canvas: HTMLCanvasElement, e: { clientX: number; clientY: number }) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)),
+    };
+  }, []);
 
   const handleMouseDown = useCallback(
     (side: 'A' | 'B') => (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const startX = e.clientX;
-      const startY = e.clientY;
+      const canvas = side === 'A' ? canvasARef.current : canvasBRef.current;
+      if (!canvas) return;
+      e.preventDefault();
+
       const currentViewport = side === 'A' ? viewportA : viewportB;
-      const setViewport = side === 'A' ? setViewportA : setViewportB;
-      const startPan = { ...currentViewport.pan };
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = moveEvent.clientX - startX;
-        const deltaY = moveEvent.clientY - startY;
-
-        const newPan = {
-          x: startPan.x + deltaX / currentViewport.zoom,
-          y: startPan.y + deltaY / currentViewport.zoom,
+      if (measuring) {
+        const { x, y } = normalizePoint(canvas, e);
+        const line: ComparisonLine = {
+          id: `${side}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          x1: x, y1: y, x2: x, y2: y,
+          owner: side === 'A' ? 'baseline' : 'comparison',
         };
+        dragRef.current = { kind: 'measure', startX: e.clientX, startY: e.clientY, startPan: currentViewport.pan, startWw: currentViewport.windowWidth, startWl: currentViewport.windowLevel, line };
 
+        const handleMove = (moveEvent: MouseEvent) => {
+          if (!dragRef.current?.line) return;
+          const p = normalizePoint(canvas, moveEvent);
+          const updated = { ...dragRef.current.line, x2: p.x, y2: p.y };
+          dragRef.current.line = updated;
+          if (side === 'A') setDraftA(updated);
+          else setDraftB(updated);
+        };
+        const handleUp = () => {
+          const line = dragRef.current?.line;
+          dragRef.current = null;
+          if (side === 'A') setDraftA(null);
+          else setDraftB(null);
+          if (line && onDrawLine && (Math.abs(line.x2 - line.x1) > 0.005 || Math.abs(line.y2 - line.y1) > 0.005)) {
+            onDrawLine(line);
+          }
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return;
+      }
+
+      if (isWwWlGesture(e)) {
+        dragRef.current = { kind: 'wl', startX: e.clientX, startY: e.clientY, startPan: currentViewport.pan, startWw: currentViewport.windowWidth, startWl: currentViewport.windowLevel, line: null };
+        const setViewport = side === 'A' ? setViewportA : setViewportB;
+        const handleMove = (moveEvent: MouseEvent) => {
+          const dx = moveEvent.clientX - dragRef.current!.startX;
+          const dy = moveEvent.clientY - dragRef.current!.startY;
+          const wl = applyWlDrag({ ...currentViewport, windowWidth: dragRef.current!.startWw, windowLevel: dragRef.current!.startWl }, dx, dy);
+          setViewport((prev) => ({ ...prev, ...wl }));
+          mirrorTo(side, (prev) => ({ ...prev, ...wl }));
+        };
+        const handleUp = () => {
+          dragRef.current = null;
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleUp);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return;
+      }
+
+      // Pan
+      dragRef.current = { kind: 'pan', startX: e.clientX, startY: e.clientY, startPan: { ...currentViewport.pan }, startWw: currentViewport.windowWidth, startWl: currentViewport.windowLevel, line: null };
+      const setViewport = side === 'A' ? setViewportA : setViewportB;
+      const handleMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - dragRef.current!.startX;
+        const dy = moveEvent.clientY - dragRef.current!.startY;
+        const newPan = {
+          x: dragRef.current!.startPan.x + dx / currentViewport.zoom,
+          y: dragRef.current!.startPan.y + dy / currentViewport.zoom,
+        };
         setViewport((prev) => ({ ...prev, pan: newPan }));
-
-        if (syncScroll && !isSyncingRef.current) {
-          isSyncingRef.current = true;
-          const otherSet = side === 'A' ? setViewportB : setViewportA;
-          otherSet((prev) => ({ ...prev, pan: newPan }));
-          isSyncingRef.current = false;
-        }
+        mirrorTo(side, (prev) => ({ ...prev, pan: newPan }));
       };
-
-      const handleMouseUp = () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+      const handleUp = () => {
+        dragRef.current = null;
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleUp);
       };
-
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleUp);
     },
-    [viewportA, viewportB, syncScroll]
+    [viewportA, viewportB, measuring, syncViewport, mirrorTo, normalizePoint, onDrawLine]
   );
 
   const handleWheel = useCallback(
     (side: 'A' | 'B') => (e: React.WheelEvent<HTMLCanvasElement>) => {
       e.preventDefault();
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      const currentViewport = side === 'A' ? viewportA : viewportB;
       const setViewport = side === 'A' ? setViewportA : setViewportB;
-      const newZoom = Math.max(0.1, Math.min(10, currentViewport.zoom * zoomFactor));
-
-      setViewport((prev) => ({ ...prev, zoom: newZoom }));
-
-      if (syncZoom && !isSyncingRef.current) {
-        isSyncingRef.current = true;
-        const otherSet = side === 'A' ? setViewportB : setViewportA;
-        otherSet((prev) => ({ ...prev, zoom: newZoom }));
-        isSyncingRef.current = false;
-      }
+      setViewport((prev) => ({ ...prev, zoom: Math.max(0.1, Math.min(10, prev.zoom * zoomFactor)) }));
+      mirrorTo(side, (prev) => ({ ...prev, zoom: Math.max(0.1, Math.min(10, prev.zoom * zoomFactor)) }));
     },
-    [viewportA, viewportB, syncZoom]
+    [mirrorTo]
   );
 
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+  }, []);
+
   const isHorizontal = orientation === 'horizontal';
+  const cursorClass = measuring ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing';
 
   return (
     <div
@@ -150,12 +244,13 @@ export function SideBySideMode({
         )}
         <canvas
           ref={canvasARef}
-          className="w-full h-full cursor-crosshair"
+          className={cn('w-full h-full', cursorClass)}
           onMouseDown={handleMouseDown('A')}
           onWheel={handleWheel('A')}
+          onContextMenu={handleContextMenu}
         />
         <div className="absolute top-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-          A
+          A · 基线
         </div>
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
           <div>{t('viewer.compare.zoom')}: {(viewportA.zoom * 100).toFixed(0)}%</div>
@@ -173,12 +268,13 @@ export function SideBySideMode({
         )}
         <canvas
           ref={canvasBRef}
-          className="w-full h-full cursor-crosshair"
+          className={cn('w-full h-full', cursorClass)}
           onMouseDown={handleMouseDown('B')}
           onWheel={handleWheel('B')}
+          onContextMenu={handleContextMenu}
         />
         <div className="absolute top-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-          B
+          B · 对比
         </div>
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
           <div>{t('viewer.compare.zoom')}: {(viewportB.zoom * 100).toFixed(0)}%</div>

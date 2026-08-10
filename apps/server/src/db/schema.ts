@@ -602,6 +602,68 @@ export const followUpRecordsRelations = relations(followUpRecords, ({ one }) => 
   }),
 }));
 
+// Measurement Definitions table — controlled dictionary (wayfinder #87)
+// Identity key is the human-readable `key`; trend_direction fixes which way is
+// worse (e.g. RNFL thickness down = worsening), reference_range drives the
+// normal-range band in the trend chart.
+export const measurementDefinitions = sqliteTable('measurement_definitions', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  type: text('type').notNull(),   // 'thickness' | 'distance' | 'area' | 'angle' | 'ratio' | 'pressure' | 'other'
+  unit: text('unit').notNull(),   // 'μm' | 'mm' | 'mm²' | '°' | 'mmHg' | ''
+  trendDirection: text('trend_direction', { enum: ['up', 'down'] }).notNull(),
+  referenceRange: text('reference_range', { mode: 'json' }),  // { min?, max? }
+  modality: text('modality'),     // optional hint: 'OCT' | 'Fundus' | ...
+  description: text('description'),
+  isPreset: integer('is_preset', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  index('measurement_definitions_key_idx').on(table.key),
+]);
+
+export const measurementDefinitionsRelations = relations(measurementDefinitions, ({ many }) => ({
+  points: many(measurementPoints),
+}));
+
+// Measurement Points table — longitudinal snapshot of one measurement per
+// (study, measurement_key), written when annotations are saved (wayfinder #87).
+// Stores the real unit Cornerstone reported; px values are flagged uncalibrated.
+export const measurementPoints = sqliteTable('measurement_points', {
+  id: text('id').primaryKey(),
+  studyId: text('study_id').references(() => studies.id).notNull(),
+  imageId: text('image_id').references(() => images.id),
+  measurementKey: text('measurement_key').notNull(),
+  type: text('type').notNull(),   // 'length' | 'angle' | 'area' | 'probe' | toolName fallback
+  value: real('value').notNull(),
+  unit: text('unit').notNull(),
+  calibrated: integer('calibrated', { mode: 'boolean' }).default(true).notNull(),
+  sourceAnnotationId: text('source_annotation_id').references(() => annotations.id),
+  capturedAt: text('captured_at').notNull(),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  uniqueIndex('measurement_points_study_key_idx').on(table.studyId, table.measurementKey),
+  index('measurement_points_study_idx').on(table.studyId),
+  index('measurement_points_key_idx').on(table.measurementKey),
+]);
+
+export const measurementPointsRelations = relations(measurementPoints, ({ one }) => ({
+  study: one(studies, {
+    fields: [measurementPoints.studyId],
+    references: [studies.id],
+  }),
+  image: one(images, {
+    fields: [measurementPoints.imageId],
+    references: [images.id],
+  }),
+  definition: one(measurementDefinitions, {
+    fields: [measurementPoints.measurementKey],
+    references: [measurementDefinitions.key],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
@@ -643,3 +705,7 @@ export const insertWorklistItemSchema = createInsertSchema(worklistItems).omit({
 export const selectWorklistItemSchema = createSelectSchema(worklistItems);
 export const insertFollowUpRecordSchema = createInsertSchema(followUpRecords).omit({ id: true });
 export const selectFollowUpRecordSchema = createSelectSchema(followUpRecords);
+export const insertMeasurementDefinitionSchema = createInsertSchema(measurementDefinitions).omit({ id: true, createdAt: true, updatedAt: true });
+export const selectMeasurementDefinitionSchema = createSelectSchema(measurementDefinitions);
+export const insertMeasurementPointSchema = createInsertSchema(measurementPoints).omit({ id: true, createdAt: true, updatedAt: true });
+export const selectMeasurementPointSchema = createSelectSchema(measurementPoints);

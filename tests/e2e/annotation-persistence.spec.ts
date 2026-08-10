@@ -15,8 +15,6 @@ import { readFileSync } from 'node:fs';
 
 test.setTimeout(120000);
 
-const STUDY_ID = '0bea8a95-2099-4770-ac57-70d6060f81d0';
-const SERIES_ID = '93b1730c-9e61-4586-a030-58f325f678c3';
 const FIXTURE_PATH = 'apps/server/data/images/_fundus_dr.png';
 const AUTH_STORAGE_KEY = 'auth-storage';
 
@@ -43,8 +41,28 @@ test.describe('Annotation persistence loop', () => {
     const jsonHeaders = { ...authHeaders, 'Content-Type': 'application/json' };
 
     let fixtureImageId: string | null = null;
+    let studyId: string | null = null;
+    let seriesId: string | null = null;
 
     try {
+      // Discover a seeded study+series via API (no hardcoded IDs — survives reseeds).
+      const patientsRes = await page.request.get('/api/patients?pageSize=50', { headers: authHeaders });
+      const patients = (await patientsRes.json()).data?.items ?? [];
+      expect(patients.length).toBeGreaterThan(0);
+      for (const p of patients) {
+        const studiesRes = await page.request.get(`/api/patients/${p.id}/studies`, { headers: authHeaders });
+        const studies = (await studiesRes.json()).data ?? [];
+        if (studies.length === 0) continue;
+        const seriesRes = await page.request.get(`/api/studies/${studies[0].id}/series`, { headers: authHeaders });
+        const seriesList = (await seriesRes.json()).data ?? [];
+        if (seriesList.length > 0) {
+          studyId = studies[0].id;
+          seriesId = seriesList[0].id;
+          break;
+        }
+      }
+      expect(studyId, 'seed should contain a study with a series').toBeTruthy();
+
       // Upload a real fixture image as the first image of the series.
       // Negative instanceNumber sorts before the seed images (instance 1, 2)
       // so the viewer displays it first. (instanceNumber=0 is coerced to 1
@@ -57,7 +75,7 @@ test.describe('Annotation persistence loop', () => {
             mimeType: 'image/png',
             buffer: readFileSync(FIXTURE_PATH),
           },
-          seriesId: SERIES_ID,
+          seriesId,
           instanceNumber: '-5',
         },
       });
@@ -78,7 +96,7 @@ test.describe('Annotation persistence loop', () => {
         (res) => res.url().includes(`/api/images/${fixtureImageId}/file`) && res.status() === 200,
         { timeout: 30000 },
       );
-      await page.goto(`/viewer/${STUDY_ID}`);
+      await page.goto(`/viewer/${studyId}`);
       const viewport = page.locator('div.relative.w-full.h-full.bg-black');
       await expect(viewport.locator('canvas').first()).toBeVisible({ timeout: 20000 });
 
