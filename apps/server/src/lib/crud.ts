@@ -93,6 +93,23 @@ export function createCrudRouter<T extends SQLiteTable>(
   // Access the relational query builder for this table
   const queryBuilder = (db.query as any)[queryKey];
 
+  // Helper: parse JSON fields in items
+  const parseJsonFields = (item: any) => {
+    if (!item) return item;
+    const result = { ...item };
+    // Parse common JSON fields
+    for (const key of ['tags', 'customFields', 'permissions', 'metadata', 'config', 'capabilities', 'connectionInfo', 'images', 'content', 'style', 'geometry', 'data', 'settings', 'options', 'fields', 'values', 'items', 'entries', 'list', 'array', 'children', 'nodes', 'elements', 'components', 'attributes', 'properties', 'params', 'args', 'kwargs', 'headers', 'body', 'query', 'filter', 'sort', 'pagination', 'results', 'errors', 'warnings', 'info', 'debug', 'trace', 'logs', 'events', 'messages', 'notifications', 'alerts', 'tasks', 'jobs', 'jobs', 'jobs', 'jobs']) {
+      if (result[key] && typeof result[key] === 'string') {
+        try {
+          result[key] = JSON.parse(result[key]);
+        } catch {
+          // Keep as string if parsing fails
+        }
+      }
+    }
+    return result;
+  };
+
   // GET / - List with pagination
   router.get('/', async (c: Context) => {
     const page = Math.max(1, Number(c.req.query('page')) || 1);
@@ -122,7 +139,7 @@ export function createCrudRouter<T extends SQLiteTable>(
     return c.json({
       success: true,
       data: {
-        items,
+        items: items.map(parseJsonFields),
         total: count[0].count,
         page,
         pageSize,
@@ -144,14 +161,19 @@ export function createCrudRouter<T extends SQLiteTable>(
     const item = await queryBuilder.findFirst(query);
     if (!item) throw new NotFoundError(name);
 
-    return c.json({ success: true, data: item });
+    return c.json({ success: true, data: parseJsonFields(item) });
   });
 
   // POST / - Create
   router.post('/', async (c: Context) => {
+    const rawBody = await c.req.json();
+    
+    // Remove id from body if present (server generates it)
+    const { id: _, ...bodyWithoutId } = rawBody as any;
+    
     const body = createSchema
-      ? createSchema.parse(await c.req.json())
-      : await c.req.json();
+      ? createSchema.parse(bodyWithoutId)
+      : bodyWithoutId;
 
     const transformed = beforeCreate ? await beforeCreate(body, c) : body;
     const id = uuid();
@@ -169,7 +191,7 @@ export function createCrudRouter<T extends SQLiteTable>(
       ...(withRelations ? { with: withRelations } : {}),
     });
 
-    return c.json({ success: true, data: item }, 201);
+    return c.json({ success: true, data: parseJsonFields(item) }, 201);
   });
 
   // PUT /:id - Update
@@ -193,7 +215,7 @@ export function createCrudRouter<T extends SQLiteTable>(
     });
     if (!item) throw new NotFoundError(name);
 
-    return c.json({ success: true, data: item });
+    return c.json({ success: true, data: parseJsonFields(item) });
   });
 
   // DELETE /:id - Delete
