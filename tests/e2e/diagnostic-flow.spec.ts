@@ -13,8 +13,8 @@ test.describe('Diagnostic Workflow', () => {
     await expect(page).toHaveTitle(/.*/);
 
     // Fill login form
-    await page.fill('input[name="username"], input[placeholder*="用户"]', 'admin');
-    await page.fill('input[name="password"], input[type="password"]', 'admin123');
+    await page.fill('#username', 'admin');
+    await page.fill('#password', 'admin123');
 
     // Submit
     await page.click('button[type="submit"]');
@@ -30,11 +30,21 @@ test.describe('Diagnostic Workflow', () => {
   });
 
   test('settings page loads', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('#username', 'admin');
+    await page.fill('#password', 'admin123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/');
     await page.goto('/settings');
-    await expect(page.locator('text=常规设置')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '常规设置' })).toBeVisible();
   });
 
   test('devices page loads', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('#username', 'admin');
+    await page.fill('#password', 'admin123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/');
     await page.goto('/devices');
     await expect(page.locator('text=设备管理')).toBeVisible();
   });

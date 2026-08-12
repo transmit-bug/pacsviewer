@@ -16,6 +16,8 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { db, followUpRecords, studies, annotations, patients } from '../db';
+import { extractMeasurementValue } from '../lib/measurement-extract';
+import { getDefinitionMap } from '../db/measurement-definitions';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { log } from '../lib/audit';
 import { AuditEvents } from '../lib/audit-events';
@@ -66,6 +68,8 @@ followUpRouter.get('/', async (c) => {
 });
 
 // POST / — Create a new follow-up record
+// Same (patientId, baselineStudyId, comparisonStudyId) pair saves → upsert
+// (update measurements + notes) instead of creating a duplicate. (T5)
 followUpRouter.post('/', async (c) => {
   const body = await c.req.json();
 
@@ -73,7 +77,7 @@ followUpRouter.post('/', async (c) => {
     throw new ValidationError('Missing required fields: patientId, baselineStudyId, comparisonStudyId');
   }
 
-  // Verify studies exist
+  // Verify studies exist and belong to the patient
   const baselineStudy = await db.query.studies.findFirst({
     where: eq(studies.id, body.baselineStudyId),
   });
@@ -84,12 +88,57 @@ followUpRouter.post('/', async (c) => {
   if (!baselineStudy || !comparisonStudy) {
     throw new NotFoundError('Baseline or comparison study');
   }
+  if (baselineStudy.patientId !== body.patientId || comparisonStudy.patientId !== body.patientId) {
+    throw new ValidationError('基线与对比检查必须属于同一患者');
+  }
+  if (body.baselineStudyId === body.comparisonStudyId) {
+    throw new ValidationError('基线检查与对比检查不能是同一个');
+  }
 
   // Calculate measurements comparison
   const measurements = await compareMeasurements(body.baselineStudyId, body.comparisonStudyId);
 
-  const id = uuid();
   const userId = (c as any).get('userId') || 'system';
+  const now = new Date().toISOString();
+
+  // Duplicate handling: same pair → update existing record (last save wins)
+  const existing = await db.query.followUpRecords.findFirst({
+    where: and(
+      eq(followUpRecords.patientId, body.patientId),
+      eq(followUpRecords.baselineStudyId, body.baselineStudyId),
+      eq(followUpRecords.comparisonStudyId, body.comparisonStudyId),
+    ),
+  });
+
+  if (existing) {
+    await db.update(followUpRecords)
+      .set({
+        measurements,
+        notes: body.notes ?? existing.notes,
+        updatedAt: now,
+      })
+      .where(eq(followUpRecords.id, existing.id));
+
+    log({
+      userId,
+      action: AuditEvents.FOLLOWUP_UPDATE,
+      resource: 'followup',
+      resourceId: existing.id,
+      details: {
+        patientId: body.patientId,
+        baselineStudyId: body.baselineStudyId,
+        comparisonStudyId: body.comparisonStudyId,
+        duplicated: true,
+      },
+    });
+
+    return c.json({
+      success: true,
+      data: { id: existing.id, updated: true, measurements },
+    });
+  }
+
+  const id = uuid();
 
   await db.insert(followUpRecords).values({
     id,
@@ -114,7 +163,7 @@ followUpRouter.post('/', async (c) => {
     },
   });
 
-  return c.json({ success: true, data: { id, measurements } }, 201);
+  return c.json({ success: true, data: { id, updated: false, measurements } }, 201);
 });
 
 // GET /:id — Get a specific follow-up record
@@ -240,6 +289,7 @@ followUpRouter.get('/:id/compare', async (c) => {
 interface MeasurementComparison {
   type: string;
   label: string;
+  measurementKey: string;
   baselineValue: number;
   comparisonValue: number;
   delta: number;
@@ -251,6 +301,12 @@ interface MeasurementComparison {
 
 /**
  * Compare measurements between two studies.
+ *
+ * Uses the T1 Cornerstone contract (annotations stored as
+ * { toolName, handles, cachedStats }) — values are typed-extracted from
+ * cachedStats (wayfinder #92), not from the legacy `geometry.value` shape.
+ * Measurements are matched across studies by their dictionary key (label
+ * fallback); trend direction comes from measurement_definitions.
  */
 async function compareMeasurements(
   baselineStudyId: string,
@@ -271,39 +327,53 @@ async function compareMeasurements(
     ),
   });
 
+  const definitions = await getDefinitionMap();
+  const definitionList = Object.values(definitions).map((d) => ({ key: d.key, displayName: d.displayName }));
+
+  const extract = (ann: typeof baselineAnnotations[number]) => {
+    const geometry = typeof ann.geometry === 'string' ? JSON.parse(ann.geometry) : ann.geometry;
+    const serialized = {
+      toolName: geometry.toolName ?? ann.type,
+      data: {
+        cachedStats: geometry.cachedStats,
+        label: ann.label ?? undefined,
+      },
+    };
+    const m = extractMeasurementValue(serialized, definitionList);
+    return m ? { ...m, label: ann.label } : null;
+  };
+
+  const baseline = baselineAnnotations.map(extract).filter((m): m is NonNullable<typeof m> => m !== null);
+  const comparison = comparisonAnnotations.map(extract).filter((m): m is NonNullable<typeof m> => m !== null);
+
   const comparisons: MeasurementComparison[] = [];
+  const usedComparison = new Set<string>();
 
-  // Match measurements by label
-  for (const baseline of baselineAnnotations) {
-    const geometry = baseline.geometry as any;
-    if (!geometry?.value) continue;
-
-    // Find matching measurement in comparison study
-    const matching = comparisonAnnotations.find(a => a.label === baseline.label);
+  for (const b of baseline) {
+    const matching = comparison.find(
+      (m) => !usedComparison.has(m.measurementKey) && m.measurementKey === b.measurementKey
+    );
     if (!matching) continue;
+    usedComparison.add(matching.measurementKey);
 
-    const matchingGeometry = matching.geometry as any;
-    if (!matchingGeometry?.value) continue;
-
-    const baselineValue = geometry.value;
-    const comparisonValue = matchingGeometry.value;
+    const baselineValue = b.value;
+    const comparisonValue = matching.value;
     const delta = comparisonValue - baselineValue;
     const deltaPercent = baselineValue !== 0 ? (delta / baselineValue) * 100 : 0;
 
-    // Determine trend
-    const trend = determineTrend(baseline.label || '', delta, deltaPercent);
-
-    // Determine if change is significant (typically >5-10% for most measurements)
+    const def = definitions[b.measurementKey];
+    const trend = determineTrend(def?.trendDirection, delta, deltaPercent);
     const isSignificant = Math.abs(deltaPercent) > 5;
 
     comparisons.push({
-      type: geometry.type || 'unknown',
-      label: baseline.label || 'Unnamed',
+      type: b.type,
+      label: b.label || def?.displayName || b.measurementKey,
+      measurementKey: b.measurementKey,
       baselineValue,
       comparisonValue,
       delta,
       deltaPercent,
-      unit: geometry.unit || 'μm',
+      unit: b.unit,
       trend,
       isSignificant,
     });
@@ -313,40 +383,22 @@ async function compareMeasurements(
 }
 
 /**
- * Determine trend direction based on measurement type and change.
+ * Determine trend direction from the dictionary's trend_direction and the
+ * measured delta ('down' = decreasing is worsening, 'up' = increasing is
+ * worsening). Threshold: |relative change| < 5% → stable.
  */
 function determineTrend(
-  label: string,
+  direction: 'up' | 'down' | undefined,
   delta: number,
   deltaPercent: number
 ): 'improving' | 'stable' | 'worsening' {
-  const threshold = 5; // 5% change threshold
-
+  const threshold = 5;
   if (Math.abs(deltaPercent) < threshold) {
     return 'stable';
   }
-
-  // For most ophthalmology measurements:
-  // - Decrease in thickness (RNFL, macular) = worsening
-  // - Decrease in IOP = improving
-  // - Increase in C/D ratio = worsening
-
-  const lowerLabel = label.toLowerCase();
-
-  if (lowerLabel.includes('iop') || lowerLabel.includes('眼压')) {
-    return delta < 0 ? 'improving' : 'worsening';
-  }
-
-  if (lowerLabel.includes('rnfl') || lowerLabel.includes('厚度') || lowerLabel.includes('thickness')) {
-    return delta < 0 ? 'worsening' : 'improving';
-  }
-
-  if (lowerLabel.includes('c/d') || lowerLabel.includes('cup')) {
-    return delta > 0 ? 'worsening' : 'improving';
-  }
-
-  // Default: improvement if value increases
-  return delta > 0 ? 'improving' : 'worsening';
+  const dir = direction ?? 'up';
+  const worse = dir === 'down' ? delta < 0 : delta > 0;
+  return worse ? 'worsening' : 'improving';
 }
 
 export default followUpRouter;

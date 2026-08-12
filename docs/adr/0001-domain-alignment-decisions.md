@@ -17,7 +17,7 @@ This ADR consolidates all decisions from the domain model alignment session. Ind
 **Rationale:**
 - Follows DICOM hierarchy: Patient → Study → Series → Image
 - Study is a container; modality is on Series
-- Supports multi-modal examinations (OCT + fundus in one visit)
+- Multi-modal examinations are separate acquisition Studies per modality, grouped by studyDate (see Decision 8)
 
 **Consequences:**
 - ✅ DICOM compliant, flexible for multi-modal workflows
@@ -110,6 +110,23 @@ This ADR consolidates all decisions from the domain model alignment session. Ind
 **Rationale:**
 - Independent modules, don't affect core functionality
 - Requirements may change during development
+
+---
+
+## Decision 8: Study Granularity = Acquisition Session
+
+**Decision:** A Study is one DICOM acquisition session, not a clinic visit. A "visit" is not modeled as an entity.
+
+**Rationale:**
+- DICOM devices send one Study per acquisition (distinct StudyInstanceUID) — the model must match that reality
+- Follow-up comparison (FollowUpRecord) matches baseline vs. comparison Studies of the same patient — needs Study granularity to be the acquisition
+- The old glossary wording ("one clinic visit") contradicted both the schema and the DICOM standard
+- Multi-modal visits remain expressible: each acquisition is its own Study, grouped by `studyDate` when needed
+
+**Consequences:**
+- ✅ Consistent with the schema (`studyInstanceUid`, denormalized `modality` from Series) and the follow-up code
+- ✅ One visit with OCT + fundus = multiple Studies grouped by date; no Visit entity to build or maintain
+- ❌ Glossary amended (Study was "clinic visit"); PRD `study_type` enum removed (already contradicted by Decision 1)
 
 ---
 

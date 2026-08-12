@@ -61,6 +61,7 @@ export const AuditEvents = {
   // ─── Follow-up Operations ─────────────────────────────────────────────────
   FOLLOWUP_CREATE: 'followup.create',
   FOLLOWUP_UPDATE: 'followup.update',
+  MEASUREMENT_SNAPSHOT: 'measurement.snapshot',
 } as const;
 
 export type AuditEvent = typeof AuditEvents[keyof typeof AuditEvents];
@@ -114,6 +115,7 @@ export const AuditEventLabels: Record<string, string> = {
 
   [AuditEvents.FOLLOWUP_CREATE]: '创建随访记录',
   [AuditEvents.FOLLOWUP_UPDATE]: '更新随访记录',
+  [AuditEvents.MEASUREMENT_SNAPSHOT]: '测量快照写入',
 };
 
 /**

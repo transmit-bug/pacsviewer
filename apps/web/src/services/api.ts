@@ -192,26 +192,10 @@ export const auditLogApi = {
   export: (params?: any) => api.get('/audit-logs/export', { params, responseType: 'blob' }),
 };
 
-export const comparisonApi = {
-  getAll: (params?: { patientId?: string; isFavorite?: boolean }) =>
-    api.get('/comparisons', { params }),
-  getFavorites: () => api.get('/comparisons/favorites'),
-  getById: (id: string) => api.get(`/comparisons/${id}`),
-  create: (data: {
-    name: string;
-    type: 'side_by_side' | 'overlay' | 'slider';
-    config: any;
-    imageIds?: string[];
-    patientId?: string;
-    isFavorite?: boolean;
-  }) => api.post('/comparisons', data),
-  update: (id: string, data: any) => api.put(`/comparisons/${id}`, data),
-  delete: (id: string) => api.delete(`/comparisons/${id}`),
-  toggleFavorite: (id: string) => api.put(`/comparisons/${id}/favorite`),
-  saveSnapshot: (id: string, image: string) =>
-    api.post(`/comparisons/${id}/snapshot`, { image }),
-  getSnapshotUrl: (id: string) => `/api/comparisons/${id}/snapshot`,
-};
+// NOTE: the legacy /compare page's saved-comparisons client (favorites,
+// snapshots) was retired when /compare evolved into the follow-up workbench
+// (wayfinder #91). The server /api/comparisons route remains for API
+// compatibility; no client calls it anymore.
 
 export const deviceApi = {
   getAll: (params?: any) => api.get('/devices', { params }),
@@ -235,4 +219,32 @@ export const dashboardApi = {
   getStats: () => api.get('/dashboard/stats'),
   getRecentStudies: (limit?: number) => api.get('/dashboard/recent-studies', { params: { limit } }),
   getPendingTasks: (limit?: number) => api.get('/dashboard/pending-tasks', { params: { limit } }),
+};
+
+/** Measurement dictionary + longitudinal trends (随访对比 T2). */
+export const measurementApi = {
+  getDefinitions: () => api.get('/measurements/definitions'),
+  getDefinition: (key: string) => api.get(`/measurements/definitions/${key}`),
+  createDefinition: (data: any) => api.post('/measurements/definitions', data),
+  updateDefinition: (key: string, data: any) => api.put(`/measurements/definitions/${key}`, data),
+  deleteDefinition: (key: string) => api.delete(`/measurements/definitions/${key}`),
+  getTrends: (params: { patientId?: string; studyIds?: string[] }) =>
+    api.get('/measurements/trends', {
+      params: {
+        ...(params.patientId ? { patientId: params.patientId } : {}),
+        ...(params.studyIds?.length ? { studyIds: params.studyIds.join(',') } : {}),
+      },
+    }),
+};
+
+/** Follow-up records (随访对比 T1/T5). */
+export const followUpApi = {
+  list: (params: { patientId?: string; page?: number; pageSize?: number }) =>
+    api.get('/follow-up', { params }),
+  getById: (id: string) => api.get(`/follow-up/${id}`),
+  create: (data: { patientId: string; baselineStudyId: string; comparisonStudyId: string; notes?: string }) =>
+    api.post('/follow-up', data),
+  update: (id: string, data: { notes?: string }) => api.put(`/follow-up/${id}`, data),
+  delete: (id: string) => api.delete(`/follow-up/${id}`),
+  compare: (id: string) => api.get(`/follow-up/${id}/compare`),
 };

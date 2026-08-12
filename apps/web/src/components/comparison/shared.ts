@@ -9,6 +9,28 @@ export interface ViewportState {
   invert: boolean;
 }
 
+/** A measurement line drawn during comparison — coords normalized to the panel (0..1). */
+export interface ComparisonLine {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** Panel/study attribution: 'baseline' | 'comparison' */
+  owner: 'baseline' | 'comparison';
+}
+
+export const LINE_COLOR_BASELINE = '#fbbf24'; // amber
+export const LINE_COLOR_COMPARISON = '#34d399'; // emerald
+
+export function newComparisonLine(owner: 'baseline' | 'comparison'): ComparisonLine {
+  return {
+    id: `${owner}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    x1: 0, y1: 0, x2: 0, y2: 0,
+    owner,
+  };
+}
+
 export const defaultViewport: ViewportState = {
   zoom: 1,
   pan: { x: 0, y: 0 },
@@ -64,6 +86,58 @@ export function applyInvert(
     data[i + 2] = 255 - data[i + 2];
   }
   ctx.putImageData(imageData, 0, 0);
+}
+
+/**
+ * Draw comparison measurement lines on a canvas (normalized coords).
+ * Drawn in a separate overlay pass so they stay crisp regardless of zoom/pan.
+ */
+export function drawMeasurementLines(
+  canvas: HTMLCanvasElement,
+  lines: ComparisonLine[],
+): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || lines.length === 0) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+
+  for (const line of lines) {
+    const color = line.owner === 'baseline' ? LINE_COLOR_BASELINE : LINE_COLOR_COMPARISON;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    ctx.moveTo(line.x1 * w, line.y1 * h);
+    ctx.lineTo(line.x2 * w, line.y2 * h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Endpoint dots
+    ctx.fillStyle = color;
+    for (const [px, py] of [[line.x1 * w, line.y1 * h], [line.x2 * w, line.y2 * h]] as const) {
+      ctx.beginPath();
+      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/** True when the pointer gesture should adjust window/level (Shift+drag or right-drag). */
+export function isWwWlGesture(e: { shiftKey?: boolean; button?: number }): boolean {
+  return !!e.shiftKey || e.button === 2;
+}
+
+/** Apply a window/level drag delta to a viewport, clamped to sane ranges. */
+export function applyWlDrag(
+  viewport: ViewportState,
+  dx: number,
+  dy: number,
+): { windowWidth: number; windowLevel: number } {
+  const windowWidth = Math.max(1, Math.min(4000, viewport.windowWidth + dx * 2));
+  const windowLevel = Math.max(-1000, Math.min(4000, viewport.windowLevel + dy * 2));
+  return { windowWidth, windowLevel };
 }
 
 /**

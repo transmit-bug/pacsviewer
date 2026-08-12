@@ -9,6 +9,7 @@ import {
   init as csInit,
   RenderingEngine,
   getRenderingEngine as csGetRenderingEngine,
+  setUseCPURendering as csSetUseCPURendering,
 } from '@cornerstonejs/core';
 import {
   init as toolsInit,
@@ -29,6 +30,7 @@ import {
   CrosshairsTool,
 } from '@cornerstonejs/tools';
 import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
+import { useAuthStore } from '@/stores/authStore';
 
 let initialized = false;
 let renderingEngine: RenderingEngine | null = null;
@@ -42,6 +44,10 @@ export const VIEWPORT_ID_PREFIX = 'viewport-';
 export async function initCornerstone(): Promise<void> {
   if (initialized) return;
 
+  // Force CPU rendering (Canvas2D). Reliable across environments — notably
+  // headless/CI browsers where WebGL (SwiftShader) can silently render black.
+  csSetUseCPURendering(true);
+
   // Initialize core and tools
   await csInit();
   await toolsInit();
@@ -49,6 +55,22 @@ export async function initCornerstone(): Promise<void> {
   // Initialize DICOM image loader (registers wadouri: and wadors: schemes)
   dicomImageLoader.init({
     maxWebWorkers: navigator.hardwareConcurrency || 2,
+    // Use the legacy (dicomParser-based) metadata provider. The default
+    // naturalized provider (@cornerstonejs/metadata AsyncDicomReader) fails to
+    // extract pixel data from single-frame DICOMs — both native files and
+    // on-the-fly conversions render as black.
+    useLegacyMetadataProvider: true,
+    // Inject the auth token into every wadouri/wadors image request. The
+    // Cornerstone loader uses its own XHR (no axios interceptor), and the
+    // image endpoints are auth-protected. Reading the token at request time
+    // keeps it fresh across refresh cycles.
+    beforeSend: async (): Promise<Record<string, string> | void> => {
+      const token = useAuthStore.getState().token;
+      if (token) {
+        return { Authorization: `Bearer ${token}` };
+      }
+      return {};
+    },
   });
 
   // Reuse existing rendering engine if present (prevents WebGL context leak on HMR)

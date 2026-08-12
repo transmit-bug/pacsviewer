@@ -13,7 +13,11 @@
 import { Hono } from 'hono';
 import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { db, annotations, insertAnnotationSchema } from '../db';
+import { db, annotations, insertAnnotationSchema, images, measurementPoints } from '../db';
+import { extractMeasurements } from '../lib/measurement-extract';
+import { getDefinitionMap } from '../db/measurement-definitions';
+import { log } from '../lib/audit';
+import { AuditEvents } from '../lib/audit-events';
 
 const annotationsRouter = new Hono();
 
@@ -165,17 +169,36 @@ annotationsRouter.delete('/:id', async (c) => {
 });
 
 // POST /sync — Batch sync annotations for an image
-// Replaces all annotations for the given imageId with the provided set
+// Replaces all annotations for the given imageId with the provided set.
+//
+// Contract per annotation (Cornerstone serialization round-trip):
+//   {
+//     id?: string,
+//     toolName: string,                          // e.g. 'Length' | 'Angle' | 'EllipticalROI' ...
+//     data: {
+//       handles: { points: Point3[] },           // verbatim Cornerstone handles (points are [x,y,z])
+//       cachedStats?: Record<string, any>,       // measurement results keyed by targetId
+//       label?: string,
+//       text?: string,
+//     },
+//     style?: Record<string, any>,
+//   }
+// Malformed payloads are rejected with 400 and a reason.
 annotationsRouter.post('/sync', async (c) => {
   const body = await c.req.json();
   const { imageId, annotations: newAnnotations } = body;
 
-  if (!imageId) {
-    return c.json({ success: false, message: '必须指定 imageId' }, 400);
+  if (!imageId || typeof imageId !== 'string') {
+    return c.json({ success: false, message: 'imageId 必须是非空字符串' }, 400);
   }
 
   if (!Array.isArray(newAnnotations)) {
     return c.json({ success: false, message: 'annotations 必须是数组' }, 400);
+  }
+
+  const invalid = validateAnnotationContract(newAnnotations);
+  if (invalid) {
+    return c.json({ success: false, message: invalid }, 400);
   }
 
   const userId = (c as any).get('userId') || body.userId;
@@ -185,6 +208,16 @@ annotationsRouter.post('/sync', async (c) => {
 
   const now = new Date().toISOString();
 
+  // Resolve the study through the image → series chain (authoritative). Image
+  // annotations belong to their study, so study-scoped queries (follow-up
+  // compare, measurement snapshots) find them even when the client did not
+  // send a studyId.
+  const img = await db.query.images.findFirst({
+    where: eq(images.id, imageId),
+    with: { series: true },
+  });
+  const resolvedStudyId = img?.series?.studyId ?? null;
+
   // Delete existing annotations for this image
   await db.delete(annotations).where(eq(annotations.imageId, imageId));
 
@@ -193,7 +226,7 @@ annotationsRouter.post('/sync', async (c) => {
     const rows = newAnnotations.map((ann: any) => ({
       id: ann.id || crypto.randomUUID(),
       imageId,
-      studyId: ann.studyId || null,
+      studyId: ann.studyId || resolvedStudyId || null,
       userId,
       layerId: ann.layerId || null,
       type: mapToolNameToType(ann.toolName),
@@ -211,6 +244,12 @@ annotationsRouter.post('/sync', async (c) => {
 
     await db.insert(annotations).values(rows);
   }
+
+  // ── Measurement snapshot sync (wayfinder #87 / T2) ────────────────────────
+  // Extract typed values (real units from Cornerstone cachedStats) into
+  // measurement_points, upserted by (study_id, measurement_key). Resolve the
+  // study through the image→series chain (authoritative, ignores client hints).
+  await syncMeasurementPoints(imageId, newAnnotations, userId, resolvedStudyId);
 
   return c.json({
     success: true,
@@ -247,6 +286,139 @@ annotationsRouter.get('/image/:imageId', async (c) => {
 
   return c.json({ success: true, data: serialized });
 });
+
+/**
+ * Sync measurement_points snapshots for an image's annotations.
+ *
+ * Semantics (decided in wayfinder #87): one point per (study, measurement_key),
+ * last write wins — saving annotations overwrites the point for that study/key.
+ * Removing a measurement (or clearing the image) removes its point when it was
+ * the source for that key (sourceAnnotationId matches).
+ */
+async function syncMeasurementPoints(
+  imageId: string,
+  newAnnotations: any[],
+  userId: string,
+  resolvedStudyId: string | null,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Resolve studyId via image → series chain (already computed by caller).
+  const studyId = resolvedStudyId;
+  if (!studyId) return;
+
+  const definitions = await getDefinitionMap();
+  const definitionList = Object.values(definitions).map((d) => ({
+    key: d.key,
+    displayName: d.displayName,
+  }));
+
+  const extracted = extractMeasurements(newAnnotations, definitionList);
+
+  // Points previously sourced from this image — delete the ones whose key is no
+  // longer present (measurement removed or image cleared).
+  const previous = await db.query.measurementPoints.findMany({
+    where: eq(measurementPoints.imageId, imageId),
+  });
+  for (const prev of previous) {
+    const stillPresent = extracted.some((m) => m.measurementKey === prev.measurementKey);
+    if (!stillPresent) {
+      await db.delete(measurementPoints).where(eq(measurementPoints.id, prev.id));
+    }
+  }
+
+  // Upsert current measurements: delete any existing point for (study, key)
+  // then insert the fresh snapshot (last write wins).
+  for (const m of extracted) {
+    await db.delete(measurementPoints).where(
+      and(
+        eq(measurementPoints.studyId, studyId),
+        eq(measurementPoints.measurementKey, m.measurementKey),
+      ),
+    );
+    await db.insert(measurementPoints).values({
+      id: uuid(),
+      studyId,
+      imageId,
+      measurementKey: m.measurementKey,
+      type: m.type,
+      value: m.value,
+      unit: m.unit,
+      calibrated: m.calibrated,
+      sourceAnnotationId: null,
+      capturedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  if (extracted.length > 0) {
+    try {
+      await log({
+        userId,
+        action: AuditEvents.MEASUREMENT_SNAPSHOT,
+        resource: 'measurement',
+        resourceId: studyId,
+        details: { imageId, studyId, count: extracted.length, keys: extracted.map((m) => m.measurementKey) },
+      });
+    } catch (err) {
+      console.warn('[measurements] audit log failed:', err);
+    }
+  }
+}
+
+/**
+ * Validate the annotation sync contract.
+ *
+ * Each annotation must match the Cornerstone serialization shape:
+ *   { toolName: string, data: { handles: { points: Point3[] }, cachedStats?: object }, ... }
+ * Points may be arrays [x,y,z] (Cornerstone native) or {x,y,z} objects.
+ *
+ * @returns an error message describing the first violation, or null when valid.
+ */
+function validateAnnotationContract(annotations: unknown[]): string | null {
+  for (let i = 0; i < annotations.length; i++) {
+    const ann = annotations[i];
+    if (!ann || typeof ann !== 'object' || Array.isArray(ann)) {
+      return `annotations[${i}] 必须是对象`;
+    }
+    const a = ann as Record<string, any>;
+
+    if (typeof a.toolName !== 'string' || !a.toolName.trim()) {
+      return `annotations[${i}].toolName 缺失或不是非空字符串`;
+    }
+    if (!a.data || typeof a.data !== 'object' || Array.isArray(a.data)) {
+      return `annotations[${i}].data 缺失或不是对象`;
+    }
+    const handles = a.data.handles;
+    if (!handles || typeof handles !== 'object' || Array.isArray(handles)) {
+      return `annotations[${i}].data.handles 缺失或不是对象`;
+    }
+    const points = (handles as Record<string, any>).points;
+    if (!Array.isArray(points) || points.length === 0) {
+      return `annotations[${i}].data.handles.points 缺失或不是非空数组`;
+    }
+    for (const p of points) {
+      const valid =
+        Array.isArray(p)
+          ? p.length >= 2 && p.slice(0, 3).every((v: any) => typeof v === 'number' && Number.isFinite(v))
+          : !!p && typeof p === 'object' && Number.isFinite((p as any).x) && Number.isFinite((p as any).y);
+      if (!valid) {
+        return `annotations[${i}].data.handles.points 包含非法坐标`;
+      }
+    }
+    if (
+      a.data.cachedStats !== undefined &&
+      (a.data.cachedStats === null || typeof a.data.cachedStats !== 'object' || Array.isArray(a.data.cachedStats))
+    ) {
+      return `annotations[${i}].data.cachedStats 必须是对象`;
+    }
+    if (a.id !== undefined && typeof a.id !== 'string') {
+      return `annotations[${i}].id 必须是字符串`;
+    }
+  }
+  return null;
+}
 
 /**
  * Map Cornerstone tool names to our annotation type enum.

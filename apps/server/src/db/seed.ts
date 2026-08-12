@@ -30,6 +30,7 @@ import {
   devices, deviceAdapters,
   comparisons, systemSettings,
 } from './schema';
+import { ensurePresetDefinitions } from './measurement-definitions';
 import { v4 as uuid } from 'uuid';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -795,7 +796,11 @@ async function seed() {
 
   console.log('✅ Comparisons created');
 
-  // ── 11. System Settings ─────────────────────────────────────────────────────
+  // ── 11. Measurement Dictionary (wayfinder #87 / T2) ─────────────────────────
+  await ensurePresetDefinitions();
+  console.log('✅ Measurement definitions ensured');
+
+  // ── 12. System Settings ─────────────────────────────────────────────────────
 
   await db.insert(systemSettings).values([
     {

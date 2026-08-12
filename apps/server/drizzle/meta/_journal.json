@@ -8,6 +8,13 @@
       "when": 1784251873198,
       "tag": "0000_strong_skullbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786379415092,
+      "tag": "0001_bitter_gladiator",
+      "breakpoints": true
     }
   ]
 }
