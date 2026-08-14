@@ -95,10 +95,10 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="x" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="x" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} />
               <YAxis
-                tick={{ fontSize: 10, fill: '#64748b' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={false}
                 width={38}
@@ -106,6 +106,15 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
                 unit={targetUnit ? ` ${targetUnit}` : undefined}
               />
               <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--popover))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: 'var(--radius)',
+                  fontSize: 12,
+                  boxShadow: 'var(--shadow-md)',
+                }}
+                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
                 formatter={(value: any) => [formatValue(Number(value), targetUnit), '测量值']}
                 labelFormatter={(label, payload) => payload?.[0]?.payload?.fullLabel ?? label}
               />
@@ -113,7 +122,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
                 <ReferenceArea
                   y1={bandY1}
                   y2={bandY2}
-                  fill="#94a3b8"
+                  fill="hsl(var(--status-neutral))"
                   fillOpacity={0.12}
                   stroke="none"
                 />
@@ -121,10 +130,10 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
               {!singlePoint && Number.isFinite(baselineDisplay) && (
                 <ReferenceLine
                   y={baselineDisplay}
-                  stroke="#94a3b8"
+                  stroke="hsl(var(--status-neutral))"
                   strokeDasharray="4 3"
                   strokeWidth={1}
-                  label={{ value: '基线', position: 'insideTopRight', fontSize: 9, fill: '#94a3b8' }}
+                  label={{ value: '基线', position: 'insideTopRight', fontSize: 9, fill: 'hsl(var(--status-neutral))' }}
                 />
               )}
               <Line
@@ -148,7 +157,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
             ? `${series.points[0].studyDate} ${formatValue(firstDisplay, targetUnit)} → ${series.points[series.points.length - 1].studyDate} ${formatValue(latestDisplay, targetUnit)}`
             : '—'}
         </span>
-        <span className={cn('tabular-nums font-medium', Math.abs(trend.pct) > 5 ? (trend.pct >= 0 ? 'text-red-600' : 'text-green-600') : '')}>
+        <span className={cn('tabular-nums font-medium', Math.abs(trend.pct) > 5 ? (trend.pct >= 0 ? 'text-[hsl(var(--status-danger))]' : 'text-[hsl(var(--status-success))]') : '')}>
           {trend.pct >= 0 ? '+' : ''}{Number.isFinite(trend.pct) ? trend.pct.toFixed(1) : '—'}%
         </span>
       </div>
@@ -159,7 +168,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
         </div>
       )}
       {series.points.some((p) => !p.calibrated) && (
-        <div className="text-[10px] text-amber-600 mt-0.5">含未校准(px)测量,数值仅供参考</div>
+        <div className="text-[10px] text-[hsl(var(--status-warning))] mt-0.5">含未校准(px)测量,数值仅供参考</div>
       )}
       {def?.unit && def.unit !== targetUnit && (
         <div className="text-[10px] text-muted-foreground mt-0.5">

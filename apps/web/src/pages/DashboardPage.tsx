@@ -31,6 +31,18 @@ interface PendingTask {
   createdAt: string;
 }
 
+/** 模态 → 语义色 Badge (展示层映射, 不改动数据) */
+function modalityMeta(modality?: string | null): { label: string; variant: 'default' | 'secondary' | 'warning' | 'progress' | 'info' | 'neutral' } {
+  const m = (modality || '').toLowerCase();
+  if (m.includes('octa')) return { label: 'OCTA', variant: 'default' };
+  if (m.includes('oct')) return { label: 'OCT', variant: 'default' };
+  if (m.includes('ffa')) return { label: 'FFA', variant: 'warning' };
+  if (m.includes('icga')) return { label: 'ICGA', variant: 'progress' };
+  if (m.includes('fundus') || m.includes('眼底') || m.includes('color')) return { label: '眼底', variant: 'info' };
+  if (m.includes('视野') || m.includes('vf') || m.includes('visual') || m.includes('perim')) return { label: '视野', variant: 'neutral' };
+  return { label: modality || '未知模态', variant: 'secondary' };
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -89,25 +101,32 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('nav.dashboard')}</h1>
-      
-      {/* Stats Cards */}
+      <h1 className="text-3xl font-bold tracking-tight">{t('nav.dashboard')}</h1>
+
+      {/* Stats Cards — HUD 数字 + teal 图标 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.key}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+            <Card
+              key={stat.key}
+              className="group relative overflow-hidden transition-colors duration-normal hover:border-primary/40"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 pt-5">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border border-primary/15 bg-primary/10 text-primary transition-colors duration-normal group-hover:bg-primary/20">
+                  <Icon className="h-4 w-4" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-5">
                 {loading ? (
-                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-9 w-24" />
                 ) : (
-                  <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
+                  <div className="hud-numeric text-3xl font-semibold leading-none text-foreground">
+                    {stat.value.toLocaleString()}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -116,11 +135,11 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent Studies */}
+        {/* 最近检查 — 动态时间轴 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>最近检查</CardTitle>
-            <Link to="/studies" className="text-sm text-primary hover:underline flex items-center">
+            <CardTitle className="text-base">最近检查</CardTitle>
+            <Link to="/studies" className="flex items-center text-sm text-primary hover:underline">
               查看全部 <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </CardHeader>
@@ -138,27 +157,37 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : recentStudies.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">暂无检查记录</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">暂无检查记录</p>
             ) : (
-              <div className="space-y-4">
-                {recentStudies.map((study) => (
-                  <Link
-                    key={study.id}
-                    to={`/viewer/${study.id}`}
-                    className="flex items-center justify-between hover:bg-accent/50 p-2 -mx-2 rounded transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{study.description || `检查 ${study.id.slice(0, 8)}`}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {study.modality || '未知模态'}
-                      </p>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatTimeAgo(study.createdAt)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+              <ul>
+                {recentStudies.map((study, i) => {
+                  const meta = modalityMeta(study.modality);
+                  const isLast = i === recentStudies.length - 1;
+                  return (
+                    <li key={study.id} className="flex gap-3 pb-3 last:pb-0">
+                      {/* 时间轴轨道 */}
+                      <span className="relative flex flex-col items-center">
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border border-primary/50 bg-primary/25" />
+                        {!isLast && <span className="mt-1 w-px flex-1 bg-border" />}
+                      </span>
+                      <Link
+                        to={`/viewer/${study.id}`}
+                        className="min-w-0 flex-1 rounded-md px-1 pb-2 transition-colors duration-fast hover:bg-accent/40"
+                      >
+                        <p className="truncate text-sm font-medium">
+                          {study.description || `检查 ${study.id.slice(0, 8)}`}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant={meta.variant} className="px-1.5 py-0 text-[10px]">
+                            {meta.label}
+                          </Badge>
+                          <span className="tabular-nums">{formatTimeAgo(study.createdAt)}</span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </CardContent>
         </Card>
@@ -166,8 +195,8 @@ export function DashboardPage() {
         {/* Pending Tasks */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>待处理任务</CardTitle>
-            <Link to="/reports" className="text-sm text-primary hover:underline flex items-center">
+            <CardTitle className="text-base">待处理任务</CardTitle>
+            <Link to="/reports" className="flex items-center text-sm text-primary hover:underline">
               查看全部 <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </CardHeader>
@@ -185,22 +214,26 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : pendingTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">暂无待处理任务</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">暂无待处理任务</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-1">
                 {pendingTasks.map((task) => (
                   <Link
                     key={task.id}
                     to={`/reports/${task.id}`}
-                    className="flex items-center justify-between hover:bg-accent/50 p-2 -mx-2 rounded transition-colors"
+                    className="flex items-center justify-between rounded-md px-2 py-2.5 transition-colors duration-fast hover:bg-accent/40"
                   >
-                    <div>
-                      <p className="font-medium">{task.title || `报告 ${task.id.slice(0, 8)}`}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {task.title || `报告 ${task.id.slice(0, 8)}`}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                         {formatTimeAgo(task.createdAt)}
                       </p>
                     </div>
-                    <Badge variant="warning" className="text-xs">待审核</Badge>
+                    <Badge variant="warning" className="ml-3 shrink-0 text-xs">
+                      待审核
+                    </Badge>
                   </Link>
                 ))}
               </div>

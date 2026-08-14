@@ -46,13 +46,35 @@ export interface TrendResult {
 
 export const STABILITY_THRESHOLD_PCT = 5;
 
+// 语义色映射到设计令牌 (CIRRUS 语义: 好转=绿 稳定=灰 恶化=红), 深色下提亮
+// color 字段为 SVG stroke / inline style 可用的 hsl(var()) 字符串。
 export const TREND_META: Record<TrendStatus, { label: string; color: string; badgeClass: string }> = {
-  improving: { label: '好转', color: '#16a34a', badgeClass: 'bg-green-500/10 text-green-600' },
-  stable: { label: '稳定', color: '#64748b', badgeClass: 'bg-slate-500/10 text-slate-500' },
-  worsening: { label: '恶化', color: '#dc2626', badgeClass: 'bg-red-500/10 text-red-600' },
+  improving: {
+    label: '好转',
+    color: 'hsl(var(--status-success))',
+    badgeClass: 'bg-[hsl(var(--status-success)/0.12)] text-[hsl(var(--status-success))]',
+  },
+  stable: {
+    label: '稳定',
+    color: 'hsl(var(--status-neutral))',
+    badgeClass: 'bg-[hsl(var(--status-neutral)/0.15)] text-[hsl(var(--status-neutral))]',
+  },
+  worsening: {
+    label: '恶化',
+    color: 'hsl(var(--status-danger))',
+    badgeClass: 'bg-[hsl(var(--status-danger)/0.12)] text-[hsl(var(--status-danger))]',
+  },
 };
 
-export const FACET_COLORS = ['#2563eb', '#7c3aed', '#ea580c', '#0891b2', '#16a34a', '#db2777'];
+// 分面图系列色: 品牌 teal + 语义色 (深色下可辨)
+export const FACET_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--status-info))',
+  'hsl(var(--status-progress))',
+  'hsl(var(--status-success))',
+  'hsl(var(--status-warning))',
+  'hsl(var(--status-danger))',
+];
 
 /** Direction that counts as worsening, given the definition (default: 'up'). */
 export function worseningDirection(def: TrendDefinition | null): 'up' | 'down' {

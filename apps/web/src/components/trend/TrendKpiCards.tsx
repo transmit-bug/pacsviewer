@@ -60,7 +60,7 @@ export function TrendKpiCards({ series, className }: TrendKpiCardsProps) {
               <span className="text-sm text-muted-foreground">{unit}</span>
             </div>
             <div className="text-xs mt-0.5">
-              <span className={cn('tabular-nums', Math.abs(trend.pct) > 5 ? (trend.pct >= 0 ? 'text-red-600' : 'text-green-600') : '')}>
+              <span className={cn('tabular-nums', Math.abs(trend.pct) > 5 ? (trend.pct >= 0 ? 'text-[hsl(var(--status-danger))]' : 'text-[hsl(var(--status-success))]') : '')}>
                 {trend.pct >= 0 ? '▲' : '▼'} {Number.isFinite(trend.pct) ? Math.abs(trend.pct).toFixed(1) : '—'}%
               </span>
               <span className="text-muted-foreground">
