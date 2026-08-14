@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LoadingScreen } from '@/components/brand/LoadingScreen';
 import { RouteTransition } from '@/components/transition/RouteTransition';
+import { GuidedTour } from '@/components/tour/GuidedTour';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/LoginPage';
 import PrototypeComparisonPage from '@/pages/PrototypeComparisonPage';
@@ -92,6 +93,8 @@ export default function App() {
       <Suspense fallback={<LoadingScreen />}>
         <AnimatedRoutes />
       </Suspense>
+      {/* 演示走查浮层 — 全局挂载, 跨路由保持 */}
+      <GuidedTour />
       <BootLoader done={booted} />
     </>
   );

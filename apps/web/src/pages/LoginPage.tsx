@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
+import { useTourStore } from '@/stores/tourStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrandMark } from '@/components/brand/BrandMark';
+import { hasDismissedTour } from '@/lib/demo';
+import { Sparkles } from 'lucide-react';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -20,6 +23,19 @@ export function LoginPage() {
     clearError();
     await login(username, password);
     if (useAuthStore.getState().isAuthenticated) {
+      navigate('/');
+    }
+  };
+
+  /** 一键演示登录: 服务端 /api/auth/demo-login 用播种演示账号登录, 前端无凭据 */
+  const handleDemoLogin = async () => {
+    clearError();
+    await useAuthStore.getState().demoLogin();
+    if (useAuthStore.getState().isAuthenticated) {
+      // 首次进入演示模式: 自动建议走查 (跳过会持久化, 不再打扰)
+      if (!useTourStore.getState().active && !hasDismissedTour()) {
+        useTourStore.getState().start('app');
+      }
       navigate('/');
     }
   };
@@ -89,6 +105,29 @@ export function LoginPage() {
                 {isLoading ? t('auth.loggingIn') : t('auth.login')}
               </Button>
             </form>
+
+            {/* 演示入口: 一键登录 + 走查 (teal / glass / 明瞳意象) */}
+            <div className="my-3 flex items-center gap-3" aria-hidden>
+              <div className="h-px flex-1 bg-border/60" />
+              <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
+                {t('demo.or')}
+              </span>
+              <div className="h-px flex-1 bg-border/60" />
+            </div>
+            <Button
+              type="button"
+              data-tour="demo-login"
+              variant="outline"
+              className="group w-full border-brand-400/40 bg-brand-400/10 text-brand-300 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-sm transition-colors hover:border-brand-400/60 hover:bg-brand-400/20 hover:text-brand-200"
+              onClick={handleDemoLogin}
+              disabled={isLoading}
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-brand-400 transition-transform group-hover:scale-110" />
+              {t('demo.login')}
+            </Button>
+            <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+              {t('demo.loginHint')}
+            </p>
           </CardContent>
         </Card>
       </div>

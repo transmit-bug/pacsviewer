@@ -1,6 +1,7 @@
 import { Check, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { isDemoPatient } from '@/lib/demo';
 import type { Patient } from '@/hooks/usePatientSearch';
 
 interface PatientCardProps {
@@ -39,6 +40,11 @@ export function PatientCard({ patient, selected = false, onClick }: PatientCardP
             )}
           />
           <span className="font-medium truncate">{patient.name}</span>
+          {isDemoPatient(patient) && (
+            <span className="shrink-0 rounded-full border border-brand-400/30 bg-brand-400/10 px-1.5 py-px text-[10px] font-medium leading-4 text-brand-300">
+              {t('demo.badge')}
+            </span>
+          )}
           {detailParts.length > 0 && (
             <span className="text-xs text-muted-foreground">
               {detailParts.join(' · ')}

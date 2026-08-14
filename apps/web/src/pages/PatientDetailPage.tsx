@@ -200,7 +200,7 @@ export function PatientDetailPage() {
           <TabsTrigger value="info">{t('patient.basicInfo')}</TabsTrigger>
           <TabsTrigger value="studies">{t('patient.studies')}</TabsTrigger>
           <TabsTrigger value="timeline">{t('patient.timeline')}</TabsTrigger>
-          <TabsTrigger value="trend">{t('patient.followUpTrend')}</TabsTrigger>
+          <TabsTrigger value="trend" data-tour="followup-compare">{t('patient.followUpTrend')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">

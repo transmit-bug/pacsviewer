@@ -9,6 +9,8 @@ export interface Patient {
   gender?: string;
   birthDate?: string;
   phone?: string;
+  /** 演示数据集患者的 notes 以「演示数据集-」开头 (用于演示角标) */
+  notes?: string | null;
   lastStudy?: {
     id: string;
     studyDate: string;

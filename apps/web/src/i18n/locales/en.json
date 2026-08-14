@@ -1,4 +1,49 @@
 {
+  "demo": {
+    "or": "or",
+    "login": "Enter Demo Mode",
+    "loginHint": "No credentials needed — explore the full demo in one click",
+    "mode": "Demo Mode",
+    "badge": "Demo",
+    "startTour": "Start Tour",
+    "tour": {
+      "ariaLabel": "Demo walkthrough",
+      "label": "Demo Tour",
+      "skip": "Skip",
+      "prev": "Back",
+      "next": "Next",
+      "enterDemo": "Enter Demo Mode",
+      "done": "Done",
+      "login": {
+        "title": "One-Click Login",
+        "text": "Click “Enter Demo Mode” — the app signs in with a seeded demo account, no credentials needed."
+      },
+      "dashboard": {
+        "title": "Demo Mode Indicator",
+        "text": "The “Demo Mode” chip marks this session as a demo environment; every image is synthetic demo data."
+      },
+      "patients": {
+        "title": "Demo Patients",
+        "text": "Patients tagged “Demo” belong to the demo dataset. Protagonist 周建国 has 5 OCT follow-ups telling an RNFL progression story (92→58 μm); supporting patients cover fundus / FFA / visual field modalities."
+      },
+      "viewer": {
+        "title": "Cinematic Viewer",
+        "text": "Enter the viewer workbench: grouped tools, clinical HUD, multi-frame cine. Demo images carry a “Demo Image” badge over synthetic data."
+      },
+      "measurement": {
+        "title": "Annotation & Measurement",
+        "text": "Record findings with the annotation/measurement tools; saved measurements feed the follow-up trend charts."
+      },
+      "followup": {
+        "title": "Follow-Up & Trends",
+        "text": "From the patient page, launch follow-up comparisons and view trends such as RNFL over time — the disease course at a glance."
+      },
+      "report": {
+        "title": "Report & Export",
+        "text": "Generate structured reports from measurements and templates, with print / PDF export for the demo outcome."
+      }
+    }
+  },
   "app": {
     "name": "PACS Viewer",
     "description": "Ophthalmic Image Management System",

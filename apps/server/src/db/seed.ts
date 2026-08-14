@@ -33,6 +33,7 @@ import {
   measurementPoints,
 } from './schema';
 import { ensurePresetDefinitions } from './measurement-definitions';
+import { DEMO_ACCOUNT } from '../lib/demo';
 import { v4 as uuid } from 'uuid';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -176,9 +177,9 @@ async function seed() {
     },
     {
       id: userIds.doctor1,
-      username: 'doctor',
+      username: DEMO_ACCOUNT.username,
       email: 'zhang@pacsviewer.com',
-      passwordHash: hashPassword('doctor123'),
+      passwordHash: hashPassword(DEMO_ACCOUNT.password),
       displayName: '张明医生',
       roleId: doctorRoleId,
       status: 'active',
