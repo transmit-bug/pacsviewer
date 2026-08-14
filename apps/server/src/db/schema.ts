@@ -14,8 +14,8 @@ export const users = sqliteTable('users', {
   roleId: text('role_id').references(() => roles.id),
   status: text('status', { enum: ['active', 'disabled', 'locked'] }).default('active').notNull(),
   lastLoginAt: text('last_login_at'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Roles table
@@ -25,7 +25,7 @@ export const roles = sqliteTable('roles', {
   description: text('description'),
   permissions: text('permissions', { mode: 'json' }).notNull().default({}),
   isSystem: integer('is_system', { mode: 'boolean' }).default(false).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Sessions table
@@ -37,7 +37,7 @@ export const sessions = sqliteTable('sessions', {
   deviceInfo: text('device_info', { mode: 'json' }),
   ipAddress: text('ip_address'),
   expiresAt: text('expires_at').notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('sessions_user_id_idx').on(table.userId),
   index('sessions_expires_at_idx').on(table.expiresAt),
@@ -59,8 +59,8 @@ export const patients = sqliteTable('patients', {
   notes: text('notes'),
   tags: text('tags', { mode: 'json' }).default([]),
   customFields: text('custom_fields', { mode: 'json' }),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('patients_name_idx').on(table.name),
   index('patients_phone_idx').on(table.phone),
@@ -73,7 +73,7 @@ export const patientTags = sqliteTable('patient_tags', {
   name: text('name').notNull().unique(),
   color: text('color').notNull(),
   description: text('description'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Studies table
@@ -92,8 +92,8 @@ export const studies = sqliteTable('studies', {
   }).default('pending').notNull(),
   description: text('description'),
   tags: text('tags', { mode: 'json' }).default([]),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('studies_patient_id_idx').on(table.patientId),
   index('studies_study_date_idx').on(table.studyDate),
@@ -112,7 +112,7 @@ export const series = sqliteTable('series', {
   modality: text('modality').notNull(),
   bodyPart: text('body_part'),
   imageCount: integer('image_count').default(0).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('series_study_id_idx').on(table.studyId),
   index('series_modality_idx').on(table.modality),
@@ -145,7 +145,7 @@ export const images = sqliteTable('images', {
   numberOfFrames: integer('number_of_frames').default(1),
   thumbnailPath: text('thumbnail_path'),
   metadata: text('metadata', { mode: 'json' }),                   // Full DICOM JSON metadata
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('images_series_id_idx').on(table.seriesId),
   index('images_file_hash_idx').on(table.fileHash),
@@ -168,7 +168,7 @@ export const dicomFrames = sqliteTable('dicom_frames', {
   imageOrientationPatient: text('image_orientation_patient', { mode: 'json' }), // [row cosines, col cosines]
   // Per-frame metadata from PerFrameFunctionalGroupsSequence
   metadata: text('metadata', { mode: 'json' }),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   uniqueIndex('dicom_frames_image_idx').on(table.imageId, table.frameIndex),
   index('dicom_frames_image_id_idx').on(table.imageId),
@@ -188,8 +188,8 @@ export const annotations = sqliteTable('annotations', {
   style: text('style', { mode: 'json' }).notNull(),
   label: text('label'),
   notes: text('notes'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('annotations_image_id_idx').on(table.imageId),
   index('annotations_study_id_idx').on(table.studyId),
@@ -206,7 +206,7 @@ export const layers = sqliteTable('layers', {
   opacity: real('opacity').default(1).notNull(),
   locked: integer('locked', { mode: 'boolean' }).default(false).notNull(),
   sortOrder: integer('sort_order').default(0).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('layers_image_id_idx').on(table.imageId),
 ]);
@@ -227,8 +227,8 @@ export const reports = sqliteTable('reports', {
   reviewNotes: text('review_notes'),
   publishedAt: text('published_at'),
   createdBy: text('created_by').references(() => users.id).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('reports_study_id_idx').on(table.studyId),
   index('reports_patient_id_idx').on(table.patientId),
@@ -248,8 +248,8 @@ export const reportTemplates = sqliteTable('report_templates', {
   layout: text('layout', { mode: 'json' }).notNull(),
   isSystem: integer('is_system', { mode: 'boolean' }).default(false).notNull(),
   createdBy: text('created_by').references(() => users.id),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Device adapters table
@@ -265,8 +265,8 @@ export const deviceAdapters = sqliteTable('device_adapters', {
   lastError: text('last_error'),
   lastImageAt: text('last_image_at'),
   imageCount: integer('image_count').default(0).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const deviceAdaptersRelations = relations(deviceAdapters, ({ many }) => ({
@@ -291,8 +291,8 @@ export const devices = sqliteTable('devices', {
   }).default('offline').notNull(),
   lastSyncAt: text('last_sync_at'),
   imageCount: integer('image_count').default(0).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const devicesRelations = relations(devices, ({ one, many }) => ({
@@ -315,7 +315,7 @@ export const inboundTransfers = sqliteTable('inbound_transfers', {
   processedCount: integer('processed_count').default(0).notNull(),
   errorCount: integer('error_count').default(0).notNull(),
   metadata: text('metadata', { mode: 'json' }),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   completedAt: text('completed_at'),
 });
 
@@ -337,7 +337,7 @@ export const systemSettings = sqliteTable('system_settings', {
   key: text('key').notNull(),
   value: text('value', { mode: 'json' }),
   description: text('description'),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Audit logs table
@@ -349,7 +349,7 @@ export const auditLogs = sqliteTable('audit_logs', {
   resourceId: text('resource_id'),
   details: text('details', { mode: 'json' }),
   ipAddress: text('ip_address'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('audit_logs_user_id_idx').on(table.userId),
   index('audit_logs_created_at_idx').on(table.createdAt),
@@ -479,7 +479,7 @@ export const reportVersions = sqliteTable('report_versions', {
   images: text('images', { mode: 'json' }).default([]),
   changeNotes: text('change_notes'),
   createdBy: text('created_by').references(() => users.id).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const reportVersionsRelations = relations(reportVersions, ({ one }) => ({
@@ -512,8 +512,8 @@ export const comparisons = sqliteTable('comparisons', {
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false).notNull(),
   snapshotPath: text('snapshot_path'),
   createdBy: text('created_by').references(() => users.id).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const comparisonsRelations = relations(comparisons, ({ one }) => ({
@@ -550,8 +550,8 @@ export const worklistItems = sqliteTable('worklist_items', {
   requestedProcedureDescription: text('requested_procedure_description'),
   referringPhysicianName: text('referring_physician_name'),
   status: text('status', { enum: ['scheduled', 'in_progress', 'completed', 'cancelled'] }).default('scheduled').notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('worklist_date_idx').on(table.scheduledProcedureStepStartDate),
   index('worklist_modality_idx').on(table.modality),
@@ -575,8 +575,8 @@ export const followUpRecords = sqliteTable('follow_up_records', {
   measurements: text('measurements', { mode: 'json' }).notNull().default([]),
   notes: text('notes'),
   createdBy: text('created_by').references(() => users.id).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('followup_patient_idx').on(table.patientId),
   index('followup_baseline_idx').on(table.baselineStudyId),
@@ -617,8 +617,8 @@ export const measurementDefinitions = sqliteTable('measurement_definitions', {
   modality: text('modality'),     // optional hint: 'OCT' | 'Fundus' | ...
   description: text('description'),
   isPreset: integer('is_preset', { mode: 'boolean' }).default(false).notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   index('measurement_definitions_key_idx').on(table.key),
 ]);
@@ -641,8 +641,8 @@ export const measurementPoints = sqliteTable('measurement_points', {
   calibrated: integer('calibrated', { mode: 'boolean' }).default(true).notNull(),
   sourceAnnotationId: text('source_annotation_id').references(() => annotations.id),
   capturedAt: text('captured_at').notNull(),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
   uniqueIndex('measurement_points_study_key_idx').on(table.studyId, table.measurementKey),
   index('measurement_points_study_idx').on(table.studyId),

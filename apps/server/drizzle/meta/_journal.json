@@ -15,6 +15,13 @@
       "when": 1786379415092,
       "tag": "0001_bitter_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786457576527,
+      "tag": "0002_sad_ben_parker",
+      "breakpoints": true
     }
   ]
 }
