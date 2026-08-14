@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { studyApi, imageApi } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +28,7 @@ export function SeriesNavigator({
   onSeriesSelect,
   className,
 }: SeriesNavigatorProps) {
+  const { t } = useTranslation();
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,7 +85,7 @@ export function SeriesNavigator({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            系列列表
+            {t('viewer.header.seriesList')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-2">
@@ -112,9 +114,9 @@ export function SeriesNavigator({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <Layers className="h-4 w-4" />
-          系列列表
+          {t('viewer.header.seriesList')}
           <span className="text-xs font-normal text-muted-foreground ml-auto">
-            {series.length} 个系列
+            {t('viewer.header.seriesCount', { count: series.length })}
           </span>
         </CardTitle>
       </CardHeader>
@@ -145,13 +147,13 @@ export function SeriesNavigator({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {s.description || `系列 ${s.seriesNumber}`}
+                      {s.description || t('viewer.header.series', { number: s.seriesNumber })}
                     </p>
                     <p className={cn(
                       'text-xs truncate',
                       isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}>
-                      {s.modality} · {s.imageCount} 张图像
+                      {s.modality} · {t('viewer.header.imagesCount', { count: s.imageCount })}
                     </p>
                   </div>
                   {isActive && (

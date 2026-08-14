@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
+import i18n from '@/i18n'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 
@@ -46,19 +47,19 @@ export class ErrorBoundary extends Component<Props, State> {
             <AlertTriangle className="h-8 w-8 text-destructive" />
           </div>
           <div className="text-center space-y-2">
-            <h2 className="text-lg font-semibold">页面出现错误</h2>
+            <h2 className="text-lg font-semibold">{i18n.t('error.title')}</h2>
             <p className="text-sm text-muted-foreground max-w-md">
-              {this.state.error?.message || '发生了意外错误，请尝试刷新页面或返回首页。'}
+              {this.state.error?.message || i18n.t('error.message')}
             </p>
           </div>
           <div className="flex space-x-2">
             <Button variant="outline" onClick={this.handleRetry}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              重试
+              {i18n.t('error.retry')}
             </Button>
             <Button onClick={this.handleGoHome}>
               <Home className="mr-2 h-4 w-4" />
-              返回首页
+              {i18n.t('error.home')}
             </Button>
           </div>
         </div>

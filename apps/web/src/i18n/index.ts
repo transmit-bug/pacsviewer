@@ -12,7 +12,9 @@ i18n
       zh: { translation: zh },
       en: { translation: en },
     },
+    lng: 'zh',
     fallbackLng: 'zh',
+    supportedLngs: ['zh', 'en'],
     interpolation: {
       escapeValue: false,
     },

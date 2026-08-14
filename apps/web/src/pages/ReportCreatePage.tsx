@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { reportApi, reportTemplateApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +28,7 @@ interface ReportTemplate {
 
 export function ReportCreatePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -52,7 +55,7 @@ export function ReportCreatePage() {
   const handleCreateReport = async () => {
     if (!selectedTemplate || !selectedPatient) {
       toast({
-        title: '请选择模板和患者',
+        title: t('report.selectTemplateAndPatient'),
         variant: 'destructive',
       });
       return;
@@ -74,19 +77,19 @@ export function ReportCreatePage() {
       const response = await reportApi.create({
         patientId: selectedPatient,
         templateId: selectedTemplate,
-        title: `${template.name} - ${new Date().toLocaleDateString('zh-CN')}`,
+        title: `${template.name} - ${new Date().toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}`,
         content: initialContent,
         images: [],
         status: 'draft',
       });
       toast({
-        title: '报告创建成功',
+        title: t('report.createSuccess'),
       });
       navigate(`/reports/${response.data.studyId || response.data.id}`);
     } catch (error) {
       console.error('Failed to create report:', error);
       toast({
-        title: '创建报告失败',
+        title: t('report.createFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -133,12 +136,12 @@ export function ReportCreatePage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold">创建报告</h1>
+        <h1 className="text-3xl font-bold">{t('report.create')}</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>选择患者</CardTitle>
+          <CardTitle>{t('report.selectPatient')}</CardTitle>
         </CardHeader>
         <CardContent>
           <PatientSelector
@@ -150,7 +153,7 @@ export function ReportCreatePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>选择报告模板</CardTitle>
+          <CardTitle>{t('report.selectTemplateTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -169,7 +172,7 @@ export function ReportCreatePage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    模板类型: {template.type}
+                    {t('report.templateTypeLabel', { type: template.type })}
                   </p>
                   {template.description && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -183,7 +186,7 @@ export function ReportCreatePage() {
 
           {templates.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              暂无可用的报告模板
+              {t('report.noTemplates')}
             </div>
           )}
 
@@ -193,7 +196,7 @@ export function ReportCreatePage() {
             onClick={handleCreateReport}
           >
             <FileText className="mr-2 h-4 w-4" />
-            {creating ? '创建中...' : '创建报告'}
+            {creating ? t('report.creating') : t('report.createReport')}
           </Button>
         </CardContent>
       </Card>

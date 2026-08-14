@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -30,6 +31,7 @@ export function ImageUpload({
   maxFiles = 20,
   className,
 }: ImageUploadProps) {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,8 +111,8 @@ export function ImageUpload({
     const dicomdir = newFiles.find(f => f.name.toUpperCase() === 'DICOMDIR');
     if (dicomdir) {
       toast({
-        title: '检测到 DICOMDIR 文件',
-        description: '将按照 DICOMDIR 目录结构组织文件',
+        title: t('upload.dicomdirDetected'),
+        description: t('upload.dicomdirDesc'),
       });
       // DICOMDIR processing would be handled by the server
     }
@@ -133,7 +135,7 @@ export function ImageUpload({
 
     if (validFiles.length + files.length > maxFiles) {
       toast({
-        title: `最多只能上传 ${maxFiles} 个文件`,
+        title: t('upload.maxFiles', { count: maxFiles }),
         variant: 'destructive',
       });
       return;
@@ -176,7 +178,7 @@ export function ImageUpload({
 
       return response.data?.id || null;
     } catch (error) {
-      const message = error instanceof Error ? error.message : '上传失败';
+      const message = error instanceof Error ? error.message : t('upload.uploadFailed');
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id ? { ...f, status: 'error', error: message } : f
@@ -211,7 +213,7 @@ export function ImageUpload({
 
     if (successIds.length > 0) {
       toast({
-        title: `成功上传 ${successIds.length} 个文件`,
+        title: t('upload.uploadSuccess', { count: successIds.length }),
       });
       onUploadComplete?.(successIds);
     }
@@ -219,7 +221,7 @@ export function ImageUpload({
     const failedCount = pendingFiles.length - successIds.length;
     if (failedCount > 0) {
       toast({
-        title: `${failedCount} 个文件上传失败`,
+        title: t('upload.uploadFailedCount', { count: failedCount }),
         variant: 'destructive',
       });
     }
@@ -250,10 +252,10 @@ export function ImageUpload({
       >
         <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <p className="text-lg font-medium mb-2">
-          拖拽文件或文件夹到此处
+          {t('upload.dropTitle')}
         </p>
         <p className="text-sm text-muted-foreground mb-4">
-          支持 DICOM、JPEG、PNG、BMP、WebP、TIFF 格式，最多 {maxFiles} 个文件
+          {t('upload.formatsHint', { count: maxFiles })}
         </p>
         <div className="flex justify-center gap-2">
           <Button
@@ -265,7 +267,7 @@ export function ImageUpload({
             }}
           >
             <FileImage className="mr-2 h-4 w-4" />
-            选择文件
+            {t('upload.selectFiles')}
           </Button>
           <Button
             variant="outline"
@@ -285,7 +287,7 @@ export function ImageUpload({
             }}
           >
             <FolderOpen className="mr-2 h-4 w-4" />
-            选择文件夹
+            {t('upload.selectFolder')}
           </Button>
         </div>
         <input
@@ -346,19 +348,19 @@ export function ImageUpload({
             {/* Actions */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <p className="text-sm text-muted-foreground">
-                {pendingCount} 个待上传，{successCount} 个已完成
-                {errorCount > 0 && `，${errorCount} 个失败`}
+                {t('upload.pendingCount', { pending: pendingCount, success: successCount })}
+                {errorCount > 0 && t('upload.failedSuffix', { count: errorCount })}
               </p>
               <div className="flex space-x-2">
                 {errorCount > 0 && (
                   <Button variant="outline" size="sm" onClick={retryFailed}>
                     <RotateCw className="mr-2 h-3 w-3" />
-                    重试失败
+                    {t('upload.retryFailed')}
                   </Button>
                 )}
                 {successCount > 0 && (
                   <Button variant="outline" size="sm" onClick={handleClearCompleted}>
-                    清除已完成
+                    {t('upload.clearCompleted')}
                   </Button>
                 )}
                 <Button
@@ -367,7 +369,7 @@ export function ImageUpload({
                   disabled={pendingCount === 0}
                 >
                   <Upload className="mr-2 h-4 w-4" />
-                  上传全部
+                  {t('upload.uploadAll')}
                 </Button>
               </div>
             </div>

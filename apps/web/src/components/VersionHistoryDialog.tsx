@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import {
   Dialog,
   DialogContent,
@@ -108,7 +109,7 @@ export function VersionHistoryDialog({
               }}
             >
               <GitCompare className="mr-1.5 h-3.5 w-3.5" />
-              {compareMode ? '选择第二版本...' : '版本对比'}
+              {compareMode ? t('report.compareSecondVersion') : t('report.compareVersions')}
             </Button>
           </DialogTitle>
         </DialogHeader>
@@ -133,27 +134,27 @@ export function VersionHistoryDialog({
                   {value.changed ? (
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="rounded bg-red-50 dark:bg-red-950/20 p-2">
-                        <div className="text-xs text-red-600 dark:text-red-400 mb-1">旧值</div>
+                        <div className="text-xs text-red-600 dark:text-red-400 mb-1">{t('report.oldValue')}</div>
                         <div className="whitespace-pre-wrap break-words">
                           {typeof value.old === 'object' ? JSON.stringify(value.old, null, 2) : String(value.old ?? '-')}
                         </div>
                       </div>
                       <div className="rounded bg-green-50 dark:bg-green-950/20 p-2">
-                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">新值</div>
+                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">{t('report.newValue')}</div>
                         <div className="whitespace-pre-wrap break-words">
                           {typeof value.new === 'object' ? JSON.stringify(value.new, null, 2) : String(value.new ?? '-')}
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground">无变更</div>
+                    <div className="text-sm text-muted-foreground">{t('report.noChange')}</div>
                   )}
                 </div>
               ))}
             </div>
 
             <Button variant="outline" size="sm" onClick={() => setDiff(null)}>
-              返回版本列表
+              {t('report.backToVersions')}
             </Button>
           </div>
         ) : (
@@ -162,7 +163,7 @@ export function VersionHistoryDialog({
             {/* Version list */}
             <div className="border rounded-md overflow-y-auto max-h-[400px]">
               {loading ? (
-                <div className="p-4 text-center text-muted-foreground">加载中...</div>
+                <div className="p-4 text-center text-muted-foreground">{t('report.loading')}</div>
               ) : versions.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   {t('report.noHistory')}
@@ -185,7 +186,7 @@ export function VersionHistoryDialog({
                     <div className="flex items-center gap-2">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
-                        {new Date(version.createdAt).toLocaleString('zh-CN')}
+                        {new Date(version.createdAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
@@ -209,16 +210,16 @@ export function VersionHistoryDialog({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <FileText className="h-4 w-4" />
-                      <span>版本 {selectedVersion.version}</span>
+                      <span>{t('report.versionLabel', { number: selectedVersion.version })}</span>
                     </div>
                     <StatusBadge status={selectedVersion.status} />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(selectedVersion.createdAt).toLocaleString('zh-CN')}
+                    {new Date(selectedVersion.createdAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
                   </div>
                   {selectedVersion.changeNotes && (
                     <div className="rounded bg-muted p-2 text-sm">
-                      <span className="text-xs font-medium">变更说明: </span>
+                      <span className="text-xs font-medium">{t('report.changeNotesLabel')} </span>
                       {selectedVersion.changeNotes}
                     </div>
                   )}
@@ -236,7 +237,7 @@ export function VersionHistoryDialog({
                   </div>
                   {selectedVersion.images && selectedVersion.images.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">包含图像 ({selectedVersion.images.length})</h4>
+                      <h4 className="font-medium text-sm">{t('report.includesImages', { count: selectedVersion.images.length })}</h4>
                       <div className="flex flex-wrap gap-1">
                         {selectedVersion.images.map((img, i) => (
                           <span key={i} className="text-xs bg-muted rounded px-2 py-0.5">
@@ -249,11 +250,11 @@ export function VersionHistoryDialog({
                 </div>
               ) : compareMode ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                  {compareFrom ? '选择第二个版本进行对比' : '选择第一个版本开始对比'}
+                  {compareFrom ? t('report.selectSecondVersionHint') : t('report.selectFirstVersionHint')}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                  选择一个版本查看详情
+                  {t('report.selectVersionDetail')}
                 </div>
               )}
             </div>
@@ -262,7 +263,7 @@ export function VersionHistoryDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('report.cancel') || '关闭'}
+            {t('common.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

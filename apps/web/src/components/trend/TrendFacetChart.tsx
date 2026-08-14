@@ -20,6 +20,7 @@ import {
   ReferenceLine,
   ReferenceArea,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
   TrendSeries,
@@ -37,6 +38,7 @@ interface TrendFacetChartProps {
 }
 
 export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartProps) {
+  const { t } = useTranslation();
   const trend = computeTrend(series);
   const meta = TREND_META[trend.status];
   const def = series.definition;
@@ -84,13 +86,13 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
     <div className="border rounded-xl p-3 bg-card">
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-medium">{def?.displayName ?? series.key}</span>
-        <span className={cn('text-xs px-1.5 py-0.5 rounded-full', meta.badgeClass)}>{meta.label}</span>
+        <span className={cn('text-xs px-1.5 py-0.5 rounded-full', meta.badgeClass)}>{t(meta.labelKey)}</span>
       </div>
 
       <div className="h-[140px]">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            暂无测量数据
+            {t('trend.noData')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -115,7 +117,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
                 }}
                 labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                 itemStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: any) => [formatValue(Number(value), targetUnit), '测量值']}
+                formatter={(value: any) => [formatValue(Number(value), targetUnit), t('trend.measurementValue')]}
                 labelFormatter={(label, payload) => payload?.[0]?.payload?.fullLabel ?? label}
               />
               {bandY1 !== undefined && bandY2 !== undefined && bandY1 < bandY2 && (
@@ -133,7 +135,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
                   stroke="hsl(var(--status-neutral))"
                   strokeDasharray="4 3"
                   strokeWidth={1}
-                  label={{ value: '基线', position: 'insideTopRight', fontSize: 9, fill: 'hsl(var(--status-neutral))' }}
+                  label={{ value: t('trend.baseline'), position: 'insideTopRight', fontSize: 9, fill: 'hsl(var(--status-neutral))' }}
                 />
               )}
               <Line
@@ -164,15 +166,15 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
 
       {bandUsable && (range!.min !== undefined || range!.max !== undefined) && (
         <div className="text-[10px] text-muted-foreground mt-0.5">
-          参考区间: {range!.min !== undefined ? `≥ ${range!.min}${def!.unit}` : ''}{range!.min !== undefined && range!.max !== undefined ? ' · ' : ''}{range!.max !== undefined ? `≤ ${range!.max}${def!.unit}` : ''}
+          {t('trend.referenceRange')}: {range!.min !== undefined ? `≥ ${range!.min}${def!.unit}` : ''}{range!.min !== undefined && range!.max !== undefined ? ' · ' : ''}{range!.max !== undefined ? `≤ ${range!.max}${def!.unit}` : ''}
         </div>
       )}
       {series.points.some((p) => !p.calibrated) && (
-        <div className="text-[10px] text-[hsl(var(--status-warning))] mt-0.5">含未校准(px)测量,数值仅供参考</div>
+        <div className="text-[10px] text-[hsl(var(--status-warning))] mt-0.5">{t('trend.containsUncalibrated')}</div>
       )}
       {def?.unit && def.unit !== targetUnit && (
         <div className="text-[10px] text-muted-foreground mt-0.5">
-          以测量实际单位 {targetUnit} 展示(字典单位 {def.unit} 不可换算)
+          {t('trend.displayedIn', { unit: targetUnit, dictUnit: def.unit })}
         </div>
       )}
     </div>

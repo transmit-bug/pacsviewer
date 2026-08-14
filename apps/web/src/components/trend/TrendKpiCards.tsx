@@ -10,6 +10,7 @@ import {
   YAxis,
   ReferenceLine,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
   TrendSeries,
@@ -27,9 +28,11 @@ interface TrendKpiCardsProps {
 }
 
 export function TrendKpiCards({ series, className }: TrendKpiCardsProps) {
+  const { t } = useTranslation();
+
   if (series.length === 0) {
     return (
-      <div className="text-center py-10 text-muted-foreground text-sm">暂无测量数据</div>
+      <div className="text-center py-10 text-muted-foreground text-sm">{t('trend.noData')}</div>
     );
   }
 
@@ -51,7 +54,7 @@ export function TrendKpiCards({ series, className }: TrendKpiCardsProps) {
           <div key={s.key} className="border rounded-xl p-4 bg-card">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{def?.displayName ?? s.key}</span>
-              <span className={cn('text-xs px-1.5 py-0.5 rounded-full', meta.badgeClass)}>{meta.label}</span>
+              <span className={cn('text-xs px-1.5 py-0.5 rounded-full', meta.badgeClass)}>{t(meta.labelKey)}</span>
             </div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-3xl font-semibold tabular-nums">
@@ -64,7 +67,7 @@ export function TrendKpiCards({ series, className }: TrendKpiCardsProps) {
                 {trend.pct >= 0 ? '▲' : '▼'} {Number.isFinite(trend.pct) ? Math.abs(trend.pct).toFixed(1) : '—'}%
               </span>
               <span className="text-muted-foreground">
-                {' '}vs 基线 {base ? formatValue(toDisplay(base.value, base.unit), unit) : '—'}
+                {' '}{t('trend.vsBaseline', { value: base ? formatValue(toDisplay(base.value, base.unit), unit) : '—' })}
               </span>
             </div>
             {s.points.length >= 2 && (

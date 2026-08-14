@@ -148,7 +148,7 @@ export function ViewerPage() {
   });
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return <div className="text-center py-8">{t('viewer.header.loading')}</div>;
   }
 
   return (
@@ -165,7 +165,7 @@ export function ViewerPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">
-                {study?.patient?.name || '患者'} - {study?.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}
+                {study?.patient?.name || t('viewer.header.patient')} - {study?.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {study?.studyDate} | {study?.patient?.mrn}
@@ -179,13 +179,13 @@ export function ViewerPage() {
               onClick={() => setShowDicomTags(!showDicomTags)}
             >
               <Tag className="mr-2 h-4 w-4" />
-              DICOM 标签
+              {t('viewer.header.dicomTags')}
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowShortcutsHelp(true)}
-              title="键盘快捷键 (?)"
+              title={t('viewer.header.keyboardShortcuts')}
             >
               <Keyboard className="h-4 w-4" />
             </Button>
@@ -249,28 +249,28 @@ export function ViewerPage() {
         {/* Study info */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">检查信息</CardTitle>
+            <CardTitle className="text-sm">{t('viewer.header.studyInfo')}</CardTitle>
           </CardHeader>
           <CardContent>
             {study && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">检查类型</span>
+                  <span className="text-muted-foreground">{t('viewer.header.studyType')}</span>
                   <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">检查日期</span>
+                  <span className="text-muted-foreground">{t('viewer.header.studyDate')}</span>
                   <span>{study.studyDate}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">模态</span>
+                  <span className="text-muted-foreground">{t('viewer.header.modality')}</span>
                   <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ') || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">状态</span>
+                  <span className="text-muted-foreground">{t('viewer.header.status')}</span>
                   <Badge variant={study.status === 'reported' ? 'default' : study.status === 'diagnosed' ? 'secondary' : 'outline'}>
-                    {study.status === 'reported' ? '已报告' :
-                     study.status === 'diagnosed' ? '已诊断' : '待处理'}
+                    {study.status === 'reported' ? t('viewer.header.statusReported') :
+                     study.status === 'diagnosed' ? t('viewer.header.statusDiagnosed') : t('viewer.header.statusPending')}
                   </Badge>
                 </div>
               </div>
@@ -283,12 +283,12 @@ export function ViewerPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <FileText className="h-3.5 w-3.5" />
-              检查级标注
+              {t('viewer.header.studyLevelAnnotations')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {studyAnnotations.length === 0 ? (
-              <p className="text-xs text-muted-foreground">暂无检查级标注</p>
+              <p className="text-xs text-muted-foreground">{t('viewer.header.noAnnotations')}</p>
             ) : (
               <div className="space-y-2">
                 {studyAnnotations.map((ann) => (
@@ -310,7 +310,7 @@ export function ViewerPage() {
         {/* Image list */}
         <Card className="flex-1 overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">图像列表</CardTitle>
+            <CardTitle className="text-sm">{t('viewer.header.imageList')}</CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-y-auto max-h-[400px]">
             <ImageList images={images} />

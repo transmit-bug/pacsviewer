@@ -14,6 +14,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { patientApi, studyApi, imageApi, annotationApi, followUpApi, measurementApi } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ interface DeltaRow {
 }
 
 export function ComparisonPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const patientIdParam = searchParams.get('patientId');
   const baselineParam = searchParams.get('baseline');
@@ -120,7 +122,7 @@ export function ComparisonPage() {
         }
       } catch (err) {
         console.error('Failed to load workbench:', err);
-        toast({ title: '加载失败', variant: 'destructive' });
+        toast({ title: t('comparison.loading'), variant: 'destructive' });
       } finally {
         setLoading(false);
       }
@@ -256,7 +258,7 @@ export function ComparisonPage() {
       }
     } catch (err) {
       console.error('Failed to persist comparison measurements:', err);
-      toast({ title: '测量保存失败', variant: 'destructive' });
+      toast({ title: t('comparison.measureSaveFailed'), variant: 'destructive' });
     }
   };
 
@@ -274,7 +276,7 @@ export function ComparisonPage() {
         data: {
           handles: { points: [[x1, y1, 0], [x2, y2, 0]] },
           cachedStats: { [targetId]: { length, unit: 'px', statsArray: [] } },
-          label: `对比测量 ${l.owner === 'baseline' ? '基线' : '对比'}`,
+          label: t('comparison.measureLabel', { owner: l.owner === 'baseline' ? t('comparison.baselineTag') : t('comparison.comparisonTag') }),
         },
         style: { color: l.owner === 'baseline' ? '#fbbf24' : '#34d399', lineWidth: 2 },
       };
@@ -285,7 +287,7 @@ export function ComparisonPage() {
 
   const handleSaveFollowUp = async () => {
     if (!patientId || !baselineStudyId || !comparisonStudyId || !selectedImageA || !selectedImageB) {
-      toast({ title: '请选择患者与两个检查', variant: 'destructive' });
+      toast({ title: t('comparison.selectPair'), variant: 'destructive' });
       return;
     }
     if (savingRef.current) return;
@@ -303,11 +305,11 @@ export function ComparisonPage() {
         setDeltaRows(data.measurements as DeltaRow[]);
       }
       toast({
-        title: data.updated ? '随访记录已更新(同对检查)' : '随访记录已保存',
+        title: data.updated ? t('comparison.updateSuccess') : t('comparison.saveSuccess'),
       });
     } catch (err) {
       console.error('Failed to save follow-up:', err);
-      toast({ title: '保存随访记录失败', variant: 'destructive' });
+      toast({ title: t('comparison.saveFailed'), variant: 'destructive' });
     } finally {
       setSaving(false);
       savingRef.current = false;
@@ -343,7 +345,7 @@ export function ComparisonPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-xl font-bold">随访对比工作台</h1>
+              <h1 className="text-xl font-bold">{t('comparison.title')}</h1>
               {patient && (
                 <p className="text-sm text-muted-foreground">
                   {patient.name} ({patient.mrn}) · {baselineStudy?.studyDate ?? '-'} → {comparisonStudy?.studyDate ?? '-'}
@@ -356,13 +358,13 @@ export function ComparisonPage() {
             {lines.length > 0 && (
               <Button variant="outline" size="sm" onClick={clearLines}>
                 <Trash2 className="h-4 w-4 mr-1" />
-                清除测量
+                {t('comparison.clearMeasurements')}
               </Button>
             )}
             {savedRecordId && (
               <span className="text-xs text-green-600 flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                已保存 #{savedRecordId.slice(0, 8)}
+                {t('comparison.saved', { id: savedRecordId.slice(0, 8) })}
               </span>
             )}
             <Button
@@ -371,7 +373,7 @@ export function ComparisonPage() {
               disabled={saving || !selectedImageA || !selectedImageB}
             >
               {saving ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-              保存随访记录
+              {t('comparison.saveFollowUp')}
             </Button>
           </div>
         </div>
@@ -381,13 +383,13 @@ export function ComparisonPage() {
           <CardContent className="p-3">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">基线检查:</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{t('comparison.baseline')}:</span>
                 <select
                   value={baselineStudyId ?? ''}
                   onChange={(e) => setBaselineStudyId(e.target.value || null)}
                   className="border rounded-md px-2 py-1.5 text-sm bg-background max-w-[260px]"
                 >
-                  {studies.length === 0 && <option value="">暂无检查</option>}
+                  {studies.length === 0 && <option value="">{t('comparison.noStudies')}</option>}
                   {[...studies]
                     .sort((a, b) => `${a.studyDate}${a.studyTime ?? ''}`.localeCompare(`${b.studyDate}${b.studyTime ?? ''}`))
                     .map((s) => (
@@ -398,13 +400,13 @@ export function ComparisonPage() {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">对比检查:</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{t('comparison.comparison')}:</span>
                 <select
                   value={comparisonStudyId ?? ''}
                   onChange={(e) => setComparisonStudyId(e.target.value || null)}
                   className="border rounded-md px-2 py-1.5 text-sm bg-background max-w-[260px]"
                 >
-                  <option value="">请选择</option>
+                  <option value="">{t('comparison.select')}</option>
                   {comparisonCandidates
                     .sort((a, b) => `${a.studyDate}${a.studyTime ?? ''}`.localeCompare(`${b.studyDate}${b.studyTime ?? ''}`))
                     .map((s) => (
@@ -414,11 +416,11 @@ export function ComparisonPage() {
                     ))}
                 </select>
                 <span className="text-[11px] text-muted-foreground">
-                  {comparisonCandidates.length < studies.length - 1 ? '(同模态)' : ''}
+                  {comparisonCandidates.length < studies.length - 1 ? t('comparison.sameModality') : ''}
                 </span>
               </div>
               {!baselineStudyId || !comparisonStudyId ? (
-                <span className="text-xs text-amber-600">需选择两个检查进入对比</span>
+                <span className="text-xs text-amber-600">{t('comparison.needBoth')}</span>
               ) : null}
             </div>
           </CardContent>
@@ -448,11 +450,11 @@ export function ComparisonPage() {
         {/* Image selection */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">基线检查图像 ({baselineStudy?.studyDate ?? '-'})</CardTitle>
+            <CardTitle className="text-sm">{t('comparison.baselineImages', { date: baselineStudy?.studyDate ?? '-' })}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {baselineImages.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground text-sm">暂无图像</div>
+              <div className="text-center py-6 text-muted-foreground text-sm">{t('comparison.noImages')}</div>
             ) : (
               <div className="grid grid-cols-3 gap-1 p-2">
                 {baselineImages.map((image) => (
@@ -485,11 +487,11 @@ export function ComparisonPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">对比检查图像 ({comparisonStudy?.studyDate ?? '-'})</CardTitle>
+            <CardTitle className="text-sm">{t('comparison.comparisonImages', { date: comparisonStudy?.studyDate ?? '-' })}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {comparisonImages.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground text-sm">暂无图像</div>
+              <div className="text-center py-6 text-muted-foreground text-sm">{t('comparison.noImages')}</div>
             ) : (
               <div className="grid grid-cols-3 gap-1 p-2">
                 {comparisonImages.map((image) => (
@@ -523,7 +525,7 @@ export function ComparisonPage() {
         {/* Workbench trend overview (#91) */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">纵向趋势 (该患者)</CardTitle>
+            <CardTitle className="text-sm">{t('comparison.trend')}</CardTitle>
           </CardHeader>
           <CardContent className="p-2">
             {trendLoading ? (
@@ -533,7 +535,7 @@ export function ComparisonPage() {
               </div>
             ) : trendSeries.length === 0 ? (
               <div className="text-sm text-muted-foreground p-2">
-                暂无趋势数据 —— 保存测量后自动进入趋势。
+                {t('comparison.noTrendData')}
               </div>
             ) : (
               <TrendKpiCards series={trendSeries} className="grid-cols-1 sm:grid-cols-1 xl:grid-cols-1" />
@@ -544,29 +546,29 @@ export function ComparisonPage() {
         {/* Delta table (T5) */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">测量对照 (delta)</CardTitle>
+            <CardTitle className="text-sm">{t('comparison.delta')}</CardTitle>
           </CardHeader>
           <CardContent>
             {!deltaRows ? (
               <div className="text-sm text-muted-foreground">
-                保存随访记录后显示测量对照表。
+                {t('comparison.noDelta')}
                 <br />
                 <span className="text-xs">
-                  基于两检查的 measurement 标注,按 label 匹配计算变化/百分比/趋势。
+                  {t('comparison.deltaHint')}
                 </span>
               </div>
             ) : deltaRows.length === 0 ? (
-              <div className="text-sm text-muted-foreground">两检查没有可对照的测量标注。</div>
+              <div className="text-sm text-muted-foreground">{t('comparison.noComparable')}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-muted-foreground border-b">
-                      <th className="py-1 pr-2">测量</th>
-                      <th className="py-1 pr-2">基线</th>
-                      <th className="py-1 pr-2">对比</th>
-                      <th className="py-1 pr-2">变化</th>
-                      <th className="py-1">趋势</th>
+                      <th className="py-1 pr-2">{t('comparison.measurement')}</th>
+                      <th className="py-1 pr-2">{t('comparison.baselineValue')}</th>
+                      <th className="py-1 pr-2">{t('comparison.comparisonValue')}</th>
+                      <th className="py-1 pr-2">{t('comparison.change')}</th>
+                      <th className="py-1">{t('comparison.trendCol')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -586,7 +588,7 @@ export function ComparisonPage() {
                             </span>
                           </td>
                           <td className="py-1.5">
-                            <span className={cn('px-1.5 py-0.5 rounded-full', trend.badgeClass)}>{trend.label}</span>
+                            <span className={cn('px-1.5 py-0.5 rounded-full', trend.badgeClass)}>{t(trend.labelKey)}</span>
                           </td>
                         </tr>
                       );

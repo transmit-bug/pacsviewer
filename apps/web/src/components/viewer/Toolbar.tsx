@@ -8,6 +8,7 @@
  * 水平工具栏，所有工具直接显示
  */
 
+import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
 import { ToolbarGroup } from './ToolbarGroup';
 import type { ToolConfig, ToolGroupConfig } from './ToolGroupPopover';
@@ -25,33 +26,34 @@ interface ViewportToolbarProps {
   className?: string;
 }
 
-/** 视图工具栏配置 */
-const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[] })[] = [
-  {
-    id: 'navigation',
-    icon: Move,
-    label: '导航',
-    tools: [
-      { id: 'pan', icon: Move, label: '平移' },
-      { id: 'zoom', icon: ZoomIn, label: '缩放' },
-      { id: 'windowLevel', icon: SlidersHorizontal, label: '窗宽窗位' },
-    ],
-  },
-  {
-    id: 'transform',
-    icon: RotateCw,
-    label: '变换',
-    tools: [
-      { id: 'rotate', icon: RotateCw, label: '旋转 90°' },
-      { id: 'flipH', icon: FlipHorizontal, label: '水平翻转' },
-      { id: 'flipV', icon: FlipVertical, label: '垂直翻转' },
-      { id: 'fit', icon: Maximize, label: '适配窗口' },
-    ],
-  },
-];
-
 export function ViewportToolbar({ className }: ViewportToolbarProps) {
+  const { t } = useTranslation();
   const { activeTool, setActiveTool, viewport, setViewport, resetViewport } = useViewerStore();
+
+  /** 视图工具栏配置 */
+  const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[] })[] = [
+    {
+      id: 'navigation',
+      icon: Move,
+      label: t('viewer.toolbar.navigation'),
+      tools: [
+        { id: 'pan', icon: Move, label: t('viewer.toolbar.pan') },
+        { id: 'zoom', icon: ZoomIn, label: t('viewer.toolbar.zoom') },
+        { id: 'windowLevel', icon: SlidersHorizontal, label: t('viewer.toolbar.windowLevel') },
+      ],
+    },
+    {
+      id: 'transform',
+      icon: RotateCw,
+      label: t('viewer.toolbar.transform'),
+      tools: [
+        { id: 'rotate', icon: RotateCw, label: t('viewer.toolbar.rotate90') },
+        { id: 'flipH', icon: FlipHorizontal, label: t('viewer.toolbar.flipH') },
+        { id: 'flipV', icon: FlipVertical, label: t('viewer.toolbar.flipV') },
+        { id: 'fit', icon: Maximize, label: t('viewer.toolbar.fit') },
+      ],
+    },
+  ];
 
   const handleToolClick = (toolId: string) => {
     switch (toolId) {

@@ -6,6 +6,7 @@
  * then confirm → jump straight into the comparison workbench.
  */
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ export function FollowUpStarterDialog({
   initialComparisonId,
   onStart,
 }: FollowUpStarterDialogProps) {
+  const { t } = useTranslation();
   const sorted = useMemo(
     () =>
       [...studies].sort((a, b) =>
@@ -82,14 +84,14 @@ export function FollowUpStarterDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>发起随访对比</DialogTitle>
+          <DialogTitle>{t('followUp.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div>
-            <div className="text-sm font-medium mb-1.5">基线检查 (最早)</div>
+            <div className="text-sm font-medium mb-1.5">{t('followUp.baselineLabel')}</div>
             <div className="max-h-36 overflow-y-auto border rounded-md divide-y">
-              {sorted.length === 0 && <div className="p-3 text-sm text-muted-foreground">该患者暂无检查记录</div>}
+              {sorted.length === 0 && <div className="p-3 text-sm text-muted-foreground">{t('followUp.noStudies')}</div>}
               {sorted.map((s) => (
                 <button
                   key={s.id}
@@ -103,18 +105,18 @@ export function FollowUpStarterDialog({
                   )}
                 >
                   <span className="font-medium">{studyLabel(s)}</span>
-                  {baselineId === s.id && <span className="ml-2 text-xs text-primary">基线</span>}
+                  {baselineId === s.id && <span className="ml-2 text-xs text-primary">{t('followUp.baselineTag')}</span>}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <div className="text-sm font-medium mb-1.5">对比检查 (最近, 同模态)</div>
+            <div className="text-sm font-medium mb-1.5">{t('followUp.comparisonLabel')}</div>
             <div className="max-h-36 overflow-y-auto border rounded-md divide-y">
               {comparisonOptions.length === 0 && (
                 <div className="p-3 text-sm text-muted-foreground">
-                  {sorted.length === 0 ? '该患者暂无检查记录' : '无可选的同模态检查'}
+                  {sorted.length === 0 ? t('followUp.noStudies') : t('followUp.noSameModality')}
                 </div>
               )}
               {comparisonOptions.map((s) => (
@@ -127,20 +129,20 @@ export function FollowUpStarterDialog({
                   )}
                 >
                   <span className="font-medium">{studyLabel(s)}</span>
-                  {comparisonId === s.id && <span className="ml-2 text-xs text-primary">对比</span>}
+                  {comparisonId === s.id && <span className="ml-2 text-xs text-primary">{t('followUp.comparisonTag')}</span>}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="text-xs text-muted-foreground">
-            预填规则: 基线 = 最早的检查, 对比 = 同模态最近的检查 (医生可改)。
+            {t('followUp.prefillRule')}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('followUp.cancel')}
           </Button>
           <Button
             disabled={!canStart}
@@ -148,7 +150,7 @@ export function FollowUpStarterDialog({
               if (baselineId && comparisonId) onStart(baselineId, comparisonId);
             }}
           >
-            进入对比工作台
+            {t('followUp.start')}
           </Button>
         </DialogFooter>
       </DialogContent>

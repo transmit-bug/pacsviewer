@@ -6,6 +6,7 @@
  */
 
 import { CornerstoneViewport } from './CornerstoneViewport';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface ImageViewerProps {
@@ -15,10 +16,11 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ imageId, imageFormat, className }: ImageViewerProps) {
+  const { t } = useTranslation();
   if (!imageId) {
     return (
       <div className={cn('flex items-center justify-center w-full h-full bg-black', className)}>
-        <p className="text-white/50 text-sm">选择图像以查看</p>
+        <p className="text-white/50 text-sm">{t('viewer.header.selectImage')}</p>
       </div>
     );
   }

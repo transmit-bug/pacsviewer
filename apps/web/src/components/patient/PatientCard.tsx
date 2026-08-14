@@ -1,4 +1,5 @@
 import { Check, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { Patient } from '@/hooks/usePatientSearch';
 
@@ -9,14 +10,15 @@ interface PatientCardProps {
 }
 
 export function PatientCard({ patient, selected = false, onClick }: PatientCardProps) {
+  const { t } = useTranslation();
   const age = patient.birthDate
     ? new Date().getFullYear() - new Date(patient.birthDate).getFullYear()
     : null;
 
   const genderLabel =
-    patient.gender === 'male' ? '男' : patient.gender === 'female' ? '女' : null;
+    patient.gender === 'male' ? t('patient.male') : patient.gender === 'female' ? t('patient.female') : null;
 
-  const detailParts = [genderLabel, age && `${age}岁`].filter(Boolean);
+  const detailParts = [genderLabel, age && t('patient.age', { count: age })].filter(Boolean);
 
   return (
     <button
@@ -50,7 +52,7 @@ export function PatientCard({ patient, selected = false, onClick }: PatientCardP
       {patient.lastStudy?.studyDate && (
         <div className="ml-6 mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3" />
-          <span>最近就诊: {patient.lastStudy.studyDate}</span>
+          <span>{t('patient.lastVisit')}: {patient.lastStudy.studyDate}</span>
         </div>
       )}
     </button>

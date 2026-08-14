@@ -188,37 +188,42 @@ export function useKeyboardShortcuts({
 }
 
 // Keyboard shortcuts help content
-export const KEYBOARD_SHORTCUTS = [
-  { category: '工具', shortcuts: [
-    { key: '1', description: '平移' },
-    { key: '2', description: '缩放' },
-    { key: '3', description: '窗宽窗位' },
-    { key: '4', description: '长度测量' },
-    { key: '5', description: '角度测量' },
-    { key: '6', description: '像素探针' },
-    { key: '7', description: '标注' },
-    { key: '8', description: '画笔' },
+// categoryKey / descriptionKey are i18n keys (viewer.keyboard.*), translated
+// at render time by KeyboardShortcutsHelp.
+export const KEYBOARD_SHORTCUTS: {
+  categoryKey: string;
+  shortcuts: { key: string; descriptionKey: string }[];
+}[] = [
+  { categoryKey: 'viewer.keyboard.catTools', shortcuts: [
+    { key: '1', descriptionKey: 'viewer.keyboard.descPan' },
+    { key: '2', descriptionKey: 'viewer.keyboard.descZoom' },
+    { key: '3', descriptionKey: 'viewer.keyboard.descWindowLevel' },
+    { key: '4', descriptionKey: 'viewer.keyboard.descLength' },
+    { key: '5', descriptionKey: 'viewer.keyboard.descAngle' },
+    { key: '6', descriptionKey: 'viewer.keyboard.descProbe' },
+    { key: '7', descriptionKey: 'viewer.keyboard.descAnnotate' },
+    { key: '8', descriptionKey: 'viewer.keyboard.descBrush' },
   ]},
-  { category: '视图', shortcuts: [
-    { key: '+', description: '放大' },
-    { key: '-', description: '缩小' },
-    { key: '0', description: '适配窗口' },
-    { key: 'R', description: '顺时针旋转' },
-    { key: 'Shift+R', description: '逆时针旋转' },
-    { key: 'H', description: '水平翻转' },
-    { key: 'V', description: '垂直翻转' },
+  { categoryKey: 'viewer.keyboard.catView', shortcuts: [
+    { key: '+', descriptionKey: 'viewer.keyboard.descZoomIn' },
+    { key: '-', descriptionKey: 'viewer.keyboard.descZoomOut' },
+    { key: '0', descriptionKey: 'viewer.keyboard.descFit' },
+    { key: 'R', descriptionKey: 'viewer.keyboard.descRotateCW' },
+    { key: 'Shift+R', descriptionKey: 'viewer.keyboard.descRotateCCW' },
+    { key: 'H', descriptionKey: 'viewer.keyboard.descFlipH' },
+    { key: 'V', descriptionKey: 'viewer.keyboard.descFlipV' },
   ]},
-  { category: '导航', shortcuts: [
-    { key: '← / ↑', description: '上一张图像' },
-    { key: '→ / ↓', description: '下一张图像' },
+  { categoryKey: 'viewer.keyboard.catNavigation', shortcuts: [
+    { key: '← / ↑', descriptionKey: 'viewer.keyboard.descPrevImage' },
+    { key: '→ / ↓', descriptionKey: 'viewer.keyboard.descNextImage' },
   ]},
-  { category: '编辑', shortcuts: [
-    { key: 'Delete', description: '删除选中标注' },
-    { key: 'Ctrl+Z', description: '撤销' },
-    { key: 'Ctrl+Shift+Z', description: '重做' },
+  { categoryKey: 'viewer.keyboard.catEdit', shortcuts: [
+    { key: 'Delete', descriptionKey: 'viewer.keyboard.descDelete' },
+    { key: 'Ctrl+Z', descriptionKey: 'viewer.keyboard.descUndo' },
+    { key: 'Ctrl+Shift+Z', descriptionKey: 'viewer.keyboard.descRedo' },
   ]},
-  { category: '其他', shortcuts: [
-    { key: '?', description: '显示快捷键帮助' },
-    { key: 'Esc', description: '取消当前操作' },
+  { categoryKey: 'viewer.keyboard.catOther', shortcuts: [
+    { key: '?', descriptionKey: 'viewer.keyboard.descHelp' },
+    { key: 'Esc', descriptionKey: 'viewer.keyboard.descEscape' },
   ]},
 ];

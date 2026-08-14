@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { reportApi, reportTemplateApi } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -147,7 +148,7 @@ export function ReportPage() {
         studyId,
         patientId: '', // Will be resolved by backend from study
         templateId: selectedTemplate,
-        title: `${template.name} - ${new Date().toLocaleDateString('zh-CN')}`,
+        title: `${template.name} - ${new Date().toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}`,
         content: initialContent,
         images: [],
         status: 'draft',
@@ -316,7 +317,7 @@ export function ReportPage() {
                     value={report?.content?.[field.key] || ''}
                     onChange={(e) => handleContentChange(field.key, e.target.value)}
                   >
-                    <option value="">请选择...</option>
+                    <option value="">{t('report.selectOption')}</option>
                     {field.options?.map((opt) => (
                       <option key={opt} value={opt}>
                         {opt}
@@ -340,7 +341,7 @@ export function ReportPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return <div className="text-center py-8">{t('report.loading')}</div>;
   }
 
   return (
@@ -564,7 +565,7 @@ export function ReportPage() {
                     <StatusBadge status={report.status} className="print:hidden" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(report.createdAt).toLocaleString('zh-CN')}
+                    {new Date(report.createdAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -673,16 +674,16 @@ export function ReportPage() {
       <Dialog open={addImageDialogOpen} onOpenChange={setAddImageDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加图像</DialogTitle>
+            <DialogTitle>{t('report.addImageTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="imageId">图像 ID</Label>
+              <Label htmlFor="imageId">{t('report.imageId')}</Label>
               <Input
                 id="imageId"
                 value={newImageId}
                 onChange={(e) => setNewImageId(e.target.value)}
-                placeholder="请输入图像ID"
+                placeholder={t('report.imageIdPlaceholder')}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddImage()}
                 autoFocus
               />
@@ -690,10 +691,10 @@ export function ReportPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddImageDialogOpen(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleAddImage} disabled={!newImageId.trim()}>
-              添加
+              {t('report.addImage')}
             </Button>
           </DialogFooter>
         </DialogContent>

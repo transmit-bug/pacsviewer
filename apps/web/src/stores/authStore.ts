@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import i18n from '@/i18n';
 
 interface AuthState {
   user: any | null;
@@ -42,7 +43,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
           if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || '登录失败');
+            throw new Error(error.message || i18n.t('auth.loginFailed'));
           }
 
           const responseData = await response.json();
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : '登录失败',
+            error: error instanceof Error ? error.message : i18n.t('auth.loginFailed'),
             isLoading: false,
           });
         }
@@ -83,7 +84,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           });
 
           if (!response.ok) {
-            throw new Error('刷新token失败');
+            throw new Error(i18n.t('auth.refreshTokenFailed'));
           }
 
           const responseData = await response.json();

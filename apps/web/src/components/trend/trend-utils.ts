@@ -48,19 +48,20 @@ export const STABILITY_THRESHOLD_PCT = 5;
 
 // 语义色映射到设计令牌 (CIRRUS 语义: 好转=绿 稳定=灰 恶化=红), 深色下提亮
 // color 字段为 SVG stroke / inline style 可用的 hsl(var()) 字符串。
-export const TREND_META: Record<TrendStatus, { label: string; color: string; badgeClass: string }> = {
+// labelKey 为 i18n key (trend.status.*), 由渲染层 t() 翻译。
+export const TREND_META: Record<TrendStatus, { labelKey: string; color: string; badgeClass: string }> = {
   improving: {
-    label: '好转',
+    labelKey: 'trend.status.improving',
     color: 'hsl(var(--status-success))',
     badgeClass: 'bg-[hsl(var(--status-success)/0.12)] text-[hsl(var(--status-success))]',
   },
   stable: {
-    label: '稳定',
+    labelKey: 'trend.status.stable',
     color: 'hsl(var(--status-neutral))',
     badgeClass: 'bg-[hsl(var(--status-neutral)/0.15)] text-[hsl(var(--status-neutral))]',
   },
   worsening: {
-    label: '恶化',
+    labelKey: 'trend.status.worsening',
     color: 'hsl(var(--status-danger))',
     badgeClass: 'bg-[hsl(var(--status-danger)/0.12)] text-[hsl(var(--status-danger))]',
   },

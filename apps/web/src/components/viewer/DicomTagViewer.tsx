@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { imageApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,6 +83,7 @@ const DICOM_TAG_NAMES: Record<string, string> = {
 };
 
 export function DicomTagViewer({ imageId, onClose, className }: DicomTagViewerProps) {
+  const { t } = useTranslation();
   const [tags, setTags] = useState<DicomTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,7 +136,7 @@ export function DicomTagViewer({ imageId, onClose, className }: DicomTagViewerPr
   return (
     <Card className={cn('flex flex-col h-full', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg">DICOM 标签</CardTitle>
+        <CardTitle className="text-lg">{t('viewer.dicom.title')}</CardTitle>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
@@ -145,7 +147,7 @@ export function DicomTagViewer({ imageId, onClose, className }: DicomTagViewerPr
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="搜索标签..."
+              placeholder={t('viewer.dicom.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8"
@@ -166,7 +168,7 @@ export function DicomTagViewer({ imageId, onClose, className }: DicomTagViewerPr
             </div>
           ) : filteredTags.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              {searchQuery ? '未找到匹配的标签' : '无 DICOM 标签数据'}
+              {searchQuery ? t('viewer.dicom.noMatch') : t('viewer.dicom.noData')}
             </p>
           ) : (
             <div className="space-y-1 pb-4">
@@ -207,8 +209,8 @@ export function DicomTagViewer({ imageId, onClose, className }: DicomTagViewerPr
 
         {/* Summary */}
         <div className="px-4 py-2 border-t text-xs text-muted-foreground">
-          共 {filteredTags.length} 个标签
-          {searchQuery && ` (筛选自 ${tags.length} 个)`}
+          {t('viewer.dicom.count', { count: filteredTags.length })}
+          {searchQuery && t('viewer.dicom.filtered', { total: tags.length })}
         </div>
       </CardContent>
     </Card>

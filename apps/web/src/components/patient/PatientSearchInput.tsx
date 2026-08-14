@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -18,10 +19,11 @@ export function PatientSearchInput({
   onChange,
   onSearch,
   loading = false,
-  placeholder = '输入姓名、病历号或拼音...',
+  placeholder,
   disabled = false,
   autoFocus = false,
 }: PatientSearchInputProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -76,7 +78,7 @@ export function PatientSearchInput({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('patient.searchPlaceholder')}
         disabled={disabled}
         autoFocus={autoFocus}
         className={cn('pl-9 pr-9', loading && 'pr-12')}
