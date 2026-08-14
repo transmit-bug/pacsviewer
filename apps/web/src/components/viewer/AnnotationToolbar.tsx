@@ -90,49 +90,6 @@ export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps
   const { measurements, annotations, removeAnnotation, clearAll } = useMeasurementStore();
   const [showList, setShowList] = useState(false);
 
-  /** 图像工具组配置 */
-  const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direct' | 'collapsed' })[] = [
-    {
-      id: 'measurement',
-      icon: Ruler,
-      label: t('viewer.toolbar.measurement'),
-      displayMode: 'direct',
-      tools: [
-        { id: 'length', icon: Ruler, label: t('viewer.toolbar.length') },
-        { id: 'angle', icon: CornerDownRight, label: t('viewer.toolbar.angle') },
-        { id: 'probe', icon: Crosshair, label: t('viewer.toolbar.probe') },
-      ],
-    },
-    {
-      id: 'annotation',
-      icon: ArrowUpRight,
-      label: t('viewer.toolbar.annotation'),
-      displayMode: 'direct',
-      tools: [
-        { id: 'arrow', icon: ArrowUpRight, label: t('viewer.toolbar.arrow') },
-      ],
-    },
-    {
-      id: 'roi',
-      icon: Circle,
-      label: 'ROI',
-      displayMode: 'direct',
-      tools: [
-        { id: 'ellipticalROI', icon: Circle, label: t('viewer.toolbar.ellipticalROI') },
-        { id: 'rectangleROI', icon: Square, label: t('viewer.toolbar.rectangleROI') },
-        { id: 'freehand', icon: Pencil, label: t('viewer.toolbar.freehand') },
-        { id: 'spline', icon: Spline, label: t('viewer.toolbar.spline') },
-      ],
-    },
-    {
-      id: 'action',
-      icon: Layers,
-      label: t('viewer.toolbar.actions'),
-      displayMode: 'collapsed',
-      tools: [], // 动态生成
-    },
-  ];
-
   const handleToolClick = (toolId: string) => {
     setActiveTool(toolId === activeTool ? 'pan' : toolId);
   };
