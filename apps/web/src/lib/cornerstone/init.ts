@@ -121,10 +121,3 @@ export function toCornerstoneImageId(imageId: string, format?: string): string {
   // PNG/JPG — request DICOM conversion from server
   return `wadouri:${window.location.origin}${base}?format=dicom`;
 }
-
-/**
- * Build a DICOM wadouri imageId directly from a DICOMweb WADO-RS URL.
- */
-export function toWadoRsImageId(studyUid: string, seriesUid: string, instanceUid: string): string {
-  return `wadouri:${window.location.origin}/dicomweb/studies/${studyUid}/series/${seriesUid}/instances/${instanceUid}`;
-}

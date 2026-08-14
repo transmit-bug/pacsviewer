@@ -66,6 +66,27 @@ async function serveFileOrFallback(filePath: string, contentType: string, fallba
   throw new NotFoundError('文件');
 }
 
+/**
+ * True when an image record's backing file is missing and would be served as
+ * a DEV_FALLBACK placeholder. Mirrors the serve decision in serveFileOrFallback
+ * and the ?format=dicom conversion path.
+ */
+async function getImageIsFallback(image: { format: string; filePath: string }): Promise<boolean> {
+  if (!DEV_FALLBACK_ENABLED) return false;
+
+  const filePath = image.format === 'dicom'
+    ? getDicomFilePath(image.filePath)
+    : join(process.cwd(), 'data', 'images', image.filePath);
+
+  if (await Bun.file(filePath).exists()) return false;
+
+  // Any fallback asset present → this image resolves to a placeholder.
+  for (const p of FALLBACK_IMAGES) {
+    if (await Bun.file(p).exists()) return true;
+  }
+  return false;
+}
+
 // Search images by series (MUST be before /:id routes)
 imagesRouter.get('/search', async (c) => {
   const seriesId = c.req.query('seriesId');
@@ -203,7 +224,11 @@ imagesRouter.get('/:id', async (c) => {
 
   if (!image) throw new NotFoundError('图像');
 
-  return c.json({ success: true, data: image });
+  // Expose whether this image is a DEV_FALLBACK placeholder so the viewer can
+  // mark it (demo data must not be mistaken for real patient imaging).
+  const isFallback = await getImageIsFallback(image);
+
+  return c.json({ success: true, data: { ...image, isFallback } });
 });
 
 // Get image file

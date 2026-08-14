@@ -28,9 +28,11 @@ import {
 import { initCornerstone, getRenderingEngine, toCornerstoneImageId, RENDERING_ENGINE_ID, VIEWPORT_ID_PREFIX } from '@/lib/cornerstone/init';
 import { utilities as ToolUtilities } from '@cornerstonejs/tools';
 import { serializeAnnotations, deserializeAnnotations, scheduleAutoSave, cancelAutoSave } from '@/lib/cornerstone/annotation-sync';
-import { annotationApi } from '@/services/api';
+import { annotationApi, dicomwebApi, imageApi } from '@/services/api';
 import { useViewerStore } from '@/stores/viewerStore';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface CornerstoneViewportProps {
   imageId: string;
@@ -56,6 +58,14 @@ const TOOL_MAP: Record<string, string> = {
   magnify: MagnifyTool.toolName,
 };
 
+/** Extract a short human-readable message from any thrown value (error surface detail). */
+function toErrorMessage(err: unknown): string {
+  if (!err) return '未知错误';
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message || err.name;
+  return String(err);
+}
+
 export function CornerstoneViewport({
   imageId,
   imageFormat,
@@ -65,6 +75,8 @@ export function CornerstoneViewport({
   const elementRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [isFallback, setIsFallback] = useState(false);
   const { activeTool, setDicomMetadata, currentFrame, setTotalFrames, totalFrames } = useViewerStore();
 
   // ─── Annotation sync (save / restore) state ───────────────────────────────
@@ -146,6 +158,40 @@ export function CornerstoneViewport({
     };
   }, [handleAnnotationChange]);
 
+  /** Re-run the current image load after a failure (unified error surface retry). */
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRetryNonce((n) => n + 1);
+  }, []);
+
+  // Probe whether the current image is a DEV_FALLBACK placeholder. The server
+  // reports isFallback on GET /api/images/:id when the backing file is missing
+  // and a synthetic fundus placeholder is served instead (dev/demo datasets).
+  useEffect(() => {
+    if (!imageId) return;
+    let cancelled = false;
+    setIsFallback(false);
+    (async () => {
+      try {
+        const resp = (await imageApi.getById(imageId)) as any;
+        const fallback = resp?.data?.isFallback === true;
+        if (cancelled) return;
+        setIsFallback(fallback);
+        if (fallback) {
+          console.log('[DEV_FALLBACK] 当前图像为演示占位图:', imageId);
+        }
+      } catch (err) {
+        // Probe failure must not block rendering — treat as a real image.
+        if (!cancelled) setIsFallback(false);
+        console.warn('[DEV_FALLBACK] 探测占位图状态失败:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [imageId]);
+
   // Initialize Cornerstone and set up the viewport
   useEffect(() => {
     const element = elementRef.current;
@@ -224,19 +270,13 @@ export function CornerstoneViewport({
           if (viewport) {
             if (imageFormat === 'dicom') {
               try {
-                const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
-                if (resp.ok) {
-                  const frameData = await resp.json();
-                  const nFrames = frameData.numberOfFrames || 1;
-                  if (nFrames > 1) {
-                    const base = toCornerstoneImageId(imageId, imageFormat);
-                    const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
-                    await viewport.setStack(imageIds);
-                    setTotalFrames(nFrames);
-                  } else {
-                    await viewport.setStack([csImageId]);
-                    setTotalFrames(1);
-                  }
+                const frameData = (await dicomwebApi.getFrames(imageId)) as any;
+                const nFrames = frameData?.numberOfFrames || 1;
+                if (nFrames > 1) {
+                  const base = toCornerstoneImageId(imageId, imageFormat);
+                  const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
+                  await viewport.setStack(imageIds);
+                  setTotalFrames(nFrames);
                 } else {
                   await viewport.setStack([csImageId]);
                   setTotalFrames(1);
@@ -262,7 +302,7 @@ export function CornerstoneViewport({
       } catch (err) {
         console.error('[CornerstoneViewport] Error:', err);
         if (!cancelled) {
-          setError('图像加载失败');
+          setError(toErrorMessage(err));
           setIsLoading(false);
         }
       }
@@ -299,19 +339,13 @@ export function CornerstoneViewport({
 
         if (imageFormat === 'dicom') {
           try {
-            const resp = await fetch(`/api/dicomweb/images/${imageId}/frames`);
-            if (resp.ok) {
-              const frameData = await resp.json();
-              const nFrames = frameData.numberOfFrames || 1;
-              if (nFrames > 1) {
-                const base = toCornerstoneImageId(imageId, imageFormat);
-                const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
-                await viewport.setStack(imageIds);
-                setTotalFrames(nFrames);
-              } else {
-                await viewport.setStack([csImageId]);
-                setTotalFrames(1);
-              }
+            const frameData = (await dicomwebApi.getFrames(imageId)) as any;
+            const nFrames = frameData?.numberOfFrames || 1;
+            if (nFrames > 1) {
+              const base = toCornerstoneImageId(imageId, imageFormat);
+              const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
+              await viewport.setStack(imageIds);
+              setTotalFrames(nFrames);
             } else {
               await viewport.setStack([csImageId]);
               setTotalFrames(1);
@@ -359,13 +393,13 @@ export function CornerstoneViewport({
         setIsLoading(false);
       } catch (err) {
         console.error('[CornerstoneViewport] Failed to load image:', err);
-        setError('图像加载失败');
+        setError(toErrorMessage(err));
         setIsLoading(false);
       }
     };
 
     loadNewImage();
-  }, [imageId, viewportId, imageFormat, setDicomMetadata, restoreAnnotations]);
+  }, [imageId, viewportId, imageFormat, setDicomMetadata, restoreAnnotations, retryNonce]);
 
   // Update active tool
   useEffect(() => {
@@ -395,10 +429,18 @@ export function CornerstoneViewport({
     if (!viewport) return;
 
     try {
-      viewport.setImageIdIndex(currentFrame);
+      const result = viewport.setImageIdIndex(currentFrame);
       viewport.render();
-    } catch {
-      // ignore
+      // setImageIdIndex is async — absorb rejections into the unified error surface.
+      Promise.resolve(result).catch((err: unknown) => {
+        console.error('[CornerstoneViewport] 帧切换失败:', err);
+        setError(toErrorMessage(err));
+        setIsLoading(false);
+      });
+    } catch (err) {
+      console.error('[CornerstoneViewport] 帧切换失败:', err);
+      setError(toErrorMessage(err));
+      setIsLoading(false);
     }
   }, [currentFrame, totalFrames, viewportId]);
 
@@ -411,8 +453,18 @@ export function CornerstoneViewport({
       )}
 
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="text-red-500 text-sm bg-black/60 px-3 py-1.5 rounded">{error}</div>
+        <div className="absolute inset-0 z-10 flex items-center justify-center">
+          <div className="flex max-w-sm flex-col items-center gap-3 rounded-lg border border-border bg-popover p-6 text-center shadow-lg">
+            <p className="text-sm font-medium text-popover-foreground">图像加载失败</p>
+            <p className="max-w-xs break-words text-xs leading-relaxed text-muted-foreground">{error}</p>
+            <Button size="sm" onClick={handleRetry}>重试</Button>
+          </div>
+        </div>
+      )}
+
+      {isFallback && (
+        <div className="absolute left-3 top-3 z-20" title="演示占位图（DEV_FALLBACK）">
+          <Badge variant="warning">演示图像</Badge>
         </div>
       )}
 
