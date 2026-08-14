@@ -7,7 +7,7 @@ import { eq, sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import { join } from 'path';
 import { mkdir, writeFile } from 'fs/promises';
-import { db, images, series, annotations, layers } from '../db';
+import { db, images, series, studies, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
@@ -156,46 +156,130 @@ imagesRouter.post('/upload-dicom', async (c) => {
   }, result.isNew ? 201 : 200);
 });
 
-// Upload image
-imagesRouter.post('/upload', async (c) => {
-  const formData = await c.req.formData();
-  const file = formData.get('file') as File;
-  const seriesId = formData.get('seriesId') as string;
-  const instanceNumber = Number(formData.get('instanceNumber')) || 1;
+// ── Upload helpers ──────────────────────────────────────────────────────────
 
-  if (!file) throw new ValidationError('请选择文件');
+/** Formats the images table can store (schema enum) and /upload accepts. */
+const UPLOADABLE_FORMATS = ['jpeg', 'png', 'tiff', 'bmp'];
 
-  // Create upload directory
+/** Normalize a file extension to the images.format enum value. */
+function normalizeImageFormat(ext: string | undefined): string {
+  const e = (ext || '').toLowerCase();
+  if (e === 'jpg' || e === 'jpeg') return 'jpeg';
+  if (e === 'tif' || e === 'tiff') return 'tiff';
+  if (e === 'png') return 'png';
+  if (e === 'bmp') return 'bmp';
+  return e;
+}
+
+/** Next instanceNumber for a series (max existing + 1, or 1). */
+async function nextInstanceNumber(seriesId: string): Promise<number> {
+  const result = await db
+    .select({ max: sql<number>`max(${images.instanceNumber})` })
+    .from(images)
+    .where(eq(images.seriesId, seriesId));
+  return (result[0]?.max ?? 0) + 1;
+}
+
+/**
+ * Resolve the target series for an upload.
+ *
+ * - seriesId: append to that series (must exist).
+ * - studyId: append to the latest series of the study, or create a new one
+ *   when `createSeries` is set or the study has no series yet (auto-create
+ *   hierarchy: upload → Series under the Study).
+ */
+async function resolveTargetSeries(opts: {
+  seriesId?: string;
+  studyId?: string;
+  modality?: string;
+  createSeries?: boolean;
+}): Promise<{ seriesId: string; seriesNumber: number; modality: string }> {
+  if (opts.seriesId) {
+    const existing = await db.query.series.findFirst({
+      where: eq(series.id, opts.seriesId),
+    });
+    if (!existing) throw new NotFoundError('序列');
+    return {
+      seriesId: existing.id,
+      seriesNumber: existing.seriesNumber,
+      modality: existing.modality,
+    };
+  }
+
+  if (opts.studyId) {
+    const study = await db.query.studies.findFirst({
+      where: eq(studies.id, opts.studyId),
+    });
+    if (!study) throw new NotFoundError('检查');
+
+    const existingSeries = await db.query.series.findMany({
+      where: eq(series.studyId, study.id),
+      orderBy: (s, { desc }) => [desc(s.seriesNumber)],
+    });
+    const latest = existingSeries[0];
+
+    if (opts.createSeries || !latest) {
+      const seriesNumber = (latest?.seriesNumber ?? 0) + 1;
+      const modality = (opts.modality || study.modality || 'OT').toUpperCase();
+      const newId = uuid();
+      await db.insert(series).values({
+        id: newId,
+        studyId: study.id,
+        seriesNumber,
+        seriesDescription: `${modality} 序列 ${seriesNumber}`,
+        modality,
+        imageCount: 0,
+        createdAt: new Date().toISOString(),
+      });
+      return { seriesId: newId, seriesNumber, modality };
+    }
+
+    return {
+      seriesId: latest.id,
+      seriesNumber: latest.seriesNumber,
+      modality: latest.modality,
+    };
+  }
+
+  throw new ValidationError('缺少 seriesId 或 studyId');
+}
+
+/**
+ * Persist one uploaded image: process (hash + metadata + thumbnail via sharp),
+ * write file + thumbnail under data/images, insert the image record, and bump
+ * the series image count.
+ */
+async function storeImageFile(opts: {
+  buffer: Buffer;
+  originalName: string;
+  seriesId: string;
+  instanceNumber: number;
+  fileSize: number;
+  format: string;
+}) {
   const uploadDir = join(process.cwd(), 'data', 'images');
   await mkdir(uploadDir, { recursive: true });
 
-  // Process image
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { hash, metadata, thumbnail } = await processImage(buffer, file.name);
+  const { hash, metadata, thumbnail } = await processImage(opts.buffer, opts.originalName);
 
-  // Generate unique filename
-  const ext = file.name.split('.').pop();
+  const ext = opts.originalName.split('.').pop() || opts.format;
   const filename = `${uuid()}.${ext}`;
-  const filePath = join(uploadDir, filename);
   const thumbnailFilename = `${uuid()}-thumb.jpeg`;
-  const thumbnailPath = join(uploadDir, thumbnailFilename);
 
-  // Save files
   await Promise.all([
-    writeFile(filePath, buffer),
-    writeFile(thumbnailPath, thumbnail),
+    writeFile(join(uploadDir, filename), opts.buffer),
+    writeFile(join(uploadDir, thumbnailFilename), thumbnail),
   ]);
 
-  // Create image record
   const id = uuid();
   await db.insert(images).values({
     id,
-    seriesId,
-    instanceNumber,
+    seriesId: opts.seriesId,
+    instanceNumber: opts.instanceNumber,
     filePath: filename,
-    fileSize: file.size,
+    fileSize: opts.fileSize,
     fileHash: hash,
-    format: ext as any,
+    format: opts.format as any,
     width: metadata.width,
     height: metadata.height,
     bitsAllocated: metadata.bitsPerSample ?? 8,
@@ -203,16 +287,88 @@ imagesRouter.post('/upload', async (c) => {
     createdAt: new Date().toISOString(),
   });
 
-  // Update series image count
   await db.update(series)
     .set({ imageCount: sql`${series.imageCount} + 1` })
-    .where(eq(series.id, seriesId));
+    .where(eq(series.id, opts.seriesId));
 
-  const image = await db.query.images.findFirst({
-    where: eq(images.id, id),
+  return db.query.images.findFirst({ where: eq(images.id, id) });
+}
+
+/** Parse shared upload context fields from a multipart form. */
+function uploadContext(formData: FormData) {
+  return {
+    seriesId: (formData.get('seriesId') as string) || undefined,
+    studyId: (formData.get('studyId') as string) || undefined,
+    modality: (formData.get('modality') as string) || undefined,
+    createSeries: formData.get('createSeries') === 'true' || formData.get('createSeries') === '1',
+  };
+}
+
+// Upload image (single). Accepts seriesId (append) or studyId (auto-create series).
+imagesRouter.post('/upload', async (c) => {
+  const formData = await c.req.formData();
+  const file = formData.get('file') as File;
+  if (!file) throw new ValidationError('请选择文件');
+
+  const format = normalizeImageFormat(file.name.split('.').pop());
+  if (!UPLOADABLE_FORMATS.includes(format)) {
+    throw new ValidationError(
+      `不支持的文件格式: ${file.name}（支持 PNG/JPEG/TIFF/BMP，DICOM 请使用 DICOM 上传）`
+    );
+  }
+
+  const target = await resolveTargetSeries(uploadContext(formData));
+
+  const explicitInstance = Number(formData.get('instanceNumber'));
+  const instanceNumber =
+    Number.isFinite(explicitInstance) && explicitInstance > 0
+      ? explicitInstance
+      : await nextInstanceNumber(target.seriesId);
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const image = await storeImageFile({
+    buffer,
+    originalName: file.name,
+    seriesId: target.seriesId,
+    instanceNumber,
+    fileSize: file.size,
+    format,
   });
 
   return c.json({ success: true, data: image }, 201);
+});
+
+// Upload multiple images in one request — all into the same series.
+imagesRouter.post('/upload/batch', async (c) => {
+  const formData = await c.req.formData();
+  const files = formData.getAll('file') as File[];
+  if (files.length === 0) throw new ValidationError('请选择文件');
+
+  const target = await resolveTargetSeries(uploadContext(formData));
+
+  const items: any[] = [];
+  let instanceNumber = await nextInstanceNumber(target.seriesId);
+  for (const file of files) {
+    const format = normalizeImageFormat(file.name.split('.').pop());
+    if (!UPLOADABLE_FORMATS.includes(format)) {
+      throw new ValidationError(
+        `不支持的文件格式: ${file.name}（支持 PNG/JPEG/TIFF/BMP，DICOM 请使用 DICOM 上传）`
+      );
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const image = await storeImageFile({
+      buffer,
+      originalName: file.name,
+      seriesId: target.seriesId,
+      instanceNumber,
+      fileSize: file.size,
+      format,
+    });
+    items.push(image);
+    instanceNumber += 1;
+  }
+
+  return c.json({ success: true, data: { seriesId: target.seriesId, items } }, 201);
 });
 
 // Get image by ID

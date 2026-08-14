@@ -12,6 +12,7 @@ import { TrendFacetGrid } from '@/components/trend/TrendFacetGrid';
 import { TrendKpiCards } from '@/components/trend/TrendKpiCards';
 import type { TrendSeries } from '@/components/trend/trend-utils';
 import { FollowUpStarterDialog } from '@/components/follow-up/FollowUpStarterDialog';
+import { StudyUploadDialog } from '@/components/upload/StudyUploadDialog';
 import { downloadBlob, measurementsCsvFilename } from '@/utils/download';
 
 interface Patient {
@@ -68,6 +69,10 @@ export function PatientDetailPage() {
     baseline: null,
     comparison: null,
   });
+
+  // Upload (wayfinder #131): append images to an existing study
+  const [uploadStudy, setUploadStudy] = useState<{ id: string; patientId: string; modality?: string } | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // Trends (T3)
   const [trendSeries, setTrendSeries] = useState<TrendSeries[]>([]);
@@ -165,6 +170,15 @@ export function PatientDetailPage() {
   const openStarter = (studyId: string) => {
     setStarterInitial({ baseline: studyId, comparison: null });
     setStarterOpen(true);
+  };
+
+  const openUpload = (study: Study) => {
+    setUploadStudy({
+      id: study.id,
+      patientId: patient?.id || '',
+      modality: study.modality,
+    });
+    setUploadOpen(true);
   };
 
   if (loading) {
@@ -325,6 +339,10 @@ export function PatientDetailPage() {
                         <Button variant="outline" size="sm" onClick={() => openStarter(study.id)}>
                           <GitCompareArrows className="mr-1 h-4 w-4" />
                           随访对比
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => openUpload(study)}>
+                          <Plus className="mr-1 h-4 w-4" />
+                          追加图像
                         </Button>
                         <Button variant="ghost" size="sm" asChild>
                           <Link to={`/viewer/${study.id}`}>查看</Link>
@@ -495,6 +513,13 @@ export function PatientDetailPage() {
         initialBaselineId={starterInitial.baseline}
         initialComparisonId={starterInitial.comparison}
         onStart={handleStartComparison}
+      />
+
+      <StudyUploadDialog
+        study={uploadStudy}
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onUploaded={() => id && loadStudies(id)}
       />
     </div>
   );

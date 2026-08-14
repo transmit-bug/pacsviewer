@@ -116,3 +116,213 @@ describe('unauthenticated guard', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ── Upload chain (wayfinder #131) ───────────────────────────────────────────
+// POST /api/images/upload accepts studyId (auto-creates a Series) or seriesId
+// (appends); /upload/batch stores multiple files into one series.
+const { join: pathJoin } = await import('path');
+
+// 1x1 PNG that sharp can process (metadata + thumbnail).
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
+
+const uploadFixture = {
+  patientId: uuid(),
+  studyId: uuid(),
+  imageIds: [] as string[],
+  seriesIds: [] as string[],
+};
+
+function uploadForm(opts: { name?: string; studyId?: string; seriesId?: string; extra?: Record<string, string> }) {
+  const form = new FormData();
+  form.append('file', new File([TINY_PNG], opts.name || 'test.png', { type: 'image/png' }));
+  if (opts.studyId) form.append('studyId', opts.studyId);
+  if (opts.seriesId) form.append('seriesId', opts.seriesId);
+  for (const [k, v] of Object.entries(opts.extra || {})) form.append(k, v);
+  return form;
+}
+
+describe('POST /api/images/upload — upload chain (wayfinder #131)', () => {
+  beforeAll(async () => {
+    await db.insert(patients).values({
+      id: uploadFixture.patientId,
+      mrn: `UPL-${uploadFixture.patientId.slice(0, 8)}`,
+      name: 'Upload Test Patient',
+      gender: 'other',
+    });
+    await db.insert(studies).values({
+      id: uploadFixture.studyId,
+      patientId: uploadFixture.patientId,
+      studyDate: '2026-09-01',
+      modality: 'OCT',
+    });
+  });
+
+  afterAll(async () => {
+    const uploadDir = pathJoin(process.cwd(), 'data', 'images');
+
+    // Remove uploaded files + DB records (files live under gitignored data/)
+    for (const id of uploadFixture.imageIds) {
+      const rec = await db.query.images.findFirst({ where: eq(images.id, id) });
+      if (rec) {
+        for (const p of [rec.filePath, rec.thumbnailPath]) {
+          if (p) {
+            try {
+              await Bun.file(pathJoin(uploadDir, p)).delete();
+            } catch {
+              // already gone
+            }
+          }
+        }
+      }
+      await db.delete(images).where(eq(images.id, id));
+    }
+    for (const id of uploadFixture.seriesIds) {
+      await db.delete(series).where(eq(series.id, id));
+    }
+    await db.delete(studies).where(eq(studies.id, uploadFixture.studyId));
+    await db.delete(patients).where(eq(patients.id, uploadFixture.patientId));
+  });
+
+  test('upload with studyId creates a Series + Image', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: uploadForm({ studyId: uploadFixture.studyId, extra: { modality: 'OCT' } }),
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    const image = body.data;
+    expect(image).toBeTruthy();
+    expect(image.format).toBe('png');
+    expect(image.instanceNumber).toBe(1);
+    expect(image.seriesId).toBeTruthy();
+
+    uploadFixture.imageIds.push(image.id);
+    uploadFixture.seriesIds.push(image.seriesId);
+
+    // Series was auto-created under the study with the provided modality
+    const createdSeries = await db.query.series.findFirst({ where: eq(series.id, image.seriesId) });
+    expect(createdSeries).toBeTruthy();
+    expect(createdSeries!.studyId).toBe(uploadFixture.studyId);
+    expect(createdSeries!.modality).toBe('OCT');
+    expect(createdSeries!.imageCount).toBe(1);
+
+    // The uploaded file is servable through the viewer loading path
+    const fileRes = await ctx.app.fetch(
+      new Request(`http://localhost/api/images/${image.id}/file`, { headers: ctx.authHeaders })
+    );
+    expect(fileRes.status).toBe(200);
+    expect(fileRes.headers.get('Content-Type')).toBe('image/png');
+  });
+
+  test('second upload without seriesId appends to the same series', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: uploadForm({ studyId: uploadFixture.studyId }),
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    const image = body.data;
+    uploadFixture.imageIds.push(image.id);
+    expect(uploadFixture.seriesIds).toContain(image.seriesId);
+    expect(image.instanceNumber).toBe(2); // auto-incremented
+  });
+
+  test('createSeries=1 forces a new series', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: uploadForm({ studyId: uploadFixture.studyId, extra: { createSeries: '1', modality: 'FFA' } }),
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    const image = body.data;
+    uploadFixture.imageIds.push(image.id);
+    uploadFixture.seriesIds.push(image.seriesId);
+    expect(uploadFixture.seriesIds.filter((s) => s === image.seriesId).length).toBe(1);
+    const createdSeries = await db.query.series.findFirst({ where: eq(series.id, image.seriesId) });
+    expect(createdSeries!.modality).toBe('FFA');
+    expect(createdSeries!.seriesNumber).toBe(2);
+  });
+
+  test('rejects unsupported formats (webp)', async () => {
+    const form = new FormData();
+    form.append('file', new File([TINY_PNG], 'photo.webp', { type: 'image/webp' }));
+    form.append('studyId', uploadFixture.studyId);
+
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: form,
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects upload without seriesId or studyId', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: uploadForm({}),
+      })
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects nonexistent seriesId', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: uploadForm({ seriesId: 'missing-series' }),
+      })
+    );
+    expect(res.status).toBe(404);
+  });
+
+  test('batch upload stores multiple files into one series', async () => {
+    const form = new FormData();
+    form.append('file', new File([TINY_PNG], 'a.png', { type: 'image/png' }));
+    form.append('file', new File([TINY_PNG], 'b.png', { type: 'image/png' }));
+    form.append('studyId', uploadFixture.studyId);
+    form.append('createSeries', '1');
+    form.append('modality', 'VF');
+
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/images/upload/batch', {
+        method: 'POST',
+        headers: ctx.authHeaders,
+        body: form,
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    const { seriesId, items } = body.data;
+    expect(items.length).toBe(2);
+    expect(items[0].instanceNumber).toBe(1);
+    expect(items[1].instanceNumber).toBe(2);
+    expect(items[0].seriesId).toBe(items[1].seriesId);
+    uploadFixture.imageIds.push(items[0].id, items[1].id);
+    uploadFixture.seriesIds.push(seriesId);
+
+    const createdSeries = await db.query.series.findFirst({ where: eq(series.id, seriesId) });
+    expect(createdSeries!.imageCount).toBe(2);
+  });
+});
+
