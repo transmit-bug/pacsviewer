@@ -1,8 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/LoginPage';
-import { PrototypeComparisonPage } from '@/pages/PrototypeComparisonPage';
-import { PrototypeTrendChartPage } from '@/pages/PrototypeTrendChartPage';
+import PrototypeComparisonPage from '@/pages/PrototypeComparisonPage';
+import PrototypeTrendChartPage from '@/pages/PrototypeTrendChartPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PatientListPage } from '@/pages/PatientListPage';
 import { PatientDetailPage } from '@/pages/PatientDetailPage';
