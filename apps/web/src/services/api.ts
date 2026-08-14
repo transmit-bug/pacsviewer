@@ -23,6 +23,37 @@ api.interceptors.request.use(
   }
 );
 
+/**
+ * 共享的刷新请求（Promise 单例）。
+ *
+ * 服务端 refresh 会轮换 refresh token（每次刷新写入新的 token/refreshToken），
+ * 因此并发 401 如果各自发一次刷新，第一个会成功、其余会因 token 已被轮换而 401，
+ * 进而全部走登出逻辑把用户踢下线（表现：点一次、多次刷新、被登出）。
+ * 这里让所有并发 401 复用同一个刷新请求，只轮换一次。
+ */
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const { refreshToken } = useAuthStore.getState();
+  const response = await axios.post('/api/auth/refresh', { refreshToken });
+  const { token, refreshToken: newRefreshToken } = response.data.data;
+
+  // 更新 Zustand store（会自动同步到 localStorage）
+  useAuthStore.setState({
+    token,
+    refreshToken: newRefreshToken,
+  });
+
+  return token;
+}
+
+function redirectToLogin() {
+  // 并发失败时只跳转一次，避免重复整页刷新
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+}
+
 // Response interceptor
 api.interceptors.response.use(
   (response) => response.data,
@@ -32,24 +63,28 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (!refreshToken) {
+        // 没有 refresh token 无法恢复，直接登出跳转（避免带 null 去刷新的无谓请求）
+        useAuthStore.getState().logout();
+        redirectToLogin();
+        return Promise.reject(error);
+      }
+
+      if (!refreshPromise) refreshPromise = refreshAccessToken();
+      const currentRefresh = refreshPromise;
+
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
-        const response = await axios.post('/api/auth/refresh', { refreshToken });
-        const { token, refreshToken: newRefreshToken } = response.data.data;
-
-        // 更新 Zustand store（会自动同步到 localStorage）
-        useAuthStore.setState({
-          token,
-          refreshToken: newRefreshToken,
-        });
-
+        const token = await currentRefresh;
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
         // 刷新失败，清除登录状态并跳转
         useAuthStore.getState().logout();
-        window.location.href = '/login';
+        redirectToLogin();
         return Promise.reject(refreshError);
+      } finally {
+        if (refreshPromise === currentRefresh) refreshPromise = null;
       }
     }
 
