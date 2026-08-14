@@ -4,60 +4,121 @@
 
 @layer base {
   :root {
-    /* Light theme (medical-optimized) */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 210 60% 50%;
+    /* ============================================================
+     * Light theme (medical-optimized — 保底不破版，不做重设计)
+     * ============================================================ */
+
+    /* 品牌色: 青绿 teal (#14B8A6 系) */
+    --primary: 173 75% 33%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 95%;
-    --secondary-foreground: 0 0% 15%;
-    --muted: 210 15% 93%;
-    --muted-foreground: 215 10% 45%;
-    --accent: 210 20% 93%;
-    --accent-foreground: 0 0% 10%;
+    --ring: 173 75% 40%;
+
+    /* 表面层级 */
+    --background: 220 20% 97%;
+    --foreground: 220 15% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 12%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 15% 20%;
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 173 40% 93%;
+    --accent-foreground: 173 60% 25%;
+
+    /* 语义色 (行业规范: 绿/黄/红/灰 + 进展黄→橙→红) */
+    --status-success: 152 62% 40%;
+    --status-warning: 38 92% 45%;
+    --status-info: 200 85% 45%;
+    --status-danger: 0 72% 48%;
+    --status-progress: 28 90% 45%;
+    --status-neutral: 220 10% 45%;
+
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 90%;
-    --input: 214 20% 88%;
-    --ring: 210 60% 50%;
-    --radius: 0.5rem;
 
-    /* Semantic status colors */
-    --status-success: 142 71% 45%;
-    --status-warning: 38 92% 50%;
-    --status-info: 210 80% 55%;
+    /* 1px 低对比描边 */
+    --border: 220 15% 89%;
+    --input: 220 15% 87%;
+
+    /* ============================================================
+     * 共享令牌 (深浅两主题一致)
+     * ============================================================ */
+
+    /* 锐利精工圆角: lg 0.375rem / md 0.25rem / sm 0.125rem */
+    --radius: 0.375rem;
+    --radius-md: 0.25rem;
+    --radius-sm: 0.125rem;
+
+    /* 字体阶梯: system-ui + CJK 回退 (不引入 webfont) */
+    --font-sans: system-ui, -apple-system, 'Segoe UI Variable', 'PingFang SC',
+      'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'SFMono-Regular', 'Menlo',
+      'Consolas', 'Roboto Mono', monospace;
+
+    /* 动效: 微交互 100-150ms, 页面级动效由后续 framer-motion 票承接 */
+    --duration-fast: 100ms;
+    --duration-normal: 150ms;
+    --duration-slow: 250ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* 玻璃拟态 (仅动态表面: 工具条/HUD 浮层/⌘K 面板/侧栏浮层, blur 8-12px, alpha ≈0.8) */
+    --glass-blur: 10px;
+    --glass-bg: 220 16% 98% / 0.8;
+
+    /* 轻量化阴影: 层级靠表面+描边，阴影仅微抬升浮层 */
+    --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+    --shadow-md: 0 2px 8px -2px rgb(16 24 40 / 0.1);
+    --shadow-lg: 0 8px 24px -6px rgb(16 24 40 / 0.14);
   }
 
   .dark {
-    /* Dark theme (medical-grade) */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 90%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 90%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 90%;
-    --primary: 210 60% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 85%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 90%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 16%;
-    --input: 0 0% 16%;
-    --ring: 210 60% 55%;
+    /* ============================================================
+     * Dark theme (cinematic dark medical — 默认主攻)
+     * 三级近黑分层: 背景 #0F1115 → 面板 #171A20 → 浮层 #1F232B (冷调)
+     * ============================================================ */
 
-    /* Semantic status colors */
-    --status-success: 142 71% 45%;
-    --status-warning: 38 92% 50%;
-    --status-info: 210 80% 55%;
+    /* 品牌色: 亮 teal (#2DD4BF→#14B8A6 系, 深色上宜亮不宜艳) */
+    --primary: 173 70% 55%;
+    --primary-foreground: 220 30% 8%;
+    --ring: 173 70% 55%;
+
+    /* 表面层级 */
+    --background: 220 17% 7%; /* #0F1115 */
+    --foreground: 220 14% 92%;
+    --card: 220 16% 11%; /* #171A20 */
+    --card-foreground: 220 14% 92%;
+    --popover: 220 16% 15%; /* #1F232B */
+    --popover-foreground: 220 14% 92%;
+    --secondary: 220 14% 14%;
+    --secondary-foreground: 220 14% 88%;
+    --muted: 220 14% 13%;
+    --muted-foreground: 220 10% 62%;
+    --accent: 173 32% 20%; /* 冷调 teal 悬停 */
+    --accent-foreground: 173 75% 88%;
+
+    /* 语义色 (深色上提亮; CIRRUS 语义: 绿=正常 黄=临界 红=异常 灰=无参考) */
+    --status-success: 152 62% 52%;
+    --status-warning: 45 92% 56%;
+    --status-info: 200 85% 60%;
+    --status-danger: 0 72% 55%;
+    --status-progress: 30 92% 56%; /* 进展: 黄→橙→红 */
+    --status-neutral: 220 10% 45%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* 1px 低对比描边 (TG270 思路) */
+    --border: 220 12% 19%;
+    --input: 220 12% 22%;
+
+    /* 深色 UI: 分层靠表面+描边，阴影仅用于浮层微抬升 */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-md: 0 2px 10px -2px rgb(0 0 0 / 0.45);
+    --shadow-lg: 0 8px 28px -6px rgb(0 0 0 / 0.55);
+
+    --glass-bg: 220 16% 15% / 0.8;
   }
 }
 
@@ -68,4 +129,28 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ============================================================
+ * 排版/密度/玻璃表面工具类 (不放入 @layer utilities —— JIT 会
+ * 按 content 扫描裁剪该层，未引用的自定义类会被丢弃)
+ * ============================================================ */
+
+/* 测量列/数据列: 等宽数字对齐 (font-variant-numeric) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* HUD 图内数值: 等宽 + 数字对齐 (窗宽/窗位/缩放/层号/测量值) */
+.hud-numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0.01em;
+}
+
+/* 玻璃表面: 仅用于动态表面 (工具条/HUD 浮层/⌘K 面板/侧栏浮层) */
+.glass-surface {
+  background-color: hsl(var(--glass-bg));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
 }

@@ -9,6 +9,9 @@ const badgeVariants = {
   success: 'bg-[hsl(var(--status-success)/0.1)] text-[hsl(var(--status-success))] border-[hsl(var(--status-success)/0.2)]',
   warning: 'bg-[hsl(var(--status-warning)/0.1)] text-[hsl(var(--status-warning))] border-[hsl(var(--status-warning)/0.2)]',
   info: 'bg-[hsl(var(--status-info)/0.1)] text-[hsl(var(--status-info))] border-[hsl(var(--status-info)/0.2)]',
+  danger: 'bg-[hsl(var(--status-danger)/0.1)] text-[hsl(var(--status-danger))] border-[hsl(var(--status-danger)/0.2)]',
+  progress: 'bg-[hsl(var(--status-progress)/0.1)] text-[hsl(var(--status-progress))] border-[hsl(var(--status-progress)/0.2)]',
+  neutral: 'bg-[hsl(var(--status-neutral)/0.15)] text-[hsl(var(--status-neutral))] border-[hsl(var(--status-neutral)/0.25)]',
 };
 
 export interface BadgeProps {

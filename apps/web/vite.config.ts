@@ -40,7 +40,7 @@ function zlibShimPlugin() {
       if (id.includes('dicom-parser') && id.includes('dicomParser')) {
         // Replace require('zlib') with a pako-based shim
         const shimCode = `
-import __pako from 'pako';
+import * as __pako from 'pako';
 if (typeof window !== 'undefined') { window.pako = __pako; }
 var __zlib_shim = { inflateRawSync: __pako.inflateRaw, inflateSync: __pako.inflate };
 `;
@@ -61,13 +61,28 @@ export default defineConfig({
     nodePolyfills({
       include: ['events', 'buffer', 'stream', 'util', 'process'],
     }),
-    commonjs(),
+    commonjs({
+      // Skip ESM-only cornerstone modules that conflict with the commonjs resolver:
+      //  - dicom-image-loader uses `new Worker(new URL(...), { type: 'module' })` which breaks
+      //    worker code-splitting (IIFE output format error)
+      //  - codec *_decode.js files already get a default export appended by cornerstoneCodecPlugin
+      filter: (id) => {
+        if (id.includes('@cornerstonejs/dicom-image-loader')) return false;
+        if (id.includes('@cornerstonejs/codec-') && id.endsWith('_decode.js')) return false;
+        return undefined;
+      },
+    }),
     cornerstoneCodecPlugin(),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  // Cornerstone's module worker (`new Worker(new URL(...), { type: 'module' })`) escapes
+  // Vite's static worker-type detection; force ES worker bundles (iife + code-splitting is invalid).
+  worker: {
+    format: 'es',
   },
   optimizeDeps: {
     include: ['dicom-parser'],
