@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { reportApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,7 +104,7 @@ export function ReportListPage() {
 
       <div className="flex items-center space-x-2">
         <Input
-          placeholder="搜索报告..."
+          placeholder={t('report.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
@@ -115,7 +116,7 @@ export function ReportListPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="all">全部</TabsTrigger>
+          <TabsTrigger value="all">{t('report.all')}</TabsTrigger>
           <TabsTrigger value="draft">{t('report.status.draft')}</TabsTrigger>
           <TabsTrigger value="pending_review">{t('report.status.pending_review')}</TabsTrigger>
           <TabsTrigger value="reviewed">{t('report.status.reviewed')}</TabsTrigger>
@@ -125,7 +126,7 @@ export function ReportListPage() {
         <TabsContent value={activeTab}>
           <Card>
             <CardHeader>
-              <CardTitle>报告列表</CardTitle>
+              <CardTitle>{t('report.list')}</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -144,11 +145,11 @@ export function ReportListPage() {
               ) : filteredReports.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">暂无报告数据</p>
+                  <p className="text-muted-foreground mb-4">{t('report.noData')}</p>
                   <Button asChild variant="outline">
                     <Link to="/reports/new">
                       <Plus className="mr-2 h-4 w-4" />
-                      创建第一份报告
+                      {t('report.createFirst')}
                     </Link>
                   </Button>
                 </div>
@@ -170,9 +171,9 @@ export function ReportListPage() {
                           <div>
                             <p className="font-medium">{report.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              创建时间:{' '}
+                              {t('report.createdAt')}
                               {new Date(report.createdAt).toLocaleDateString(
-                                'zh-CN'
+                                i18n.language === 'en' ? 'en-US' : 'zh-CN'
                               )}
                             </p>
                           </div>
@@ -189,19 +190,19 @@ export function ReportListPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
                               <Link to={`/reports/${report.studyId}`}>
-                                查看
+                                {t('report.view')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/reports/${report.studyId}/edit`}>
-                                编辑
+                                {t('report.edit')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => handleDeleteClick(report.id)}
                             >
-                              删除
+                              {t('report.delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -219,15 +220,15 @@ export function ReportListPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确定要删除这个报告吗？</AlertDialogTitle>
+            <AlertDialogTitle>{t('report.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作无法撤销。删除后，该报告将被永久移除。
+              {t('report.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              删除
+              {t('report.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

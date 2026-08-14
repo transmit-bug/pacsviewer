@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -7,22 +8,24 @@ interface WindowLevelProps {
   className?: string;
 }
 
-const PRESETS = [
-  { label: '默认', windowWidth: 400, windowLevel: 40 },
-  { label: '肺窗', windowWidth: 2000, windowLevel: 0 },
-  { label: '腹部', windowWidth: 350, windowLevel: 40 },
-  { label: '脑窗', windowWidth: 80, windowLevel: 40 },
-] as const;
-
 export function WindowLevel({ className }: WindowLevelProps) {
+  const { t } = useTranslation();
   const { viewport, setViewport } = useViewerStore();
+
+  const PRESETS = [
+    { label: t('viewer.windowLevelPanel.presetDefault'), windowWidth: 400, windowLevel: 40 },
+    { label: t('viewer.windowLevelPanel.presetLung'), windowWidth: 2000, windowLevel: 0 },
+    { label: t('viewer.windowLevelPanel.presetAbdomen'), windowWidth: 350, windowLevel: 40 },
+    { label: t('viewer.windowLevelPanel.presetBrain'), windowWidth: 80, windowLevel: 40 },
+  ] as const;
+
 
   return (
     <div className={className}>
       <div className="space-y-4">
         <div>
           <div className="flex justify-between text-sm mb-1">
-            <Label>窗宽</Label>
+            <Label>{t('viewer.windowLevelPanel.width')}</Label>
             <span className="text-muted-foreground">{viewport.windowWidth}</span>
           </div>
           <Slider
@@ -35,7 +38,7 @@ export function WindowLevel({ className }: WindowLevelProps) {
         </div>
         <div>
           <div className="flex justify-between text-sm mb-1">
-            <Label>窗位</Label>
+            <Label>{t('viewer.windowLevelPanel.level')}</Label>
             <span className="text-muted-foreground">{viewport.windowLevel}</span>
           </div>
           <Slider

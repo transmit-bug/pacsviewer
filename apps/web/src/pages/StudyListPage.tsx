@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { studyApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,15 +47,15 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-800',
 };
 
-const statusLabels: Record<string, string> = {
-  pending: '待处理',
-  in_progress: '进行中',
-  completed: '已完成',
-  cancelled: '已取消',
+const statusKeys: Record<string, string> = {
+  pending: 'study.statusPending',
+  in_progress: 'study.statusInProgress',
+  completed: 'study.statusCompleted',
+  cancelled: 'study.statusCancelled',
 };
 
 export function StudyListPage() {
-  const { t: _t } = useTranslation();
+  const { t } = useTranslation();
   const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,7 +129,7 @@ export function StudyListPage() {
     if (!dateStr) return '-';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('zh-CN');
+      return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-CN');
     } catch {
       return dateStr;
     }
@@ -141,27 +142,27 @@ export function StudyListPage() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffHours < 1) return '刚刚';
-    if (diffHours < 24) return `${diffHours} 小时前`;
-    if (diffDays < 7) return `${diffDays} 天前`;
-    return date.toLocaleDateString('zh-CN');
+    if (diffHours < 1) return t('dashboard.justNow');
+    if (diffHours < 24) return t('dashboard.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('dashboard.daysAgo', { count: diffDays });
+    return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-CN');
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">检查记录</h1>
+        <h1 className="text-3xl font-bold">{t('study.title')}</h1>
         <Button asChild>
           <Link to="/patients">
             <Plus className="mr-2 h-4 w-4" />
-            新建检查
+            {t('study.create')}
           </Link>
         </Button>
       </div>
 
       <div className="flex items-center space-x-2">
         <Input
-          placeholder="搜索检查..."
+          placeholder={t('study.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -181,7 +182,7 @@ export function StudyListPage() {
                 setPage(1);
               }}
             >
-              {status === '' ? '全部' : statusLabels[status] || status}
+              {status === '' ? t('study.all') : t(statusKeys[status] || status)}
             </Button>
           ))}
         </div>
@@ -190,7 +191,7 @@ export function StudyListPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            检查列表 {total > 0 && <span className="text-sm font-normal text-muted-foreground">({total} 条记录)</span>}
+            {t('study.list')} {total > 0 && <span className="text-sm font-normal text-muted-foreground">{t('study.count', { total })}</span>}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -208,11 +209,11 @@ export function StudyListPage() {
             </div>
           ) : studies.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">暂无检查记录</div>
+              <div className="text-muted-foreground mb-4">{t('study.noData')}</div>
               <Button asChild variant="outline">
                 <Link to="/patients">
                   <Plus className="mr-2 h-4 w-4" />
-                  创建第一份检查
+                  {t('study.createFirst')}
                 </Link>
               </Button>
             </div>
@@ -231,14 +232,14 @@ export function StudyListPage() {
                         </div>
                         <div>
                           <p className="font-medium">
-                            {study.description || `检查 ${study.id.slice(0, 8)}`}
+                            {study.description || `${t('common.study')} ${study.id.slice(0, 8)}`}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {study.modality || '未知模态'} | {formatDate(study.studyDate)} | {formatTimeAgo(study.createdAt)}
+                            {study.modality || t('study.unknownModality')} | {formatDate(study.studyDate)} | {formatTimeAgo(study.createdAt)}
                           </p>
                           {study.patientName && (
                             <p className="text-sm text-muted-foreground">
-                              患者: {study.patientName}
+                              {t('study.patient', { name: study.patientName })}
                             </p>
                           )}
                         </div>
@@ -246,7 +247,7 @@ export function StudyListPage() {
                     </Link>
                     <div className="flex items-center space-x-2">
                       <Badge className={statusColors[study.status] || 'bg-gray-100 text-gray-800'}>
-                        {statusLabels[study.status] || study.status}
+                        {t(statusKeys[study.status] || study.status)}
                       </Badge>
                       {study.tags?.map((tag) => (
                         <span
@@ -266,13 +267,13 @@ export function StudyListPage() {
                           <DropdownMenuItem asChild>
                             <Link to={`/viewer/${study.id}`}>
                               <Eye className="mr-2 h-4 w-4" />
-                              查看
+                              {t('study.view')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link to={`/reports/${study.id}`}>
                               <FileText className="mr-2 h-4 w-4" />
-                              报告
+                              {t('study.report')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -280,7 +281,7 @@ export function StudyListPage() {
                             onClick={() => handleDeleteClick(study.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            删除
+                            {t('study.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -293,7 +294,7 @@ export function StudyListPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6">
                   <p className="text-sm text-muted-foreground">
-                    第 {page} / {totalPages} 页
+                    {t('study.pageInfo', { page, totalPages })}
                   </p>
                   <div className="flex space-x-2">
                     <Button
@@ -324,15 +325,15 @@ export function StudyListPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确定要删除这个检查吗？</AlertDialogTitle>
+            <AlertDialogTitle>{t('study.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作无法撤销。删除后，该检查的所有数据将被永久移除。
+              {t('study.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              删除
+              {t('study.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

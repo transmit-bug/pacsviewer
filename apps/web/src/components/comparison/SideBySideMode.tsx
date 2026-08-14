@@ -250,7 +250,7 @@ export function SideBySideMode({
           onContextMenu={handleContextMenu}
         />
         <div className="absolute top-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-          A · 基线
+          A · {t('comparison.baselineTag')}
         </div>
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
           <div>{t('viewer.compare.zoom')}: {(viewportA.zoom * 100).toFixed(0)}%</div>
@@ -274,7 +274,7 @@ export function SideBySideMode({
           onContextMenu={handleContextMenu}
         />
         <div className="absolute top-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
-          B · 对比
+          B · {t('comparison.comparisonTag')}
         </div>
         <div className="absolute bottom-2 left-2 text-xs text-white/70">
           <div>{t('viewer.compare.zoom')}: {(viewportB.zoom * 100).toFixed(0)}%</div>

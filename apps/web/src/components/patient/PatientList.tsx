@@ -1,4 +1,5 @@
 import { Loader2, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PatientCard } from './PatientCard';
 import { cn } from '@/lib/utils';
 import type { Patient } from '@/hooks/usePatientSearch';
@@ -17,14 +18,16 @@ export function PatientList({
   selectedId,
   onSelect,
   loading = false,
-  emptyMessage = '暂无患者数据',
+  emptyMessage,
   maxHeight = 'max-h-64',
 }: PatientListProps) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-5 w-5 animate-spin mr-2 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">搜索中...</span>
+        <span className="text-sm text-muted-foreground">{t('patient.searching')}</span>
       </div>
     );
   }
@@ -33,7 +36,7 @@ export function PatientList({
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <Users className="h-8 w-8 mb-2" />
-        <p className="text-sm">{emptyMessage}</p>
+        <p className="text-sm">{emptyMessage ?? t('patient.noPatients')}</p>
       </div>
     );
   }

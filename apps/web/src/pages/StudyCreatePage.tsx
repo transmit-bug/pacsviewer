@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { patientApi, studyApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 export function StudyCreatePage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export function StudyCreatePage() {
     } catch (error) {
       console.error('Failed to load patient:', error);
       toast({
-        title: '加载患者信息失败',
+        title: t('study.loadPatientFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -54,19 +56,19 @@ export function StudyCreatePage() {
       const response = await studyApi.create({
         patientId,
         modality: formData.modality,
-        description: formData.description || `${formData.modality} 检查`,
+        description: formData.description || `${formData.modality} ${t('common.study')}`,
         studyDate: formData.studyDate,
         status: 'pending',
       });
       setStudyId(response.data.id);
       toast({
-        title: '检查创建成功',
-        description: '现在可以上传图像了。',
+        title: t('study.createSuccess'),
+        description: t('study.createSuccessDesc'),
       });
     } catch (error) {
       console.error('Failed to create study:', error);
       toast({
-        title: '创建检查失败',
+        title: t('study.createFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -76,7 +78,7 @@ export function StudyCreatePage() {
 
   const handleUploadComplete = (imageIds: string[]) => {
     toast({
-      title: `成功上传 ${imageIds.length} 张图像`,
+      title: t('study.uploadSuccess', { count: imageIds.length }),
     });
   };
 
@@ -111,9 +113,9 @@ export function StudyCreatePage() {
   if (!patient) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">患者未找到</p>
+        <p className="text-muted-foreground mb-4">{t('study.patientNotFound')}</p>
         <Button asChild variant="outline">
-          <Link to="/patients">返回患者列表</Link>
+          <Link to="/patients">{t('study.backToPatients')}</Link>
         </Button>
       </div>
     );
@@ -129,9 +131,9 @@ export function StudyCreatePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">新建检查</h1>
+          <h1 className="text-3xl font-bold">{t('study.create')}</h1>
           <p className="text-sm text-muted-foreground">
-            患者：{patient.name} ({patient.mrn})
+            {t('study.patient', { name: patient.name })} ({patient.mrn})
           </p>
         </div>
       </div>
@@ -140,30 +142,30 @@ export function StudyCreatePage() {
       {!studyId && (
         <Card>
           <CardHeader>
-            <CardTitle>检查信息</CardTitle>
+            <CardTitle>{t('study.info')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="modality">检查类型</Label>
+                <Label htmlFor="modality">{t('study.type')}</Label>
                 <select
                   id="modality"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.modality}
                   onChange={(e) => setFormData({ ...formData, modality: e.target.value })}
                 >
-                  <option value="OCT">OCT</option>
-                  <option value="Fundus">眼底彩照</option>
-                  <option value="FFA">FFA 荧光造影</option>
-                  <option value="ICGA">ICGA 吲哚菁绿造影</option>
-                  <option value="VF">视野检查</option>
-                  <option value="UBM">UBM</option>
-                  <option value="B-Scan">B 超</option>
+                  <option value="OCT">{t('study.modalityOCT')}</option>
+                  <option value="Fundus">{t('study.modalityFundus')}</option>
+                  <option value="FFA">{t('study.modalityFFA')}</option>
+                  <option value="ICGA">{t('study.modalityICGA')}</option>
+                  <option value="VF">{t('study.modalityVF')}</option>
+                  <option value="UBM">{t('study.modalityUBM')}</option>
+                  <option value="B-Scan">{t('study.modalityBScan')}</option>
                 </select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="studyDate">检查日期</Label>
+                <Label htmlFor="studyDate">{t('study.date')}</Label>
                 <Input
                   id="studyDate"
                   type="date"
@@ -173,12 +175,12 @@ export function StudyCreatePage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="description">检查描述</Label>
+                <Label htmlFor="description">{t('study.description')}</Label>
                 <Input
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="可选：输入检查描述"
+                  placeholder={t('study.descriptionPlaceholder')}
                 />
               </div>
             </div>
@@ -186,7 +188,7 @@ export function StudyCreatePage() {
             <div className="flex justify-end">
               <Button onClick={handleCreateStudy} disabled={saving}>
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? '创建中...' : '创建检查'}
+                {saving ? t('study.creating') : t('study.createBtn')}
               </Button>
             </div>
           </CardContent>
@@ -198,7 +200,7 @@ export function StudyCreatePage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>上传图像</CardTitle>
+              <CardTitle>{t('study.uploadImages')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ImageUpload
@@ -211,10 +213,10 @@ export function StudyCreatePage() {
 
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={handleFinish}>
-              稍后上传
+              {t('study.uploadLater')}
             </Button>
             <Button onClick={handleFinish}>
-              完成，查看检查
+              {t('study.finishAndView')}
             </Button>
           </div>
         </>

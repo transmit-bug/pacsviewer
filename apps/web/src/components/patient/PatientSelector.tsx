@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +21,7 @@ export function PatientSelector({
   disabled = false,
   error,
 }: PatientSelectorProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -92,7 +94,7 @@ export function PatientSelector({
                     {selectedPatient.gender && (
                       <span>
                         {' · '}
-                        {selectedPatient.gender === 'male' ? '男' : '女'}
+                        {selectedPatient.gender === 'male' ? t('patient.male') : t('patient.female')}
                       </span>
                     )}
                   </p>
@@ -133,7 +135,7 @@ export function PatientSelector({
           />
 
           <div className="text-xs text-muted-foreground px-1">
-            {searchQuery.trim() ? '搜索结果' : '最近就诊'}
+            {searchQuery.trim() ? t('patient.searchResults') : t('patient.recentVisits')}
           </div>
 
           <PatientList
@@ -142,7 +144,7 @@ export function PatientSelector({
             onSelect={handleSelect}
             loading={isLoading}
             emptyMessage={
-              searchQuery.trim() ? '未找到匹配的患者' : '暂无最近就诊记录'
+              searchQuery.trim() ? t('patient.noMatch') : t('patient.noRecent')
             }
             maxHeight="max-h-48"
           />

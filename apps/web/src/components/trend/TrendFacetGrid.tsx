@@ -1,6 +1,7 @@
 /**
  * Trend facet grid (随访对比 T3) — one mini chart per measurement key.
  */
+import { useTranslation } from 'react-i18next';
 import { TrendSeries, FACET_COLORS } from './trend-utils';
 import { TrendFacetChart } from './TrendFacetChart';
 import { cn } from '@/lib/utils';
@@ -11,10 +12,12 @@ interface TrendFacetGridProps {
 }
 
 export function TrendFacetGrid({ series, className }: TrendFacetGridProps) {
+  const { t } = useTranslation();
+
   if (series.length === 0) {
     return (
       <div className="text-center py-10 text-muted-foreground text-sm">
-        暂无纵向测量数据 —— 在查看器/对比工作台中保存测量后,这里会显示各项测量随时间的趋势。
+        {t('trend.noDataLong')}
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import {
   ResponsiveContainer,
   PieChart,
@@ -67,15 +68,23 @@ const TREND_DAYS = 14;
 const SPARK_DAYS = 7;
 
 /** 模态 → 语义色 Badge (展示层映射, 不改动数据) */
-function modalityMeta(modality?: string | null): { label: string; variant: 'default' | 'secondary' | 'warning' | 'progress' | 'info' | 'neutral' } {
+function modalityMeta(modality?: string | null): { label?: string; labelKey?: string; variant: 'default' | 'secondary' | 'warning' | 'progress' | 'info' | 'neutral' } {
   const m = (modality || '').toLowerCase();
   if (m.includes('octa')) return { label: 'OCTA', variant: 'default' };
   if (m.includes('oct')) return { label: 'OCT', variant: 'default' };
   if (m.includes('ffa')) return { label: 'FFA', variant: 'warning' };
   if (m.includes('icga')) return { label: 'ICGA', variant: 'progress' };
-  if (m.includes('fundus') || m.includes('眼底') || m.includes('color')) return { label: '眼底', variant: 'info' };
-  if (m.includes('视野') || m.includes('vf') || m.includes('visual') || m.includes('perim')) return { label: '视野', variant: 'neutral' };
-  return { label: modality || '未知模态', variant: 'secondary' };
+  if (m.includes('fundus') || m.includes('眼底') || m.includes('color')) return { labelKey: 'dashboard.modality.fundus', variant: 'info' };
+  if (m.includes('视野') || m.includes('vf') || m.includes('visual') || m.includes('perim')) return { labelKey: 'dashboard.modality.visualField', variant: 'neutral' };
+  return { label: modality || '未知模态', labelKey: 'dashboard.modality.unknown', variant: 'secondary' };
+}
+
+/** 模态分片 label → i18n key (仅中文标识需要翻译) */
+function modalityLabelKey(label: string): string {
+  if (label === '眼底') return 'dashboard.modality.fundus';
+  if (label === '视野') return 'dashboard.modality.visualField';
+  if (label === '未知模态') return 'dashboard.modality.unknown';
+  return '';
 }
 
 /** 确定性配色: 品牌 teal + 语义色; 未知/其他模态一律归 neutral (深色下可辨) */
@@ -200,17 +209,17 @@ export function DashboardPage() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffHours < 1) return '刚刚';
-    if (diffHours < 24) return `${diffHours} 小时前`;
-    if (diffDays < 7) return `${diffDays} 天前`;
-    return date.toLocaleDateString('zh-CN');
+    if (diffHours < 1) return t('dashboard.justNow');
+    if (diffHours < 24) return t('dashboard.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('dashboard.daysAgo', { count: diffDays });
+    return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-CN');
   };
 
   const statCards = [
-    { title: '今日检查', value: stats?.todayStudies ?? 0, icon: Activity, key: 'todayStudies', spark: true },
-    { title: '患者总数', value: stats?.totalPatients ?? 0, icon: Users, key: 'totalPatients', spark: false },
-    { title: '待审核报告', value: stats?.pendingReports ?? 0, icon: FileText, key: 'pendingReports', spark: false },
-    { title: '图像总数', value: stats?.totalImages ?? 0, icon: Image, key: 'totalImages', spark: false },
+    { title: t('dashboard.todayStudies'), value: stats?.todayStudies ?? 0, icon: Activity, key: 'todayStudies', spark: true },
+    { title: t('dashboard.totalPatients'), value: stats?.totalPatients ?? 0, icon: Users, key: 'totalPatients', spark: false },
+    { title: t('dashboard.pendingReports'), value: stats?.pendingReports ?? 0, icon: FileText, key: 'pendingReports', spark: false },
+    { title: t('dashboard.totalImages'), value: stats?.totalImages ?? 0, icon: Image, key: 'totalImages', spark: false },
   ];
 
   return (
@@ -270,18 +279,18 @@ export function DashboardPage() {
                         </ResponsiveContainer>
                       ) : (
                         <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-                          暂无数据
+                          {t('dashboard.noData')}
                         </div>
                       )}
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">近7日检查量</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{t('dashboard.last7Days')}</p>
                   </>
                 ) : (
                   <>
                     <div className="mt-3 flex h-11 items-end">
                       <span className="h-px w-full border-t border-dashed border-border/60" />
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">暂无历史数据</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{t('dashboard.noHistoryData')}</p>
                   </>
                 )}
               </CardContent>
@@ -295,7 +304,7 @@ export function DashboardPage() {
         {/* 模态占比 — donut */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">模态占比</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.modalityShare')}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -309,7 +318,7 @@ export function DashboardPage() {
               </div>
             ) : !hasAnyStudies ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                暂无数据
+                {t('dashboard.noData')}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
@@ -335,7 +344,7 @@ export function DashboardPage() {
                         contentStyle={chartTooltipStyle}
                         labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                         itemStyle={{ color: 'hsl(var(--foreground))' }}
-                        formatter={(value: any, name: any) => [`${value} 项`, name]}
+                        formatter={(value: any, name: any) => [t('dashboard.count', { count: value }), modalityLabelKey(name) ? t(modalityLabelKey(name)) : name]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -344,7 +353,7 @@ export function DashboardPage() {
                     <span className="hud-numeric text-2xl font-semibold text-foreground">
                       {recentStudies.length}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">检查</span>
+                    <span className="text-[11px] text-muted-foreground">{t('dashboard.study')}</span>
                   </div>
                 </div>
 
@@ -359,7 +368,9 @@ export function DashboardPage() {
                             className="h-2.5 w-2.5 shrink-0 rounded-sm"
                             style={{ backgroundColor: slice.color }}
                           />
-                          <span className="truncate text-muted-foreground">{slice.name}</span>
+                          <span className="truncate text-muted-foreground">
+                            {modalityLabelKey(slice.name) ? t(modalityLabelKey(slice.name)) : slice.name}
+                          </span>
                         </span>
                         <span className="flex shrink-0 items-baseline gap-2">
                           <span className="tabular-nums text-foreground">{slice.value}</span>
@@ -379,7 +390,7 @@ export function DashboardPage() {
         {/* 检查量趋势 — 近 14 天 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">检查量趋势</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.studyTrend')}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -394,7 +405,7 @@ export function DashboardPage() {
               </div>
             ) : !hasAnyStudies ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                暂无数据
+                {t('dashboard.noData')}
               </div>
             ) : (
               <div className="h-64">
@@ -426,7 +437,7 @@ export function DashboardPage() {
                       contentStyle={chartTooltipStyle}
                       labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                       itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: any) => [`${value} 项`, '检查量']}
+                      formatter={(value: any) => [t('dashboard.count', { count: value }), t('dashboard.study')]}
                       labelFormatter={(label, payload) => payload?.[0]?.payload?.key ?? label}
                     />
                     <Area
@@ -451,9 +462,9 @@ export function DashboardPage() {
         {/* 最近检查 — 动态时间轴 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">最近检查</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.recentStudies')}</CardTitle>
             <Link to="/studies" className="flex items-center text-sm text-primary hover:underline">
-              查看全部 <ArrowRight className="ml-1 h-4 w-4" />
+              {t('dashboard.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </CardHeader>
           <CardContent>
@@ -470,7 +481,7 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : recentStudies.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">暂无检查记录</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">{t('dashboard.noStudies')}</p>
             ) : (
               <ul>
                 {timelineStudies.map((study, i) => {
@@ -488,11 +499,11 @@ export function DashboardPage() {
                         className="min-w-0 flex-1 rounded-md px-1 pb-2 transition-colors duration-fast hover:bg-accent/40"
                       >
                         <p className="truncate text-sm font-medium">
-                          {study.description || `检查 ${study.id.slice(0, 8)}`}
+                          {study.description || `${t('dashboard.study')} ${study.id.slice(0, 8)}`}
                         </p>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                           <Badge variant={meta.variant} className="px-1.5 py-0 text-[10px]">
-                            {meta.label}
+                            {meta.labelKey ? t(meta.labelKey) : meta.label}
                           </Badge>
                           <span className="tabular-nums">{formatTimeAgo(study.createdAt)}</span>
                         </div>
@@ -508,9 +519,9 @@ export function DashboardPage() {
         {/* Pending Tasks */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">待处理任务</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.pendingTasks')}</CardTitle>
             <Link to="/reports" className="flex items-center text-sm text-primary hover:underline">
-              查看全部 <ArrowRight className="ml-1 h-4 w-4" />
+              {t('dashboard.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </CardHeader>
           <CardContent>
@@ -527,7 +538,7 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : pendingTasks.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">暂无待处理任务</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">{t('dashboard.noTasks')}</p>
             ) : (
               <div className="space-y-1">
                 {pendingTasks.map((task) => (
@@ -538,14 +549,14 @@ export function DashboardPage() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {task.title || `报告 ${task.id.slice(0, 8)}`}
+                        {task.title || `${t('dashboard.report')} ${task.id.slice(0, 8)}`}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                         {formatTimeAgo(task.createdAt)}
                       </p>
                     </div>
                     <Badge variant="warning" className="ml-3 shrink-0 text-xs">
-                      待审核
+                      {t('dashboard.pendingReview')}
                     </Badge>
                   </Link>
                 ))}

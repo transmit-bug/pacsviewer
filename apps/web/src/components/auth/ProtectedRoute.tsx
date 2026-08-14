@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 
 interface ProtectedRouteProps {
@@ -8,12 +9,13 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isHydrated } = useAuthStore();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // 等待 zustand persist 恢复完成
   if (!isHydrated) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-foreground">加载中...</div>
+        <div className="text-foreground">{t('common.loading')}</div>
       </div>
     );
   }

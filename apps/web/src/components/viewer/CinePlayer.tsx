@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useViewerStore, type PlaybackMode } from '@/stores/viewerStore';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -31,13 +32,15 @@ interface CinePlayerProps {
   className?: string;
 }
 
-const PLAYBACK_MODES: { mode: PlaybackMode; icon: any; label: string }[] = [
-  { mode: 'loop', icon: Repeat, label: '循环' },
-  { mode: 'once', icon: Repeat1, label: '单次' },
-  { mode: 'pingpong', icon: ArrowRightLeft, label: '往复' },
-];
-
 export function CinePlayer({ className }: CinePlayerProps) {
+  const { t } = useTranslation();
+
+  const PLAYBACK_MODES: { mode: PlaybackMode; icon: any; label: string }[] = [
+    { mode: 'loop', icon: Repeat, label: t('viewer.cine.loop') },
+    { mode: 'once', icon: Repeat1, label: t('viewer.cine.once') },
+    { mode: 'pingpong', icon: ArrowRightLeft, label: t('viewer.cine.pingpong') },
+  ];
+
   const {
     totalFrames,
     currentFrame,
@@ -201,7 +204,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
                 <ChevronsLeft className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>第一帧 (Home)</TooltipContent>
+            <TooltipContent>{t('viewer.cine.firstFrame')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -210,7 +213,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
                 <SkipBack className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>上一帧 (←)</TooltipContent>
+            <TooltipContent>{t('viewer.cine.prevFrame')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -224,7 +227,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isPlaying ? '暂停 (Space)' : '播放 (Space)'}</TooltipContent>
+            <TooltipContent>{isPlaying ? t('viewer.cine.pause') : t('viewer.cine.play')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -233,7 +236,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
                 <SkipForward className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>下一帧 (→)</TooltipContent>
+            <TooltipContent>{t('viewer.cine.nextFrame')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -242,7 +245,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
                 <ChevronsRight className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>最后一帧 (End)</TooltipContent>
+            <TooltipContent>{t('viewer.cine.lastFrame')}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -267,7 +270,7 @@ export function CinePlayer({ className }: CinePlayerProps) {
               <ModeIcon className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{currentModeConfig.label} ([ ] 切换)</TooltipContent>
+          <TooltipContent>{t('viewer.cine.switchMode', { mode: currentModeConfig.label })}</TooltipContent>
         </Tooltip>
       </div>
     </div>

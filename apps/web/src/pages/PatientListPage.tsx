@@ -129,7 +129,7 @@ export function PatientListPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>患者列表 {total > 0 && <span className="text-sm font-normal text-muted-foreground">({total} 位患者)</span>}</CardTitle>
+          <CardTitle>{t('patient.list')} {total > 0 && <span className="text-sm font-normal text-muted-foreground">{t('patient.count', { count: total })}</span>}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -146,11 +146,11 @@ export function PatientListPage() {
             </div>
           ) : patients.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">暂无患者数据</div>
+              <div className="text-muted-foreground mb-4">{t('patient.noData')}</div>
               <Button asChild variant="outline">
                 <Link to="/patients/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  添加第一位患者
+                  {t('patient.addFirst')}
                 </Link>
               </Button>
             </div>
@@ -192,16 +192,16 @@ export function PatientListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link to={`/patients/${patient.id}`}>查看详情</Link>
+                            <Link to={`/patients/${patient.id}`}>{t('patient.viewDetails')}</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link to={`/patients/${patient.id}/edit`}>编辑</Link>
+                            <Link to={`/patients/${patient.id}/edit`}>{t('patient.edit')}</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDeleteClick(patient.id)}
                           >
-                            删除
+                            {t('patient.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -214,7 +214,7 @@ export function PatientListPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6">
                   <p className="text-sm text-muted-foreground">
-                    第 {page} / {totalPages} 页
+                    {t('common.pageInfo', { page, totalPages })}
                   </p>
                   <div className="flex space-x-2">
                     <Button
@@ -245,15 +245,15 @@ export function PatientListPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确定要删除这个患者吗？</AlertDialogTitle>
+            <AlertDialogTitle>{t('patient.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作无法撤销。删除后，该患者的所有数据将被永久移除。
+              {t('patient.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              删除
+              {t('patient.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

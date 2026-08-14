@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SideBySideMode } from './SideBySideMode';
@@ -35,12 +36,6 @@ interface ComparisonViewProps {
   className?: string;
 }
 
-const MODE_OPTIONS: { value: ComparisonMode; label: string; icon: typeof Columns }[] = [
-  { value: 'side-by-side', label: '并排对比', icon: Columns },
-  { value: 'overlay', label: '叠加对比', icon: Layers },
-  { value: 'slider', label: '滑动对比', icon: SlidersHorizontal },
-];
-
 export function ComparisonView({
   imageIdA,
   imageIdB,
@@ -55,6 +50,14 @@ export function ComparisonView({
   onDrawLine,
   className,
 }: ComparisonViewProps) {
+  const { t } = useTranslation();
+
+  const MODE_OPTIONS: { value: ComparisonMode; label: string; icon: typeof Columns }[] = [
+    { value: 'side-by-side', label: t('comparison.modeSideBySide'), icon: Columns },
+    { value: 'overlay', label: t('comparison.modeOverlay'), icon: Layers },
+    { value: 'slider', label: t('comparison.modeSlider'), icon: SlidersHorizontal },
+  ];
+
   const [internalMode, setInternalMode] = useState<ComparisonMode>(initialMode);
   const mode = controlledMode ?? internalMode;
   const setMode = (m: ComparisonMode) => {
@@ -68,8 +71,8 @@ export function ComparisonView({
     return (
       <div className={cn('flex items-center justify-center bg-black text-white', className)}>
         <div className="text-center">
-          <p className="text-lg font-medium">请选择两张图像进行对比</p>
-          <p className="text-sm text-muted-foreground mt-1">从上方选择基线与对比检查</p>
+          <p className="text-lg font-medium">{t('comparison.selectImagesHint')}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('comparison.selectFromTop')}</p>
         </div>
       </div>
     );
@@ -108,7 +111,7 @@ export function ComparisonView({
               onClick={() => setSideOrientation('horizontal')}
               className="text-xs h-7"
             >
-              左右
+              {t('comparison.leftRight')}
             </Button>
             <Button
               variant={sideOrientation === 'vertical' ? 'secondary' : 'ghost'}
@@ -116,7 +119,7 @@ export function ComparisonView({
               onClick={() => setSideOrientation('vertical')}
               className="text-xs h-7"
             >
-              上下
+              {t('comparison.topBottom')}
             </Button>
           </div>
         )}
@@ -129,7 +132,7 @@ export function ComparisonView({
               onClick={() => setSliderOrientation('horizontal')}
               className="text-xs h-7"
             >
-              水平
+              {t('comparison.horizontal')}
             </Button>
             <Button
               variant={sliderOrientation === 'vertical' ? 'secondary' : 'ghost'}
@@ -137,7 +140,7 @@ export function ComparisonView({
               onClick={() => setSliderOrientation('vertical')}
               className="text-xs h-7"
             >
-              垂直
+              {t('comparison.vertical')}
             </Button>
           </div>
         )}
@@ -151,10 +154,10 @@ export function ComparisonView({
             size="sm"
             onClick={() => onSyncViewportChange(!syncViewport)}
             className="text-xs h-7"
-            title="缩放/平移/窗宽窗位同步到两个面板"
+            title={t('comparison.syncTitle')}
           >
             {syncViewport ? <Link2 className="h-3.5 w-3.5 mr-1" /> : <Link2Off className="h-3.5 w-3.5 mr-1" />}
-            {syncViewport ? '同步' : '不同步'}
+            {syncViewport ? t('comparison.sync') : t('comparison.notSync')}
           </Button>
         )}
 
@@ -165,10 +168,10 @@ export function ComparisonView({
             size="sm"
             onClick={() => onMeasuringChange(!measuring)}
             className="text-xs h-7"
-            title="测量模式: 拖拽画线,按面板归属对应检查"
+            title={t('comparison.measureTitle')}
           >
             <Ruler className="h-3.5 w-3.5 mr-1" />
-            {measuring ? '测量中…' : '测量'}
+            {measuring ? t('comparison.measuringOn') : t('comparison.measuring')}
           </Button>
         )}
       </div>
@@ -208,7 +211,7 @@ export function ComparisonView({
         )}
         {measuring && (
           <div className="absolute bottom-2 right-2 z-10 text-[11px] text-white/80 bg-black/50 px-2 py-1 rounded pointer-events-none">
-            测量模式: 拖拽画线(基线面板→基线检查, 对比面板→对比检查)
+            {t('comparison.measureHint')}
           </div>
         )}
       </div>

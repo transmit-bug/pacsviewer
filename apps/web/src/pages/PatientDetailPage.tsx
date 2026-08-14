@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { patientApi, followUpApi, measurementApi } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -118,7 +119,7 @@ export function PatientDetailPage() {
       setTrendSeries(res.data.series ?? []);
     } catch (error) {
       console.error('Failed to load trends:', error);
-      toast({ title: '趋势加载失败', variant: 'destructive' });
+      toast({ title: t('patient.trendLoadFailed'), variant: 'destructive' });
     } finally {
       setTrendLoading(false);
     }
@@ -156,9 +157,9 @@ export function PatientDetailPage() {
     try {
       await followUpApi.delete(recordId);
       if (id) loadFollowUpRecords(id);
-      toast({ title: '随访记录已删除' });
+      toast({ title: t('patient.recordDeleted') });
     } catch (error) {
-      toast({ title: '删除失败', variant: 'destructive' });
+      toast({ title: t('patient.deleteFailed'), variant: 'destructive' });
     }
   };
 
@@ -168,11 +169,11 @@ export function PatientDetailPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return <div className="text-center py-8">{t('patient.loading')}</div>;
   }
 
   if (!patient) {
-    return <div className="text-center py-8">患者未找到</div>;
+    return <div className="text-center py-8">{t('patient.patientNotFound')}</div>;
   }
 
   return (
@@ -196,16 +197,16 @@ export function PatientDetailPage() {
 
       <Tabs defaultValue="info">
         <TabsList>
-          <TabsTrigger value="info">基本信息</TabsTrigger>
-          <TabsTrigger value="studies">检查记录</TabsTrigger>
-          <TabsTrigger value="timeline">时间轴</TabsTrigger>
-          <TabsTrigger value="trend">随访趋势</TabsTrigger>
+          <TabsTrigger value="info">{t('patient.basicInfo')}</TabsTrigger>
+          <TabsTrigger value="studies">{t('patient.studies')}</TabsTrigger>
+          <TabsTrigger value="timeline">{t('patient.timeline')}</TabsTrigger>
+          <TabsTrigger value="trend">{t('patient.followUpTrend')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
           <Card>
             <CardHeader>
-              <CardTitle>患者信息</CardTitle>
+              <CardTitle>{t('patient.info')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
@@ -232,19 +233,19 @@ export function PatientDetailPage() {
                   <p className="font-medium">{patient.phone || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">邮箱</p>
+                  <p className="text-sm text-muted-foreground">{t('patient.email')}</p>
                   <p className="font-medium">{patient.email || '-'}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">地址</p>
+                  <p className="text-sm text-muted-foreground">{t('patient.address')}</p>
                   <p className="font-medium">{patient.address || '-'}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">备注</p>
+                  <p className="text-sm text-muted-foreground">{t('patient.notes')}</p>
                   <p className="font-medium">{patient.notes || '-'}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">标签</p>
+                  <p className="text-sm text-muted-foreground">{t('patient.tags')}</p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {patient.tags?.map((tag) => (
                       <span
@@ -264,16 +265,16 @@ export function PatientDetailPage() {
         <TabsContent value="studies">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>检查记录</CardTitle>
+              <CardTitle>{t('patient.studies')}</CardTitle>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => { setStarterInitial({ baseline: null, comparison: null }); setStarterOpen(true); }}>
                   <GitCompareArrows className="mr-2 h-4 w-4" />
-                  发起随访对比
+                  {t('patient.startFollowUp')}
                 </Button>
                 <Button size="sm" asChild>
                   <Link to={`/patients/${id}/new-study`}>
                     <Plus className="mr-2 h-4 w-4" />
-                    新建检查
+                    {t('patient.newStudy')}
                   </Link>
                 </Button>
               </div>
@@ -281,7 +282,7 @@ export function PatientDetailPage() {
             <CardContent>
               {studies.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  暂无检查记录
+                  {t('study.noData')}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -317,17 +318,17 @@ export function PatientDetailPage() {
                           }`}
                         >
                           {study.status === 'reported'
-                            ? '已报告'
+                            ? t('patient.statusReported')
                             : study.status === 'diagnosed'
-                            ? '已诊断'
-                            : '待处理'}
+                            ? t('patient.statusDiagnosed')
+                            : t('patient.statusPending')}
                         </span>
                         <Button variant="outline" size="sm" onClick={() => openStarter(study.id)}>
                           <GitCompareArrows className="mr-1 h-4 w-4" />
-                          随访对比
+                          {t('patient.followUpCompare')}
                         </Button>
                         <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/viewer/${study.id}`}>查看</Link>
+                          <Link to={`/viewer/${study.id}`}>{t('study.view')}</Link>
                         </Button>
                       </div>
                     </div>
@@ -341,7 +342,7 @@ export function PatientDetailPage() {
         <TabsContent value="timeline">
           <Card>
             <CardHeader>
-              <CardTitle>随访记录</CardTitle>
+              <CardTitle>{t('patient.followUpRecords')}</CardTitle>
             </CardHeader>
             <CardContent>
               {followUpLoading ? (
@@ -351,7 +352,7 @@ export function PatientDetailPage() {
                 </div>
               ) : followUpRecords.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  暂无随访记录 —— 在「检查记录」中点击「随访对比」发起
+                  {t('patient.noFollowUpRecords')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -372,8 +373,8 @@ export function PatientDetailPage() {
                             {record.baselineStudy?.studyDate ?? '?'} → {record.comparisonStudy?.studyDate ?? '?'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {record.baselineStudy?.modality ?? ''} · {new Date(record.createdAt).toLocaleString('zh-CN')}
-                            {record.measurements?.length > 0 ? ` · ${record.measurements.length} 项对照` : ''}
+                            {record.baselineStudy?.modality ?? ''} · {new Date(record.createdAt).toLocaleString(i18n.language === 'en' ? 'en-US' : 'zh-CN')}
+                            {record.measurements?.length > 0 ? ` · ${t('patient.countComparison', { count: record.measurements.length })}` : ''}
                           </p>
                         </div>
                       </div>
@@ -388,7 +389,7 @@ export function PatientDetailPage() {
                             );
                           }}
                         >
-                          打开工作台
+                          {t('patient.openWorkbench')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -399,7 +400,7 @@ export function PatientDetailPage() {
                             handleDeleteFollowUp(record.id);
                           }}
                         >
-                          删除
+                          {t('patient.deleteRecord')}
                         </Button>
                       </div>
                     </div>
@@ -413,7 +414,7 @@ export function PatientDetailPage() {
         <TabsContent value="trend">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>随访趋势</CardTitle>
+              <CardTitle>{t('patient.followUpTrend')}</CardTitle>
               <div className="flex gap-1">
                 <Button
                   size="sm"
@@ -433,7 +434,7 @@ export function PatientDetailPage() {
                     if (id) loadTrends(id);
                   }}
                 >
-                  分面网格
+                  {t('patient.facetGrid')}
                 </Button>
                 <Button
                   size="sm"
@@ -443,7 +444,7 @@ export function PatientDetailPage() {
                     if (id) loadTrends(id);
                   }}
                 >
-                  KPI 卡
+                  {t('patient.kpiCards')}
                 </Button>
               </div>
             </CardHeader>
@@ -457,7 +458,7 @@ export function PatientDetailPage() {
                 <div className="text-center py-10">
                   <LineChartIcon className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
                   <p className="text-muted-foreground text-sm">
-                    暂无纵向测量数据 —— 在检查中保存测量后,这里会显示各测量项随时间的趋势。
+                    {t('patient.noTrendData')}
                   </p>
                   <Button
                     className="mt-3"
@@ -465,7 +466,7 @@ export function PatientDetailPage() {
                     size="sm"
                     onClick={() => id && loadTrends(id)}
                   >
-                    刷新
+                    {t('common.refresh')}
                   </Button>
                 </div>
               ) : (
@@ -476,9 +477,9 @@ export function PatientDetailPage() {
                     <TrendKpiCards series={trendSeries} />
                   )}
                   <div className="text-xs text-muted-foreground mt-4 flex items-center justify-between">
-                    <span>趋势判定由测量字典的 trend_direction 驱动,阈值 5%</span>
+                    <span>{t('patient.trendDrivenBy')}</span>
                     <Button variant="ghost" size="sm" onClick={() => id && loadTrends(id)}>
-                      刷新
+                      {t('common.refresh')}
                     </Button>
                   </div>
                 </div>

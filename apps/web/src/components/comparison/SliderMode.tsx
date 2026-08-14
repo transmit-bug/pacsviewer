@@ -345,7 +345,7 @@ export function SliderMode({
       <div className="absolute bottom-2 left-2 text-xs text-white/70">
         <div>{t('viewer.compare.zoom')}: {(viewport.zoom * 100).toFixed(0)}%</div>
         <div>{t('viewer.compare.sliderPosition')}: {(sliderPosition * 100).toFixed(0)}%</div>
-        <div>窗宽/窗位: {viewport.windowWidth}/{viewport.windowLevel}</div>
+        <div>{t('viewer.compare.windowLevel')}: {viewport.windowWidth}/{viewport.windowLevel}</div>
       </div>
     </div>
   );

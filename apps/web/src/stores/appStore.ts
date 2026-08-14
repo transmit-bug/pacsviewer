@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import i18n from '@/i18n';
 
 interface AppState {
   sidebarCollapsed: boolean;
@@ -15,5 +16,8 @@ export const useAppStore = create<AppState>((set) => ({
   language: 'zh',
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setTheme: (theme) => set({ theme }),
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) => {
+    i18n.changeLanguage(language);
+    set({ language });
+  },
 }));

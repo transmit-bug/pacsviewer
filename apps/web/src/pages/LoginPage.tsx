@@ -40,7 +40,7 @@ export function LoginPage() {
             <BrandMark animate uniqueId="login-iris" />
           </div>
           <h1 className="mt-6 text-[2.5rem] font-bold leading-none tracking-tight text-foreground">
-            明瞳
+            {t('app.brand')}
           </h1>
           <p className="mt-2.5 text-[11px] font-medium uppercase tracking-[0.42em] text-muted-foreground">
             PACS Viewer
@@ -86,7 +86,7 @@ export function LoginPage() {
                 <div className="text-sm text-destructive">{error}</div>
               )}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? '登录中...' : t('auth.login')}
+                {isLoading ? t('auth.loggingIn') : t('auth.login')}
               </Button>
             </form>
           </CardContent>

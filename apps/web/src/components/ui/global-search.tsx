@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Search, User, FileText, Image, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ interface SearchResult {
 
 export function GlobalSearch() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -76,7 +78,7 @@ export function GlobalSearch() {
           ...reportsRes.value.data.items.map((r: any) => ({
             id: r.id,
             type: 'report' as const,
-            title: r.title || `报告 ${r.id.slice(0, 8)}`,
+            title: r.title || `${t('common.report')} ${r.id.slice(0, 8)}`,
             subtitle: r.status || '',
             href: `/reports/${r.id}`,
           }))
@@ -124,7 +126,7 @@ export function GlobalSearch() {
         className="flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
         <Search className="mr-2 h-4 w-4" />
-        <span className="hidden sm:inline">搜索...</span>
+        <span className="hidden sm:inline">{t('search.placeholder')}</span>
         <kbd className="pointer-events-none ml-2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
@@ -133,11 +135,11 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>搜索</DialogTitle>
+            <DialogTitle>{t('search.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
-              placeholder="搜索患者、检查、报告..."
+              placeholder={t('search.inputPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -145,7 +147,7 @@ export function GlobalSearch() {
             {loading && (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <span className="text-sm text-muted-foreground">搜索中...</span>
+                <span className="text-sm text-muted-foreground">{t('search.searching')}</span>
               </div>
             )}
             {!loading && results.length > 0 && (
@@ -164,7 +166,7 @@ export function GlobalSearch() {
                       <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
                     </div>
                     <span className="text-xs text-muted-foreground capitalize">
-                      {result.type === 'patient' ? '患者' : result.type === 'study' ? '检查' : '报告'}
+                      {result.type === 'patient' ? t('search.patient') : result.type === 'study' ? t('search.study') : t('search.report')}
                     </span>
                   </button>
                 ))}
@@ -172,7 +174,7 @@ export function GlobalSearch() {
             )}
             {!loading && query && results.length === 0 && (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                未找到相关结果
+                {t('search.noResults')}
               </div>
             )}
           </div>

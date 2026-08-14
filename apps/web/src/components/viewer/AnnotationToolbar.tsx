@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
 import { measurementApi } from '@/services/api';
@@ -39,53 +40,98 @@ interface ImageToolsToolbarProps {
   studyId?: string;
 }
 
-/** 图像工具组配置 */
-const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direct' | 'collapsed' })[] = [
-  {
-    id: 'measurement',
-    icon: Ruler,
-    label: '测量',
-    displayMode: 'direct',
-    tools: [
-      { id: 'length', icon: Ruler, label: '长度测量' },
-      { id: 'angle', icon: CornerDownRight, label: '角度测量' },
-      { id: 'probe', icon: Crosshair, label: '像素探针' },
-    ],
-  },
-  {
-    id: 'annotation',
-    icon: ArrowUpRight,
-    label: '标注',
-    displayMode: 'direct',
-    tools: [
-      { id: 'arrow', icon: ArrowUpRight, label: '箭头标注' },
-    ],
-  },
-  {
-    id: 'roi',
-    icon: Circle,
-    label: 'ROI',
-    displayMode: 'direct',
-    tools: [
-      { id: 'ellipticalROI', icon: Circle, label: '椭圆 ROI' },
-      { id: 'rectangleROI', icon: Square, label: '矩形 ROI' },
-      { id: 'freehand', icon: Pencil, label: '自由画笔' },
-      { id: 'spline', icon: Spline, label: '样条曲线' },
-    ],
-  },
-  {
-    id: 'action',
-    icon: Layers,
-    label: '操作',
-    displayMode: 'collapsed',
-    tools: [], // 动态生成
-  },
-];
-
 export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps) {
+  const { t } = useTranslation();
+
+  /** 图像工具组配置 */
+  const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direct' | 'collapsed' })[] = [
+    {
+      id: 'measurement',
+      icon: Ruler,
+      label: t('viewer.toolbar.measurement'),
+      displayMode: 'direct',
+      tools: [
+        { id: 'length', icon: Ruler, label: t('viewer.toolbar.length') },
+        { id: 'angle', icon: CornerDownRight, label: t('viewer.toolbar.angle') },
+        { id: 'probe', icon: Crosshair, label: t('viewer.toolbar.probe') },
+      ],
+    },
+    {
+      id: 'annotation',
+      icon: ArrowUpRight,
+      label: t('viewer.toolbar.annotation'),
+      displayMode: 'direct',
+      tools: [
+        { id: 'arrow', icon: ArrowUpRight, label: t('viewer.toolbar.arrow') },
+      ],
+    },
+    {
+      id: 'roi',
+      icon: Circle,
+      label: 'ROI',
+      displayMode: 'direct',
+      tools: [
+        { id: 'ellipticalROI', icon: Circle, label: t('viewer.toolbar.ellipticalROI') },
+        { id: 'rectangleROI', icon: Square, label: t('viewer.toolbar.rectangleROI') },
+        { id: 'freehand', icon: Pencil, label: t('viewer.toolbar.freehand') },
+        { id: 'spline', icon: Spline, label: t('viewer.toolbar.spline') },
+      ],
+    },
+    {
+      id: 'action',
+      icon: Layers,
+      label: t('viewer.toolbar.actions'),
+      displayMode: 'collapsed',
+      tools: [], // 动态生成
+    },
+  ];
+
   const { activeTool, setActiveTool } = useViewerStore();
   const { measurements, annotations, removeAnnotation, clearAll } = useMeasurementStore();
   const [showList, setShowList] = useState(false);
+
+  /** 图像工具组配置 */
+  const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direct' | 'collapsed' })[] = [
+    {
+      id: 'measurement',
+      icon: Ruler,
+      label: t('viewer.toolbar.measurement'),
+      displayMode: 'direct',
+      tools: [
+        { id: 'length', icon: Ruler, label: t('viewer.toolbar.length') },
+        { id: 'angle', icon: CornerDownRight, label: t('viewer.toolbar.angle') },
+        { id: 'probe', icon: Crosshair, label: t('viewer.toolbar.probe') },
+      ],
+    },
+    {
+      id: 'annotation',
+      icon: ArrowUpRight,
+      label: t('viewer.toolbar.annotation'),
+      displayMode: 'direct',
+      tools: [
+        { id: 'arrow', icon: ArrowUpRight, label: t('viewer.toolbar.arrow') },
+      ],
+    },
+    {
+      id: 'roi',
+      icon: Circle,
+      label: 'ROI',
+      displayMode: 'direct',
+      tools: [
+        { id: 'ellipticalROI', icon: Circle, label: t('viewer.toolbar.ellipticalROI') },
+        { id: 'rectangleROI', icon: Square, label: t('viewer.toolbar.rectangleROI') },
+        { id: 'freehand', icon: Pencil, label: t('viewer.toolbar.freehand') },
+        { id: 'spline', icon: Spline, label: t('viewer.toolbar.spline') },
+      ],
+    },
+    {
+      id: 'action',
+      icon: Layers,
+      label: t('viewer.toolbar.actions'),
+      displayMode: 'collapsed',
+      tools: [], // 动态生成
+    },
+  ];
 
   const handleToolClick = (toolId: string) => {
     setActiveTool(toolId === activeTool ? 'pan' : toolId);
@@ -121,10 +167,11 @@ export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps
 
   // 动态生成操作工具组
   const actionTools: ToolConfig[] = [
-    { id: 'list', icon: List, label: '标注列表', badgeCount: annotations.length },
-    { id: 'export', icon: Download, label: '导出测量结果', disabled: measurements.length === 0 },
-    { id: 'exportCsv', icon: FileSpreadsheet, label: '导出 CSV', disabled: !studyId },
-    { id: 'clear', icon: Trash2, label: '清除全部', variant: 'destructive', disabled: annotations.length === 0 },
+    { id: 'list', icon: List, label: t('viewer.toolbar.annotationList'), badgeCount: annotations.length },
+    { id: 'export', icon: Download, label: t('viewer.toolbar.exportMeasurements'), disabled: measurements.length === 0 },
+    { id: 'exportCsv', icon: FileSpreadsheet, label: t('viewer.toolbar.exportCsv'), disabled: !studyId },
+    { id: 'clear', icon: Trash2, label: t('viewer.toolbar.clearAll'), variant: 'destructive', disabled: annotations.length === 0 },
+
   ];
 
   return (
@@ -150,13 +197,13 @@ export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps
         {showList && (
           <div className="border rounded-md p-2 max-h-64 overflow-y-auto space-y-1">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium">标注列表</p>
+              <p className="text-xs font-medium">{t('viewer.toolbar.annotationList')}</p>
               <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowList(false)}>
                 <X className="h-3 w-3" />
               </Button>
             </div>
             {measurements.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-2">暂无标注</p>
+              <p className="text-xs text-muted-foreground text-center py-2">{t('viewer.toolbar.noAnnotations')}</p>
             ) : (
               measurements.map((m) => (
                 <div key={m.id} className="flex items-center justify-between gap-2 text-xs p-1 hover:bg-muted rounded">

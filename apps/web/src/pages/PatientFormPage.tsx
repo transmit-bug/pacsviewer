@@ -68,8 +68,8 @@ export function PatientFormPage() {
     } catch (error) {
       console.error('Failed to load patient:', error);
       toast({
-        title: '加载失败',
-        description: '无法加载患者信息，请稍后重试。',
+        title: t('patient.loadFailed'),
+        description: t('patient.loadFailedDesc'),
         variant: 'destructive',
       });
     } finally {
@@ -103,8 +103,8 @@ export function PatientFormPage() {
     
     if (!formData.mrn || !formData.name) {
       toast({
-        title: '请填写必填字段',
-        description: 'MRN 和姓名为必填项。',
+        title: t('patient.requiredFields'),
+        description: t('patient.requiredFieldsDesc'),
         variant: 'destructive',
       });
       return;
@@ -125,22 +125,22 @@ export function PatientFormPage() {
       if (isEdit) {
         await patientApi.update(id!, submitData);
         toast({
-          title: '更新成功',
-          description: '患者信息已更新。',
+          title: t('patient.updateSuccess'),
+          description: t('patient.updateSuccessDesc'),
         });
       } else {
         await patientApi.create(submitData);
         toast({
-          title: '创建成功',
-          description: '新患者已创建。',
+          title: t('patient.createSuccess'),
+          description: t('patient.createSuccessDesc'),
         });
       }
       navigate('/patients');
     } catch (error) {
       console.error('Failed to save patient:', error);
       toast({
-        title: isEdit ? '更新失败' : '创建失败',
-        description: '操作失败，请稍后重试。',
+        title: isEdit ? t('patient.updateFailed') : t('patient.createFailed'),
+        description: t('patient.opFailedDesc'),
         variant: 'destructive',
       });
     } finally {
@@ -183,14 +183,14 @@ export function PatientFormPage() {
           </Link>
         </Button>
         <h1 className="text-3xl font-bold">
-          {isEdit ? '编辑患者' : '新增患者'}
+          {isEdit ? t('patient.editTitle') : t('patient.new')}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>患者信息</CardTitle>
+            <CardTitle>{t('patient.info')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
@@ -203,7 +203,7 @@ export function PatientFormPage() {
                   id="mrn"
                   value={formData.mrn}
                   onChange={(e) => handleChange('mrn', e.target.value)}
-                  placeholder="例如: MRN-001"
+                  placeholder={t('patient.placeholderMrn')}
                   required
                 />
               </div>
@@ -217,7 +217,7 @@ export function PatientFormPage() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="患者姓名"
+                  placeholder={t('patient.placeholderName')}
                   required
                 />
               </div>
@@ -255,12 +255,12 @@ export function PatientFormPage() {
                       size="sm"
                       onClick={() => handleChange('birthDate', '')}
                     >
-                      清除
+                      {t('patient.clear')}
                     </Button>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  可选，不填则不记录出生日期
+                  {t('patient.optionalBirthDate')}
                 </p>
               </div>
 
@@ -271,53 +271,53 @@ export function PatientFormPage() {
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="联系电话"
+                  placeholder={t('patient.placeholderPhone')}
                 />
               </div>
 
               {/* 邮箱 */}
               <div className="space-y-2">
-                <Label htmlFor="email">邮箱</Label>
+                <Label htmlFor="email">{t('patient.email')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="电子邮箱"
+                  placeholder={t('patient.placeholderEmail')}
                 />
               </div>
 
               {/* 地址 */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">地址</Label>
+                <Label htmlFor="address">{t('patient.address')}</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  placeholder="家庭住址"
+                  placeholder={t('patient.placeholderAddress')}
                 />
               </div>
 
               {/* 备注 */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="notes">备注</Label>
+                <Label htmlFor="notes">{t('patient.notes')}</Label>
                 <textarea
                   id="notes"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
-                  placeholder="其他备注信息"
+                  placeholder={t('patient.placeholderNotes')}
                 />
               </div>
 
               {/* 标签 */}
               <div className="space-y-2 md:col-span-2">
-                <Label>标签</Label>
+                <Label>{t('patient.tags')}</Label>
                 <div className="flex gap-2">
                   <Input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    placeholder="输入标签"
+                    placeholder={t('patient.placeholderTag')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -326,7 +326,7 @@ export function PatientFormPage() {
                     }}
                   />
                   <Button type="button" variant="outline" onClick={handleAddTag}>
-                    添加
+                    {t('patient.addTag')}
                   </Button>
                 </div>
                 {formData.tags.length > 0 && (
@@ -353,11 +353,11 @@ export function PatientFormPage() {
 
             <div className="flex justify-end space-x-2">
               <Button variant="outline" asChild>
-                <Link to="/patients">取消</Link>
+                <Link to="/patients">{t('common.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={saving}>
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? '保存中...' : '保存'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </CardContent>
