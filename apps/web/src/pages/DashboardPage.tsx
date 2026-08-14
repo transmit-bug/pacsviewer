@@ -299,7 +299,14 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-64 w-full" />
+              <div className="flex h-64 items-center justify-center gap-10">
+                <Skeleton className="h-44 w-44 shrink-0 rounded-full" />
+                <div className="w-full max-w-[10rem] space-y-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" />
+                  ))}
+                </div>
+              </div>
             ) : !hasAnyStudies ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                 暂无数据
@@ -376,7 +383,15 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <Skeleton className="h-64 w-full" />
+              <div className="flex h-64 items-end gap-2 px-2 pb-1">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className="flex-1 rounded-sm"
+                    style={{ height: `${30 + ((i * 13) % 55)}%` }}
+                  />
+                ))}
+              </div>
             ) : !hasAnyStudies ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
                 暂无数据

@@ -14,6 +14,7 @@ import { DicomTagViewer } from '@/components/viewer/DicomTagViewer';
 import { SeriesNavigator } from '@/components/viewer/SeriesNavigator';
 import { KeyboardShortcutsHelp } from '@/components/viewer/KeyboardShortcutsHelp';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { ArrowLeft, FileText, Tag, Keyboard } from 'lucide-react';
@@ -148,7 +149,38 @@ export function ViewerPage() {
   });
 
   if (loading) {
-    return <div className="text-center py-8">加载中...</div>;
+    return (
+      <div className="flex h-[calc(100vh-8rem)] space-x-4" role="status" aria-label="加载中">
+        {/* 主查看区骨架 */}
+        <div className="flex flex-1 flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-9 w-9 rounded-md" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-md" />
+          <div className="flex flex-1 gap-4">
+            <Skeleton className="w-16 shrink-0 rounded-md" />
+            <Skeleton className="flex-1 rounded-md" />
+          </div>
+          <Skeleton className="h-8 w-full rounded-md" />
+        </div>
+
+        {/* 侧栏骨架 */}
+        <div className="flex w-80 flex-col space-y-4">
+          <Skeleton className="h-36 w-full rounded-md" />
+          <Skeleton className="h-28 w-full rounded-md" />
+          <Skeleton className="h-28 w-full rounded-md" />
+          <Skeleton className="flex-1 rounded-md" />
+          <Skeleton className="h-24 w-full rounded-md" />
+        </div>
+      </div>
+    );
   }
 
   return (
