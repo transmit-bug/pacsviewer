@@ -447,6 +447,67 @@ describe('GET /measurements/trends', () => {
   });
 });
 
+// ─── CSV export (wayfinder #130) ─────────────────────────────────────────────
+
+describe('GET /measurements/export (CSV)', () => {
+  test('returns BOM CSV with patient/study context + definition display name', async () => {
+    const { patientId, imageId } = await createFixture();
+    await sync(imageId, [
+      annotation({ data: { handles: { points: [[0, 0, 0], [10, 0, 0]] }, cachedStats: { [TARGET_ID]: { length: 25, unit: 'mm' } }, label: 'RNFL 厚度' } }),
+    ]);
+
+    const res = await ctx.app.fetch(
+      new Request(`http://localhost/api/measurements/export?patientId=${patientId}`, {
+        headers: ctx.authHeaders,
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('text/csv; charset=utf-8');
+    const buf = new Uint8Array(await res.arrayBuffer());
+    // UTF-8 BOM for Excel compatibility (audit-logs precedent). Note: res.text()
+    // strips the BOM via TextDecoder, so assert on the raw bytes instead.
+    expect(buf[0]).toBe(0xef);
+    expect(buf[1]).toBe(0xbb);
+    expect(buf[2]).toBe(0xbf);
+    const text = new TextDecoder('utf-8').decode(buf.subarray(3));
+
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('患者姓名,病历号,检查日期,检查时间,检查类型,测量项,数值,单位,是否校准,测量时间');
+    const row = lines[1].split(',');
+    expect(row[0]).toBe('测试患者');      // patient name (patients join)
+    expect(row[2]).toBe('2025-01-10');    // study date
+    expect(row[5]).toBe('RNFL 厚度');     // definition displayName
+    expect(row[6]).toBe('25');            // value
+    expect(row[7]).toBe('mm');            // unit
+    expect(row[8]).toBe('是');            // calibrated
+  });
+
+  test('export scoped by studyIds', async () => {
+    const { baselineStudyId, imageId } = await createFixture();
+    await sync(imageId, [
+      annotation({ data: { handles: { points: [[0, 0, 0], [10, 0, 0]] }, cachedStats: { [TARGET_ID]: { length: 25, unit: 'mm' } }, label: 'RNFL 厚度' } }),
+    ]);
+
+    const res = await ctx.app.fetch(
+      new Request(`http://localhost/api/measurements/export?studyIds=${baselineStudyId}`, {
+        headers: ctx.authHeaders,
+      })
+    );
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const lines = text.slice(1).split('\n');
+    expect(lines).toHaveLength(2); // header + one data row
+  });
+
+  test('requires patientId or studyIds', async () => {
+    const res = await ctx.app.fetch(
+      new Request('http://localhost/api/measurements/export', { headers: ctx.authHeaders })
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
 // ─── Dictionary API ──────────────────────────────────────────────────────────
 
 describe('GET /measurements/definitions', () => {

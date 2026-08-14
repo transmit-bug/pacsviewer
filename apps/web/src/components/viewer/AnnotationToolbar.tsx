@@ -11,6 +11,8 @@
 import { useState } from 'react';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
+import { measurementApi } from '@/services/api';
+import { downloadBlob, measurementsCsvFilename } from '@/utils/download';
 import { Button } from '@/components/ui/button';
 import { ToolbarGroup } from './ToolbarGroup';
 import type { ToolConfig, ToolGroupConfig } from './ToolGroupPopover';
@@ -25,6 +27,7 @@ import {
   Spline,
   Trash2,
   Download,
+  FileSpreadsheet,
   List,
   X,
   Layers,
@@ -32,6 +35,8 @@ import {
 
 interface ImageToolsToolbarProps {
   className?: string;
+  /** Current study id — used to scope the measurements CSV export. */
+  studyId?: string;
 }
 
 /** 图像工具组配置 */
@@ -77,7 +82,7 @@ const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[]; displayMode: 'direc
   },
 ];
 
-export function ImageToolsToolbar({ className }: ImageToolsToolbarProps) {
+export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps) {
   const { activeTool, setActiveTool } = useViewerStore();
   const { measurements, annotations, removeAnnotation, clearAll } = useMeasurementStore();
   const [showList, setShowList] = useState(false);
@@ -101,6 +106,13 @@ export function ImageToolsToolbar({ className }: ImageToolsToolbarProps) {
         a.click();
         URL.revokeObjectURL(url);
         break;
+      case 'exportCsv':
+        if (!studyId) return;
+        measurementApi
+          .exportCsv({ studyIds: [studyId] })
+          .then((response) => downloadBlob(response as unknown as Blob, measurementsCsvFilename()))
+          .catch((error) => console.error('Failed to export measurements CSV:', error));
+        break;
       case 'clear':
         clearAll();
         break;
@@ -111,6 +123,7 @@ export function ImageToolsToolbar({ className }: ImageToolsToolbarProps) {
   const actionTools: ToolConfig[] = [
     { id: 'list', icon: List, label: '标注列表', badgeCount: annotations.length },
     { id: 'export', icon: Download, label: '导出测量结果', disabled: measurements.length === 0 },
+    { id: 'exportCsv', icon: FileSpreadsheet, label: '导出 CSV', disabled: !studyId },
     { id: 'clear', icon: Trash2, label: '清除全部', variant: 'destructive', disabled: annotations.length === 0 },
   ];
 

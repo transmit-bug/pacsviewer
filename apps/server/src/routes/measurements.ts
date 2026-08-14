@@ -15,6 +15,7 @@ import { eq, asc, sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import {
   db,
+  patients,
   measurementDefinitions,
   measurementPoints,
   studies,
@@ -263,6 +264,84 @@ measurementsRouter.get('/trends', async (c) => {
     data: {
       patientId,
       series: Array.from(seriesMap.values()),
+    },
+  });
+});
+
+// ─── CSV export (wayfinder #130) ────────────────────────────────────────────
+// Browser-download only (no server-side archive, per research/export-path.md).
+// Serves a UTF-8 BOM CSV so Excel opens Chinese text without mojibake — the
+// exact same contract as audit-logs.ts /export (see routes/audit-logs.ts).
+
+/** Quote CSV fields containing commas, quotes or newlines (RFC 4180). */
+function csvCell(value: unknown): string {
+  const s = String(value ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+measurementsRouter.get('/export', async (c) => {
+  const patientId = c.req.query('patientId');
+  const studyIdsParam = c.req.query('studyIds');
+
+  let studyFilter;
+  if (studyIdsParam) {
+    const ids = studyIdsParam.split(',').map((s) => s.trim()).filter(Boolean);
+    if (ids.length > 0) {
+      studyFilter = sql`${studies.id} in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})`;
+    }
+  } else if (patientId) {
+    studyFilter = eq(studies.patientId, patientId);
+  } else {
+    throw new ValidationError('需要 patientId 或 studyIds 参数');
+  }
+
+  await ensurePresetDefinitions();
+
+  const rows = await db
+    .select({
+      patientName: patients.name,
+      patientMrn: patients.mrn,
+      studyId: measurementPoints.studyId,
+      studyDate: studies.studyDate,
+      studyTime: studies.studyTime,
+      modality: studies.modality,
+      imageId: measurementPoints.imageId,
+      measurementKey: measurementPoints.measurementKey,
+      displayName: measurementDefinitions.displayName,
+      value: measurementPoints.value,
+      unit: measurementPoints.unit,
+      calibrated: measurementPoints.calibrated,
+      capturedAt: measurementPoints.capturedAt,
+    })
+    .from(measurementPoints)
+    .innerJoin(studies, eq(measurementPoints.studyId, studies.id))
+    .innerJoin(patients, eq(studies.patientId, patients.id))
+    .leftJoin(measurementDefinitions, eq(measurementPoints.measurementKey, measurementDefinitions.key))
+    .where(studyFilter)
+    .orderBy(asc(studies.studyDate), asc(studies.studyTime), asc(measurementPoints.measurementKey), asc(measurementPoints.capturedAt));
+
+  const csv = [
+    '患者姓名,病历号,检查日期,检查时间,检查类型,测量项,数值,单位,是否校准,测量时间',
+    ...rows.map((r) =>
+      [
+        csvCell(r.patientName),
+        csvCell(r.patientMrn),
+        r.studyDate,
+        csvCell(r.studyTime),
+        csvCell(r.modality),
+        csvCell(r.displayName || r.measurementKey),
+        r.value,
+        csvCell(r.unit),
+        r.calibrated ? '是' : '否',
+        r.capturedAt,
+      ].join(',')
+    ),
+  ].join('\n');
+
+  return new Response('\uFEFF' + csv, { // Add BOM for Excel UTF-8 support
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="measurements-${new Date().toISOString().slice(0, 10)}.csv"`,
     },
   });
 });
