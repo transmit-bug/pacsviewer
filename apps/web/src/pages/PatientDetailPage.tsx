@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
-import { ArrowLeft, Edit, Plus, GitCompareArrows, LineChart as LineChartIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Plus, GitCompareArrows, LineChart as LineChartIcon, Download } from 'lucide-react';
 import { TrendFacetGrid } from '@/components/trend/TrendFacetGrid';
 import { TrendKpiCards } from '@/components/trend/TrendKpiCards';
 import type { TrendSeries } from '@/components/trend/trend-utils';
 import { FollowUpStarterDialog } from '@/components/follow-up/FollowUpStarterDialog';
+import { downloadBlob, measurementsCsvFilename } from '@/utils/download';
 
 interface Patient {
   id: string;
@@ -132,6 +133,17 @@ export function PatientDetailPage() {
       console.error('Failed to load follow-up records:', error);
     } finally {
       setFollowUpLoading(false);
+    }
+  };
+
+  const handleExportTrendsCsv = async () => {
+    if (!id) return;
+    try {
+      const blob = (await measurementApi.exportCsv({ patientId: id })) as unknown as Blob;
+      downloadBlob(blob, measurementsCsvFilename());
+    } catch (error) {
+      console.error('Failed to export measurements CSV:', error);
+      toast({ title: '导出失败', variant: 'destructive' });
     }
   };
 
@@ -403,6 +415,16 @@ export function PatientDetailPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>随访趋势</CardTitle>
               <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleExportTrendsCsv}
+                  disabled={trendSeries.length === 0}
+                  title="导出测量数据为 CSV（Excel 可直接打开）"
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  导出 CSV
+                </Button>
                 <Button
                   size="sm"
                   variant={trendView === 'grid' ? 'default' : 'ghost'}

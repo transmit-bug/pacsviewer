@@ -270,6 +270,15 @@ export const measurementApi = {
         ...(params.studyIds?.length ? { studyIds: params.studyIds.join(',') } : {}),
       },
     }),
+  /** Export measurement points as UTF-8 BOM CSV (browser download, #130). */
+  exportCsv: (params: { patientId?: string; studyIds?: string[] }) =>
+    api.get('/measurements/export', {
+      params: {
+        ...(params.patientId ? { patientId: params.patientId } : {}),
+        ...(params.studyIds?.length ? { studyIds: params.studyIds.join(',') } : {}),
+      },
+      responseType: 'blob',
+    }),
 };
 
 /** Follow-up records (随访对比 T1/T5). */

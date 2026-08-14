@@ -235,7 +235,7 @@ export function ViewerPage() {
         <div className="flex gap-4 flex-1">
           <Card className="w-16 shrink-0">
             <CardContent className="p-1">
-              <ImageToolsToolbar />
+              <ImageToolsToolbar studyId={studyId} />
             </CardContent>
           </Card>
 

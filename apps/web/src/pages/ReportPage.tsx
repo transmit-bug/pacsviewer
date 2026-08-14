@@ -343,6 +343,85 @@ export function ReportPage() {
     return <div className="text-center py-8">加载中...</div>;
   }
 
+  /**
+   * The polished, read-only report body (structured fields + findings +
+   * conclusion + notes + images + review notes).
+   *
+   * Rendered in two places: the Preview tab (screen) and the dedicated print
+   * document (#130 — always prints the final report regardless of active tab).
+   */
+  const renderReportSections = () => {
+    if (!report) return null;
+    return (
+      <>
+        {/* Structured fields preview */}
+        {getTemplate()?.fields?.map((field) => {
+          const value = report.content?.[field.key];
+          if (!value) return null;
+          return (
+            <div key={field.key} className="report-section">
+              <h3 className="font-medium text-lg mb-2">{field.label}</h3>
+              <p className="text-sm whitespace-pre-wrap">{value}</p>
+            </div>
+          );
+        })}
+
+        {/* Findings preview */}
+        {report.content?.findings && (
+          <div className="report-section">
+            <h3 className="font-medium text-lg mb-2">{t('report.findings')}</h3>
+            <div
+              className="prose dark:prose-invert max-w-none text-sm"
+              dangerouslySetInnerHTML={{ __html: report.content.findings }}
+            />
+          </div>
+        )}
+
+        {/* Conclusion preview */}
+        <div className="report-section">
+          <h3 className="font-medium text-lg mb-2">{t('report.conclusion')}</h3>
+          <p className="text-sm whitespace-pre-wrap">
+            {report.content?.conclusion || '-'}
+          </p>
+        </div>
+
+        {/* Notes preview */}
+        {report.content?.notes && (
+          <div className="report-section">
+            <h3 className="font-medium text-lg mb-2">{t('report.notes')}</h3>
+            <p className="text-sm whitespace-pre-wrap">{report.content.notes}</p>
+          </div>
+        )}
+
+        {/* Images preview */}
+        {getReportImages(report.images).length > 0 && (
+          <div className="report-section">
+            <h3 className="font-medium text-lg mb-2">{t('report.imageReferences')}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {getReportImages(report.images).map((imageId, index) => (
+                <img
+                  key={index}
+                  src={`/api/images/${imageId}/thumbnail?token=${token}`}
+                  alt={`Image ${index + 1}`}
+                  className="w-full rounded border"
+                  loading="eager"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Review Notes */}
+        {report.reviewNotes && (
+          <div className="report-section">
+            <h3 className="font-medium text-lg mb-2">{t('report.reviewNotes')}</h3>
+            <p className="text-sm whitespace-pre-wrap">{report.reviewNotes}</p>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -360,7 +439,7 @@ export function ReportPage() {
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportPdf}>
                 <Printer className="mr-2 h-4 w-4" />
-                {t('report.print')}
+                {t('report.export')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setHistoryDialogOpen(true)}>
                 <History className="mr-2 h-4 w-4" />
@@ -418,7 +497,9 @@ export function ReportPage() {
         </Card>
       ) : (
         <div className="print-container">
-          <Tabs defaultValue="edit">
+          {/* Tabs UI never prints — the dedicated print document below is the
+              single print source (#130), so output is the same from any tab. */}
+          <Tabs className="print:hidden" defaultValue="edit">
             <TabsList className="print:hidden">
               <TabsTrigger value="edit">{t('report.edit')}</TabsTrigger>
               <TabsTrigger value="preview">{t('report.preview')}</TabsTrigger>
@@ -568,73 +649,24 @@ export function ReportPage() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Structured fields preview */}
-                  {getTemplate()?.fields?.map((field) => {
-                    const value = report.content?.[field.key];
-                    if (!value) return null;
-                    return (
-                      <div key={field.key}>
-                        <h3 className="font-medium text-lg mb-2">{field.label}</h3>
-                        <p className="text-sm whitespace-pre-wrap">{value}</p>
-                      </div>
-                    );
-                  })}
-
-                  {/* Findings preview */}
-                  {report.content?.findings && (
-                    <div>
-                      <h3 className="font-medium text-lg mb-2">{t('report.findings')}</h3>
-                      <div
-                        className="prose dark:prose-invert max-w-none text-sm"
-                        dangerouslySetInnerHTML={{ __html: report.content.findings }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Conclusion preview */}
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">{t('report.conclusion')}</h3>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {report.content?.conclusion || '-'}
-                    </p>
-                  </div>
-
-                  {/* Notes preview */}
-                  {report.content?.notes && (
-                    <div>
-                      <h3 className="font-medium text-lg mb-2">{t('report.notes')}</h3>
-                      <p className="text-sm whitespace-pre-wrap">{report.content.notes}</p>
-                    </div>
-                  )}
-
-                  {/* Images preview */}
-                  {getReportImages(report.images).length > 0 && (
-                    <div>
-                      <h3 className="font-medium text-lg mb-2">{t('report.imageReferences')}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {getReportImages(report.images).map((imageId, index) => (
-                          <img
-                            key={index}
-                            src={`/api/images/${imageId}/thumbnail?token=${token}`}
-                            alt={`Image ${index + 1}`}
-                            className="w-full rounded border"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Review Notes */}
-                  {report.reviewNotes && (
-                    <div>
-                      <h3 className="font-medium text-lg mb-2">{t('report.reviewNotes')}</h3>
-                      <p className="text-sm whitespace-pre-wrap">{report.reviewNotes}</p>
-                    </div>
-                  )}
+                  {renderReportSections()}
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Dedicated print document — the finished report on A4 paper.
+              Hidden on screen (display:none), shown only under @media print,
+              so printing from the edit tab still yields the polished report. */}
+          <div className="hidden print:block print-report">
+            <div className="mb-6 pb-4 border-b border-gray-200">
+              <h2 className="text-2xl font-bold">{report.title}</h2>
+              <p className="text-sm mt-1">
+                {new Date(report.createdAt).toLocaleString('zh-CN')}
+              </p>
+            </div>
+            {renderReportSections()}
+          </div>
         </div>
       )}
 
@@ -699,19 +731,28 @@ export function ReportPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Print Styles */}
+      {/* Print Styles — paper-ready report output (#130, research/export-path.md).
+          Route: window.print() + @media print; no jsPDF/html2canvas/react-pdf.
+          - @page A4 + 12mm margins
+          - dedicated print DOM (print-report) is the single print source;
+            tabs/buttons/app-shell are hidden (display:none / visibility trick)
+          - paper-white background + dark text (report is otherwise dark-theme)
+          - sections avoid breaking across pages */}
       <style>{`
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
         @media print {
           .print\\:hidden {
             display: none !important;
           }
-          .print-container {
-            padding: 0;
-          }
+          /* Hide the app shell; keep only the report container */
           body * {
             visibility: hidden;
           }
-          .print-container, .print-container * {
+          .print-container,
+          .print-container * {
             visibility: visible;
           }
           .print-container {
@@ -719,6 +760,32 @@ export function ReportPage() {
             left: 0;
             top: 0;
             width: 100%;
+            padding: 0;
+          }
+          /* Paper-ready: white background, dark text, no shadows */
+          html,
+          body {
+            background: #fff !important;
+          }
+          .print-report {
+            background: #fff !important;
+            color: #111 !important;
+          }
+          .print-report * {
+            background: #fff !important;
+            color: #111 !important;
+            border-color: #d1d5db !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+          }
+          /* Avoid breaking report sections across pages */
+          .print-report .report-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .print-report img {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
         }
       `}</style>
