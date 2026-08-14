@@ -76,6 +76,10 @@ app.route('/api/devices', devicesRouter);
 app.route('/api/transfers', transfersRouter);
 app.route('/api/dicom', dicomRouter);
 app.route('/dicomweb', dicomwebRouter);
+// Also mount under /api — the web client calls /api/dicomweb/... (axios
+// baseURL is /api and CornerstoneViewport uses inline /api/dicomweb fetches),
+// and production nginx only proxies /api.
+app.route('/api/dicomweb', dicomwebRouter);
 app.route('/api/settings', settingsRouter);
 app.route('/api/dashboard', dashboardRouter);
 app.route('/api/worklist', worklistRouter);

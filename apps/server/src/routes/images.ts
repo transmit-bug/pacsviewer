@@ -225,9 +225,25 @@ imagesRouter.get('/:id/file', async (c) => {
   // Non-DICOM images: check if Cornerstone wants DICOM format
   const wantDicom = c.req.query('format') === 'dicom';
   if (wantDicom) {
-    // Convert to DICOM on-the-fly for Cornerstone
+    // Convert to DICOM on-the-fly for Cornerstone. Missing files fall back to
+    // a synthetic fundus image in dev — the same contract as serveFileOrFallback
+    // (placeholder seed records have no backing file).
     const filePath = join(process.cwd(), 'data', 'images', image.filePath);
-    const buffer = await Bun.file(filePath).arrayBuffer();
+    const file = Bun.file(filePath);
+
+    let buffer: Buffer;
+    let usedFallback = false;
+    if (await file.exists()) {
+      buffer = Buffer.from(await file.arrayBuffer());
+    } else if (DEV_FALLBACK_ENABLED) {
+      const fallbackPath = pickFallbackImage(FALLBACK_IMAGES);
+      const fallback = Bun.file(fallbackPath);
+      if (!(await fallback.exists())) throw new NotFoundError('文件');
+      buffer = Buffer.from(await fallback.arrayBuffer());
+      usedFallback = true;
+    } else {
+      throw new NotFoundError('文件');
+    }
 
     // Get patient/study info for DICOM metadata
     const seriesRecord = await db.query.series.findFirst({
@@ -237,7 +253,7 @@ imagesRouter.get('/:id/file', async (c) => {
 
     const { convertImageToDicom } = await import('../services/image-to-dicom');
     const result = await convertImageToDicom({
-      imageBuffer: Buffer.from(buffer),
+      imageBuffer: buffer,
       filename: image.filePath,
       patientName: seriesRecord?.study?.patient?.name || 'Anonymous',
       patientId: seriesRecord?.study?.patient?.mrn ?? undefined,
@@ -250,6 +266,7 @@ imagesRouter.get('/:id/file', async (c) => {
       headers: {
         'Content-Type': 'application/dicom',
         'Cache-Control': 'public, max-age=31536000, immutable',
+        ...(usedFallback ? { 'X-Dev-Fallback': 'true' } : {}),
       },
     });
   }
