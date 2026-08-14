@@ -1,0 +1,95 @@
+/* ============================================================
+ * 🧪 PROTOTYPE — wayfinder #123 查看器深色工作台原型
+ * 仅原型页使用。实现 #126 时并入正式令牌/动效体系后删除。
+ * 动效全部为 CSS（framer-motion 是 #134 特批依赖，本原型不引入）。
+ * ============================================================ */
+
+/* 图像切换交叉淡入 200ms（决议 #122-6） */
+@keyframes pv-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pv-fade-in {
+  animation: pv-fade-in 200ms var(--ease-out) both;
+}
+
+/* ⌘K 面板悬浮预览交叉淡入（决议 #122-4） */
+@keyframes pv-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.pv-preview-in {
+  animation: pv-preview-in 200ms var(--ease-out) both;
+}
+
+/* 侧栏/工具条折叠 300ms（决议 #122-6） */
+.pv-collapse {
+  transition: width 300ms var(--ease-out), transform 300ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+/* HUD 数字：等宽 + 1px 深色描边/微投影（GSPS OUTLINED 语义，保证图上可读） */
+.pv-hud-text {
+  text-shadow:
+    0 0 1px rgba(0, 0, 0, 0.9),
+    0 0 3px rgba(0, 0, 0, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.7);
+  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.55);
+}
+
+/* 标注文字底板（半透明黑，配合描边） */
+.pv-anno-label {
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* 玻璃浮层（决议 #121-4：blur 8-12px、alpha≈0.8，仅动态表面） */
+.pv-glass {
+  background-color: hsl(var(--glass-bg));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+/* 视口底：近黑（决议 #121-2 三级近黑最底层） */
+.pv-viewport-bg {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(26, 32, 40, 0.55) 0%, transparent 60%),
+    #000;
+}
+
+/* 面板间 1px 低对比分隔线 */
+.pv-divider {
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+
+/* 缩略图悬停放大预览（决议 #122-8） */
+.pv-thumb {
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out),
+    border-color 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.pv-thumb:hover {
+  transform: scale(1.06);
+  z-index: 2;
+}
+
+/* 工具按钮微交互 100-150ms（决议 #121-5） */
+.pv-tool-btn {
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out),
+    border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.pv-tool-btn:active {
+  transform: scale(0.94);
+}

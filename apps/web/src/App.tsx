@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/LoginPage';
 import PrototypeComparisonPage from '@/pages/PrototypeComparisonPage';
 import PrototypeTrendChartPage from '@/pages/PrototypeTrendChartPage';
+import ViewerWorkspacePrototype from '@/prototypes/viewer/ViewerWorkspacePrototype';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PatientListPage } from '@/pages/PatientListPage';
 import { PatientDetailPage } from '@/pages/PatientDetailPage';
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/prototype/viewer" element={<ViewerWorkspacePrototype />} />
       <Route path="/prototype/comparison" element={<PrototypeComparisonPage />} />
       <Route path="/prototype/trend-chart" element={<PrototypeTrendChartPage />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
