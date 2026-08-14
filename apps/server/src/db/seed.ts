@@ -22,13 +22,15 @@
  */
 
 import { db } from './index';
+import { eq, and } from 'drizzle-orm';
 import {
   roles, users, patients, patientTags,
-  studies, series, images,
+  studies, series, images, dicomFrames,
   reportTemplates, reports, reportVersions,
   annotations, layers,
   devices, deviceAdapters,
   comparisons, systemSettings,
+  measurementPoints,
 } from './schema';
 import { ensurePresetDefinitions } from './measurement-definitions';
 import { v4 as uuid } from 'uuid';
@@ -604,6 +606,444 @@ async function seed() {
 
   console.log(`✅ Studies (${studyIds.length}), Series (${totalSeries}), Images (${totalImages}) created`);
 
+  // ── 7.5 Demo Family (wayfinder #111) ────────────────────────────────────────
+  // 演示数据集：主角随访家族（5+ 次 OCT 随访，多帧 + 测量快照 + 报告 + 标注）
+  // + 配角多模态（眼底彩照 / FFA 时序 / 视野）。
+  // 约定：
+  //  - 所有图像沿用既有 placeholder 标记（fileHash `seed_placeholder_*`、format png、
+  //    512×512），DEV_FALLBACK 图片服务与 #110 标记一致。
+  //  - studyDate/studyTime + createdAt 均为显式真实时间戳（趋势按日分桶正确）。
+  //  - 新增患者/检查与既有 20 患者互不干扰，重复 seed 幂等（全表先清后建）。
+
+  const DEMO_PHYSICIAN = userIds.doctor1;
+  const demoStats = { patients: 0, studies: 0, series: 0, images: 0, frames: 0, points: 0, reports: 0 };
+
+  // 创建单条 placeholder 图像记录（与第 7 节占位标记保持一致）
+  const insertDemoImage = async (opts: {
+    seriesId: string;
+    instanceNumber: number;
+    studyDate: string;
+    numberOfFrames?: number;
+    sopInstanceUid?: string;
+  }) => {
+    const imageId = uuid();
+    await db.insert(images).values({
+      id: imageId,
+      seriesId: opts.seriesId,
+      sopInstanceUid: opts.sopInstanceUid ?? null,
+      instanceNumber: opts.instanceNumber,
+      filePath: `${imageId}.png`,       // placeholder filename (DEV_FALLBACK 兜底)
+      fileSize: 18387,
+      fileHash: `seed_placeholder_${imageId}`,
+      format: 'png',
+      width: 512,
+      height: 512,
+      bitsAllocated: 8,
+      numberOfFrames: opts.numberOfFrames ?? 1,
+      thumbnailPath: `${imageId}-thumb.jpeg`,
+      createdAt: `${opts.studyDate}T00:00:00.000Z`,
+    });
+    demoStats.images++;
+    return imageId;
+  };
+
+  // 写一条测量快照（measurement_points，join measurement_definitions 供趋势图聚合）
+  const insertDemoPoint = async (opts: {
+    studyId: string;
+    imageId: string | null;
+    key: string;
+    type: string;
+    value: number;
+    unit: string;
+    capturedAt: string;
+  }) => {
+    await db.insert(measurementPoints).values({
+      id: uuid(),
+      studyId: opts.studyId,
+      imageId: opts.imageId,
+      measurementKey: opts.key,
+      type: opts.type,
+      value: opts.value,
+      unit: opts.unit,
+      calibrated: true,
+      sourceAnnotationId: null,
+      capturedAt: opts.capturedAt,
+      createdAt: opts.capturedAt,
+      updatedAt: opts.capturedAt,
+    });
+    demoStats.points++;
+  };
+
+  // ── 主角：周建国 — 左眼开角型青光眼，5 次 OCT 随访（2024-01 ~ 2025-03）─────
+  // 趋势故事：RNFL/GCL/黄斑中心凹厚度进行性变薄（down=恶化），C/D 与眼压上升（up=恶化）。
+  const protagonistId = uuid();
+  await db.insert(patients).values({
+    id: protagonistId,
+    mrn: 'MRN20260001',
+    name: '周建国',
+    gender: 'male',
+    birthDate: '1956-05-20',
+    phone: '13800139001',
+    email: 'zhoujianguo@example.com',
+    address: '北京市海淀区中关村大街28号',
+    tags: [tagIds.glaucoma],
+    notes: '演示数据集-主角患者：左眼原发性开角型青光眼，5 次 OCT 随访，RNFL/GCL 进行性变薄，视野缺损进展',
+    createdAt: '2024-01-15T09:30:00.000Z',
+    updatedAt: '2024-01-15T09:30:00.000Z',
+  });
+  demoStats.patients++;
+
+  // visits: [日期, 时间, 描述, 多帧帧数(0=单帧), 测量值] — 日期严格递增、间隔 3-4 个月
+  const protagonistVisits = [
+    { date: '2024-01-15', time: '09:30:00', desc: '黄斑区 OCT + RNFL 随访（基线）', frames: 0,  m: { rnfl: 92, gcl: 78, fovea: 262, cd: 0.46, iop: 21 } },
+    { date: '2024-04-20', time: '10:05:00', desc: '黄斑区 OCT + RNFL 随访',          frames: 0,  m: { rnfl: 85, gcl: 72, fovea: 256, cd: 0.52, iop: 23 } },
+    { date: '2024-08-02', time: '09:50:00', desc: '黄斑区 OCT 容积扫描 + RNFL',       frames: 12, m: { rnfl: 74, gcl: 65, fovea: 248, cd: 0.58, iop: 24 } },
+    { date: '2024-12-10', time: '14:20:00', desc: '黄斑区 OCT 容积扫描 + RNFL',       frames: 12, m: { rnfl: 66, gcl: 58, fovea: 240, cd: 0.63, iop: 25 } },
+    { date: '2025-03-05', time: '09:40:00', desc: '黄斑区 OCT 容积扫描 + RNFL（复诊）', frames: 24, m: { rnfl: 58, gcl: 52, fovea: 231, cd: 0.68, iop: 26 } },
+  ];
+
+  const protagonistStudyIds: string[] = [];
+  let baselineOCTImageId: string | null = null; // 首访 B 扫描（对比视图基线）
+  let lastOCTImageId: string | null = null;     // 末次 B 扫描（标注/对比视图末次）
+
+  for (const v of protagonistVisits) {
+    const studyId = uuid();
+    protagonistStudyIds.push(studyId);
+    const iso = `${v.date}T${v.time}.000Z`;
+    const dateKey = v.date.replace(/-/g, '');
+    const status = v.date === '2025-03-05' ? 'reported' : 'diagnosed';
+
+    await db.insert(studies).values({
+      id: studyId,
+      patientId: protagonistId,
+      studyInstanceUid: `1.2.826.0.1.3680043.10.111.1.${dateKey}`,
+      accessionNumber: `ACC${dateKey}01`,
+      studyDate: v.date,
+      studyTime: v.time,
+      modality: 'OCT',
+      device: deviceIds.oct,
+      physicianId: DEMO_PHYSICIAN,
+      status,
+      description: v.desc,
+      createdAt: iso,
+      updatedAt: iso,
+    });
+    demoStats.studies++;
+
+    // 序列 1：黄斑区 B 扫描（V3 起为多帧容积扫描）
+    const bscanSeriesId = uuid();
+    await db.insert(series).values({
+      id: bscanSeriesId, studyId, seriesNumber: 1,
+      seriesDescription: '黄斑区 B 扫描', modality: 'OCT', bodyPart: 'OS',
+      imageCount: 1, createdAt: iso,
+    });
+    demoStats.series++;
+    const bscanImageId = await insertDemoImage({
+      seriesId: bscanSeriesId, instanceNumber: 1, studyDate: v.date,
+      numberOfFrames: v.frames > 0 ? v.frames : 1,
+      sopInstanceUid: `1.2.826.0.1.3680043.10.111.2.${dateKey}.1`,
+    });
+    if (v.date === '2024-01-15') baselineOCTImageId = bscanImageId;
+    lastOCTImageId = bscanImageId;
+
+    // 多帧 B 扫描 → dicom_frames（CinePlayer / useOctNavigation 的帧元数据）
+    if (v.frames > 0) {
+      const frameRows: any[] = [];
+      for (let fi = 0; fi < v.frames; fi++) {
+        const slice = Number((-3 + (6 * fi) / (v.frames - 1)).toFixed(3)); // -3.0 ~ +3.0 mm
+        frameRows.push({
+          id: uuid(),
+          imageId: bscanImageId,
+          frameIndex: fi,
+          frameType: 'ORIGINAL\\PRIMARY',
+          instanceNumber: fi + 1,
+          temporalPositionIdentifier: null,
+          frameAcquisitionDateTime: null,
+          sliceLocation: slice,
+          imagePositionPatient: [0, 0, slice],
+          imageOrientationPatient: [1, 0, 0, 0, 1, 0],
+          metadata: null,
+          createdAt: iso,
+        });
+      }
+      await db.insert(dicomFrames).values(frameRows);
+      demoStats.frames += frameRows.length;
+    }
+
+    // 序列 2：视盘 RNFL 环形扫描（单帧）
+    const rnflSeriesId = uuid();
+    await db.insert(series).values({
+      id: rnflSeriesId, studyId, seriesNumber: 2,
+      seriesDescription: '视盘 RNFL 环形扫描', modality: 'OCT', bodyPart: 'OS',
+      imageCount: 1, createdAt: iso,
+    });
+    demoStats.series++;
+    const rnflImageId = await insertDemoImage({
+      seriesId: rnflSeriesId, instanceNumber: 1, studyDate: v.date,
+      sopInstanceUid: `1.2.826.0.1.3680043.10.111.3.${dateKey}.1`,
+    });
+
+    // 本访测量快照（每 study 每 key 唯一，趋势图按 key + studyDate 聚合）
+    const m = v.m;
+    await insertDemoPoint({ studyId, imageId: rnflImageId, key: 'rnfl',  type: 'length',   value: m.rnfl,  unit: 'μm',    capturedAt: iso });
+    await insertDemoPoint({ studyId, imageId: bscanImageId, key: 'fovea', type: 'length',   value: m.fovea, unit: 'μm',    capturedAt: iso });
+    await insertDemoPoint({ studyId, imageId: bscanImageId, key: 'gcl',   type: 'length',   value: m.gcl,   unit: 'μm',    capturedAt: iso });
+    await insertDemoPoint({ studyId, imageId: rnflImageId, key: 'cd',    type: 'probe',     value: m.cd,    unit: '',      capturedAt: iso });
+    await insertDemoPoint({ studyId, imageId: rnflImageId, key: 'iop',   type: 'probe',     value: m.iop,   unit: 'mmHg',  capturedAt: iso });
+  }
+
+  // 报告：末次随访（V5）— 发布态 OCT 报告 + 版本历史
+  const v5StudyId = protagonistStudyIds[protagonistStudyIds.length - 1];
+  const reportId = uuid();
+  const reportCreatedAt = '2025-03-06T11:00:00.000Z';
+  const reportContent = {
+    diagnosis: '双眼原发性开角型青光眼（左眼进展）',
+    macularThickness: 231,
+    rnflThickness: 58,
+    findings: '左眼视盘周围 RNFL 平均厚度 58μm（较基线 92μm 下降 37%），上方及下方弓形纤维束明显变薄；黄斑中心凹厚度 231μm；C/D 比 0.68，视杯进行性扩大。',
+    impression: '左眼开角型青光眼随访 14 个月，RNFL/GCL 进行性变薄，视野缺损进展，建议强化降眼压治疗并 3 个月后复查。',
+  };
+  await db.insert(reports).values({
+    id: reportId,
+    studyId: v5StudyId,
+    patientId: protagonistId,
+    templateId: templateIds.oct,
+    title: '左眼 OCT 随访报告（2025-03-05）',
+    content: reportContent,
+    images: [],
+    status: 'published',
+    reviewerId: userIds.admin,
+    reviewNotes: '审核通过，已发布',
+    publishedAt: reportCreatedAt,
+    createdBy: DEMO_PHYSICIAN,
+    createdAt: reportCreatedAt,
+    updatedAt: reportCreatedAt,
+  });
+  demoStats.reports++;
+  await db.insert(reportVersions).values([
+    { id: uuid(), reportId, version: 1, status: 'draft', content: { ...reportContent, impression: '初稿' }, changeNotes: '初稿创建', createdBy: DEMO_PHYSICIAN, createdAt: reportCreatedAt },
+    { id: uuid(), reportId, version: 2, status: 'pending_review', content: reportContent, changeNotes: '提交审核', createdBy: DEMO_PHYSICIAN, createdAt: '2025-03-06T15:30:00.000Z' },
+    { id: uuid(), reportId, version: 3, status: 'reviewed', content: reportContent, changeNotes: '审核通过', createdBy: userIds.admin, createdAt: '2025-03-07T09:00:00.000Z' },
+  ]);
+
+  // 预置测量标注（末次随访 B 扫描）：黄斑中心凹厚度测量 + 视盘箭头
+  const demoLayerId = uuid();
+  await db.insert(layers).values({
+    id: demoLayerId,
+    imageId: lastOCTImageId!,
+    name: '随访测量标注',
+    type: 'annotation',
+    visible: true,
+    opacity: 1,
+    locked: false,
+    sortOrder: 0,
+    createdAt: '2025-03-05T10:00:00.000Z',
+  });
+  const demoAnnotationId = uuid();
+  await db.insert(annotations).values({
+    id: demoAnnotationId,
+    imageId: lastOCTImageId,
+    studyId: v5StudyId,
+    userId: DEMO_PHYSICIAN,
+    layerId: demoLayerId,
+    type: 'measurement',
+    geometry: { points: [{ x: 256, y: 256 }, { x: 258, y: 258 }] },
+    style: { color: '#00e5a0', lineWidth: 2, fontSize: 14 },
+    label: '黄斑中心凹厚度 231μm',
+    notes: '随访测量标注（预置）',
+    createdAt: '2025-03-05T10:00:00.000Z',
+    updatedAt: '2025-03-05T10:00:00.000Z',
+  });
+  await db.insert(annotations).values({
+    id: uuid(),
+    imageId: lastOCTImageId,
+    studyId: v5StudyId,
+    userId: DEMO_PHYSICIAN,
+    layerId: demoLayerId,
+    type: 'arrow',
+    geometry: { points: [{ x: 300, y: 200 }, { x: 330, y: 220 }] },
+    style: { color: '#ffb020', lineWidth: 2, fontSize: 14 },
+    label: '视盘边缘',
+    notes: null,
+    createdAt: '2025-03-05T10:00:00.000Z',
+    updatedAt: '2025-03-05T10:00:00.000Z',
+  });
+  // 关联 fovea 快照来源标注（模拟「标注落库 → measurement_points」链路）
+  await db.update(measurementPoints)
+    .set({ sourceAnnotationId: demoAnnotationId })
+    .where(and(eq(measurementPoints.studyId, v5StudyId), eq(measurementPoints.measurementKey, 'fovea')));
+
+  // 对比视图：基线 vs 末次随访（OCT B 扫描）
+  await db.insert(comparisons).values({
+    id: uuid(),
+    patientId: protagonistId,
+    name: '左眼 OCT 基线 vs 末次随访',
+    type: 'side_by_side',
+    config: { layout: 'horizontal', syncScroll: true },
+    imageIds: [baselineOCTImageId!, lastOCTImageId!],
+    isFavorite: true,
+    createdBy: DEMO_PHYSICIAN,
+    createdAt: '2025-03-07T10:00:00.000Z',
+    updatedAt: '2025-03-07T10:00:00.000Z',
+  });
+  console.log(`✅ Demo 主角「周建国」随访家族：5 次 OCT（含多帧 ${demoStats.frames} 帧）、测量 ${'5×5'} 项、报告 1、标注/对比就绪`);
+
+  // ── 配角 1：钱美玉 — 眼底彩照（糖尿病视网膜病变）────────────────────────────
+  const side1Id = uuid();
+  await db.insert(patients).values({
+    id: side1Id,
+    mrn: 'MRN20260002',
+    name: '钱美玉',
+    gender: 'female',
+    birthDate: '1959-11-03',
+    phone: '13800139002',
+    email: 'qianmeiyu@example.com',
+    address: '上海市黄浦区南京东路100号',
+    tags: [tagIds.diabetic],
+    notes: '演示数据集-配角：糖尿病视网膜病变，眼底彩照（双眼）',
+    createdAt: '2024-06-18T10:10:00.000Z',
+    updatedAt: '2024-06-18T10:10:00.000Z',
+  });
+  demoStats.patients++;
+  const s1StudyId = uuid();
+  await db.insert(studies).values({
+    id: s1StudyId, patientId: side1Id,
+    studyInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618',
+    accessionNumber: 'ACC2024061801',
+    studyDate: '2024-06-18', studyTime: '10:10:00',
+    modality: 'fundus', device: deviceIds.fundus,
+    physicianId: userIds.doctor2,
+    status: 'diagnosed', description: '彩色眼底照相（双眼）',
+    createdAt: '2024-06-18T10:10:00.000Z', updatedAt: '2024-06-18T10:10:00.000Z',
+  });
+  demoStats.studies++;
+  const s1SeriesId = uuid();
+  await db.insert(series).values({
+    id: s1SeriesId, studyId: s1StudyId, seriesNumber: 1,
+    seriesDescription: '双眼彩色眼底照相', modality: 'fundus', bodyPart: 'OU',
+    imageCount: 2, createdAt: '2024-06-18T10:10:00.000Z',
+  });
+  demoStats.series++;
+  const s1Img1 = await insertDemoImage({ seriesId: s1SeriesId, instanceNumber: 1, studyDate: '2024-06-18', sopInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618.1' });
+  const s1Img2 = await insertDemoImage({ seriesId: s1SeriesId, instanceNumber: 2, studyDate: '2024-06-18', sopInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618.2' });
+  await insertDemoPoint({ studyId: s1StudyId, imageId: s1Img1, key: 'cd', type: 'probe', value: 0.35, unit: '', capturedAt: '2024-06-18T10:10:00.000Z' });
+  await insertDemoPoint({ studyId: s1StudyId, imageId: s1Img1, key: 'iop', type: 'probe', value: 16, unit: 'mmHg', capturedAt: '2024-06-18T10:10:00.000Z' });
+  console.log('✅ Demo 配角 1「钱美玉」：眼底彩照（2 图）');
+
+  // ── 配角 2：冯志刚 — FFA 时序系列（多时间点，测 FfaTimeline）─────────────────
+  const side2Id = uuid();
+  await db.insert(patients).values({
+    id: side2Id,
+    mrn: 'MRN20260003',
+    name: '冯志刚',
+    gender: 'male',
+    birthDate: '1968-07-25',
+    phone: '13800139003',
+    email: 'fengzhigang@example.com',
+    address: '广州市天河区珠江新城华夏路16号',
+    tags: [tagIds.diabetic],
+    notes: '演示数据集-配角：增殖期糖尿病视网膜病变，FFA 时序造影（左眼）',
+    createdAt: '2024-09-12T09:00:00.000Z',
+    updatedAt: '2024-09-12T09:00:00.000Z',
+  });
+  demoStats.patients++;
+  const s2StudyId = uuid();
+  await db.insert(studies).values({
+    id: s2StudyId, patientId: side2Id,
+    studyInstanceUid: '1.2.826.0.1.3680043.10.111.5.20240912',
+    accessionNumber: 'ACC2024091201',
+    studyDate: '2024-09-12', studyTime: '09:00:00',
+    modality: 'FFA', device: deviceIds.fundus,
+    physicianId: userIds.doctor2,
+    status: 'reported', description: 'FFA 荧光素血管造影（左眼）',
+    createdAt: '2024-09-12T09:00:00.000Z', updatedAt: '2024-09-12T09:00:00.000Z',
+  });
+  demoStats.studies++;
+  // 序列 1：彩色眼底对照
+  const s2Series1Id = uuid();
+  await db.insert(series).values({
+    id: s2Series1Id, studyId: s2StudyId, seriesNumber: 1,
+    seriesDescription: '彩色眼底对照', modality: 'fundus', bodyPart: 'OS',
+    imageCount: 1, createdAt: '2024-09-12T09:00:00.000Z',
+  });
+  demoStats.series++;
+  await insertDemoImage({ seriesId: s2Series1Id, instanceNumber: 1, studyDate: '2024-09-12', sopInstanceUid: '1.2.826.0.1.3680043.10.111.5.20240912.1' });
+  // 序列 2：FFA 时序（6 帧：动脉期→动静脉期→静脉期→晚期）
+  const s2Series2Id = uuid();
+  await db.insert(series).values({
+    id: s2Series2Id, studyId: s2StudyId, seriesNumber: 2,
+    seriesDescription: 'FFA 时序（动脉期→静脉期→晚期）', modality: 'FFA', bodyPart: 'OS',
+    imageCount: 1, createdAt: '2024-09-12T09:00:00.000Z',
+  });
+  demoStats.series++;
+  const s2FfaImageId = await insertDemoImage({
+    seriesId: s2Series2Id, instanceNumber: 1, studyDate: '2024-09-12',
+    numberOfFrames: 6,
+    sopInstanceUid: '1.2.826.0.1.3680043.10.111.5.20240912.2',
+  });
+  // FFA 帧：temporalPositionIdentifier + 帧采集时间（相位分桶）
+  const ffaTimeline = [0, 12, 25, 45, 90, 300]; // 相对注射后秒数
+  const ffaFrameRows = ffaTimeline.map((sec, fi) => ({
+    id: uuid(),
+    imageId: s2FfaImageId,
+    frameIndex: fi,
+    frameType: 'ORIGINAL\\PRIMARY',
+    instanceNumber: fi + 1,
+    temporalPositionIdentifier: fi + 1,
+    frameAcquisitionDateTime: new Date(Date.parse('2024-09-12T09:00:00.000Z') + sec * 1000).toISOString(),
+    sliceLocation: null,
+    imagePositionPatient: null,
+    imageOrientationPatient: null,
+    metadata: null,
+    createdAt: '2024-09-12T09:00:00.000Z',
+  }));
+  await db.insert(dicomFrames).values(ffaFrameRows as any);
+  demoStats.frames += ffaFrameRows.length;
+  console.log('✅ Demo 配角 2「冯志刚」：FFA 时序（6 帧，0s/12s/25s/45s/90s/300s）');
+
+  // ── 配角 3：潘玉兰 — 视野（Humphrey 24-2，青光眼视野缺损）────────────────────
+  const side3Id = uuid();
+  await db.insert(patients).values({
+    id: side3Id,
+    mrn: 'MRN20260004',
+    name: '潘玉兰',
+    gender: 'female',
+    birthDate: '1965-02-14',
+    phone: '13800139004',
+    email: 'panyulan@example.com',
+    address: '杭州市西湖区文三路138号',
+    tags: [tagIds.glaucoma],
+    notes: '演示数据集-配角：原发性开角型青光眼，Humphrey 24-2 视野检查（左眼）',
+    createdAt: '2024-10-08T15:30:00.000Z',
+    updatedAt: '2024-10-08T15:30:00.000Z',
+  });
+  demoStats.patients++;
+  const s3StudyId = uuid();
+  await db.insert(studies).values({
+    id: s3StudyId, patientId: side3Id,
+    studyInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008',
+    accessionNumber: 'ACC2024100801',
+    studyDate: '2024-10-08', studyTime: '15:30:00',
+    modality: 'VF', device: deviceIds.vf,
+    physicianId: userIds.doctor1,
+    status: 'diagnosed', description: 'Humphrey 24-2 视野检查（左眼）',
+    createdAt: '2024-10-08T15:30:00.000Z', updatedAt: '2024-10-08T15:30:00.000Z',
+  });
+  demoStats.studies++;
+  const s3SeriesId = uuid();
+  await db.insert(series).values({
+    id: s3SeriesId, studyId: s3StudyId, seriesNumber: 1,
+    seriesDescription: '24-2 SITA-Standard', modality: 'VF', bodyPart: 'OS',
+    imageCount: 2, createdAt: '2024-10-08T15:30:00.000Z',
+  });
+  demoStats.series++;
+  const s3Img1 = await insertDemoImage({ seriesId: s3SeriesId, instanceNumber: 1, studyDate: '2024-10-08', sopInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008.1' });
+  const s3Img2 = await insertDemoImage({ seriesId: s3SeriesId, instanceNumber: 2, studyDate: '2024-10-08', sopInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008.2' });
+  await insertDemoPoint({ studyId: s3StudyId, imageId: s3Img1, key: 'md', type: 'probe', value: -6.8, unit: 'dB', capturedAt: '2024-10-08T15:30:00.000Z' });
+  await insertDemoPoint({ studyId: s3StudyId, imageId: s3Img1, key: 'psd', type: 'probe', value: 5.2, unit: 'dB', capturedAt: '2024-10-08T15:30:00.000Z' });
+  console.log('✅ Demo 配角 3「潘玉兰」：视野（MD -6.8dB / PSD 5.2dB）');
+  console.log(`✅ Demo 家族合计：患者 ${demoStats.patients}、检查 ${demoStats.studies}、序列 ${demoStats.series}、图像 ${demoStats.images}、帧 ${demoStats.frames}、测量 ${demoStats.points}、报告 ${demoStats.reports}`);
+
   // ── 8. Reports & Versions ───────────────────────────────────────────────────
 
   const reportStatuses = ['draft', 'pending_review', 'reviewed', 'published'] as const;
@@ -911,6 +1351,13 @@ async function seed() {
   console.log(`  Annotations:     ${sampleImages.slice(0, 5).length * 2}`);
   console.log(`  Comparisons:     3`);
   console.log(`  Settings:        10`);
+  console.log('═══════════════════════════════════════════════════');
+  console.log('\n  Demo Family (wayfinder #111):');
+  console.log('  ─────────────────────────────────────────────');
+  console.log(`  主角 周建国 (MRN20260001)  青光眼 · 5× OCT 随访 2024-01~2025-03 · RNFL 92→58μm · C/D 0.46→0.68 · 多帧${demoStats.frames}帧 · 报告已发布`);
+  console.log(`  配角 钱美玉 (MRN20260002)  眼底彩照 · 糖尿病视网膜病变`);
+  console.log(`  配角 冯志刚 (MRN20260003)  FFA 时序 6 帧 · 增殖期糖尿病视网膜病变`);
+  console.log(`  配角 潘玉兰 (MRN20260004)  视野 Humphrey 24-2 · MD -6.8dB / PSD 5.2dB`);
   console.log('═══════════════════════════════════════════════════\n');
 }
 

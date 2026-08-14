@@ -104,6 +104,26 @@ export const PRESET_MEASUREMENT_DEFINITIONS: PresetMeasurementDefinition[] = [
     modality: 'Fundus',
     description: '视盘总盘面积',
   },
+  {
+    key: 'md',
+    displayName: '视野平均偏差 MD',
+    type: 'other',
+    unit: 'dB',
+    trendDirection: 'down',
+    referenceRange: { min: -2 },
+    modality: 'VF',
+    description: 'Humphrey 视野平均偏差,低于 -2dB 提示弥漫性视野缺损',
+  },
+  {
+    key: 'psd',
+    displayName: '视野模式标准差 PSD',
+    type: 'other',
+    unit: 'dB',
+    trendDirection: 'up',
+    referenceRange: { max: 2 },
+    modality: 'VF',
+    description: '视野局部缺损程度,超过 2dB 提示局部视野缺损',
+  },
 ];
 
 /**
