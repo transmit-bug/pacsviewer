@@ -154,3 +154,47 @@
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
 }
+
+/* 骨架屏 shimmer: 底 --muted, 高光 --border 扫过 (token 化, GPU transform 不触发布局) */
+@keyframes shimmer-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: hsl(var(--muted));
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--border) / 0.45),
+    transparent
+  );
+  animation: shimmer-sweep 1.6s var(--ease-out) infinite;
+}
+
+/* 品牌加载页细加载条: teal 扫过 (加载屏专用) */
+@keyframes loading-bar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(220%);
+  }
+}
+
+.loading-bar {
+  animation: loading-bar 1.1s var(--ease-out) infinite;
+}

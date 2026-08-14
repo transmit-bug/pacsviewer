@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { Toaster } from '@/components/ui/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
@@ -29,14 +30,17 @@ function ThemeSync() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ErrorBoundary>
-        <TooltipProvider>
-          <ThemeSync />
-          <App />
-          <Toaster />
-        </TooltipProvider>
-      </ErrorBoundary>
-    </BrowserRouter>
+    {/* 尊重 prefers-reduced-motion: 用户关闭动效时 framer-motion 自动降级 */}
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <ErrorBoundary>
+          <TooltipProvider>
+            <ThemeSync />
+            <App />
+            <Toaster />
+          </TooltipProvider>
+        </ErrorBoundary>
+      </BrowserRouter>
+    </MotionConfig>
   </React.StrictMode>
 );
