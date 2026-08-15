@@ -27,9 +27,10 @@ import {
 } from '@cornerstonejs/tools';
 import { initCornerstone, getRenderingEngine, toCornerstoneImageId, RENDERING_ENGINE_ID, VIEWPORT_ID_PREFIX } from '@/lib/cornerstone/init';
 import { utilities as ToolUtilities } from '@cornerstonejs/tools';
-import { serializeAnnotations, deserializeAnnotations, scheduleAutoSave, cancelAutoSave } from '@/lib/cornerstone/annotation-sync';
+import { serializeAnnotations, deserializeAnnotations, scheduleAutoSave, cancelAutoSave, extractMeasurements } from '@/lib/cornerstone/annotation-sync';
 import { annotationApi, dicomwebApi, imageApi } from '@/services/api';
 import { useViewerStore } from '@/stores/viewerStore';
+import { useMeasurementStore } from '@/stores/measurementStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +78,39 @@ export function CornerstoneViewport({
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const [isFallback, setIsFallback] = useState(false);
-  const { activeTool, setDicomMetadata, currentFrame, setTotalFrames, totalFrames } = useViewerStore();
+  const { activeTool, setDicomMetadata, currentFrame, setTotalFrames, totalFrames, viewport: storeViewport } = useViewerStore();
+
+  // 实际栈长度 (真实多帧 DICOM 才有 >1; 元数据多帧的演示占位图栈为 1,
+  // 帧导航必须跳过以免越界触发错误面)
+  const stackLengthRef = useRef(0);
+
+  /** 将当前 element 的标注同步到 measurementStore (右面板 标注/测量 tab 数据源) */
+  const syncMeasurementsToStore = useCallback((element: HTMLDivElement | null, imageId?: string) => {
+    if (!element) return;
+    try {
+      const serialized = serializeAnnotations(element);
+      useMeasurementStore.getState().setAnnotations(serialized);
+      useMeasurementStore.getState().setMeasurements(extractMeasurements(serialized));
+      if (imageId) useMeasurementStore.getState().setCurrentImageId(imageId);
+    } catch (err) {
+      console.warn('[CornerstoneViewport] 同步测量到 store 失败:', err);
+    }
+  }, []);
+
+  /** 将 viewerStore 窗宽窗位应用到真实 Cornerstone 视口 (预设/滑杆/⌘K 驱动).
+   *  suppressEvents 避免写回循环; 显式 render 触发重绘。 */
+  const applyStoreVoi = useCallback((viewport: any) => {
+    if (!viewport?.setProperties) return;
+    const v = useViewerStore.getState().viewport;
+    const lower = v.windowLevel - v.windowWidth / 2;
+    const upper = v.windowLevel + v.windowWidth / 2;
+    try {
+      viewport.setProperties({ voiRange: { lower, upper } }, true);
+      viewport.render();
+    } catch (err) {
+      console.warn('[CornerstoneViewport] 应用 VOI 失败:', err);
+    }
+  }, []);
 
   // ─── Annotation sync (save / restore) state ───────────────────────────────
   // True while restoring annotations so render-triggered ANNOTATION_MODIFIED
@@ -109,6 +142,7 @@ export function CornerstoneViewport({
 
       restoringRef.current = true;
       const added = deserializeAnnotations(csImageId, serialized, element);
+      syncMeasurementsToStore(element, targetImageId);
       if (added > 0) {
         const renderingEngine = getRenderingEngine();
         const viewport = renderingEngine?.getViewport(viewportId) as any;
@@ -142,9 +176,9 @@ export function CornerstoneViewport({
   // Subscribe to Cornerstone annotation events once. Saves happen immediately
   // on completion/removal, debounced (1.5s) on modification.
   useEffect(() => {
-    const onCompleted = (evt: any) => handleAnnotationChange(evt, false);
-    const onModified = (evt: any) => handleAnnotationChange(evt, true);
-    const onRemoved = (evt: any) => handleAnnotationChange(evt, false);
+    const onCompleted = (evt: any) => { handleAnnotationChange(evt, false); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
+    const onModified = (evt: any) => { handleAnnotationChange(evt, true); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
+    const onRemoved = (evt: any) => { handleAnnotationChange(evt, false); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
 
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_MODIFIED, onModified);
@@ -268,34 +302,33 @@ export function CornerstoneViewport({
           const viewport = renderingEngine.getViewport(viewportId) as any;
 
           if (viewport) {
-            if (imageFormat === 'dicom') {
-              try {
-                const frameData = (await dicomwebApi.getFrames(imageId)) as any;
-                const nFrames = frameData?.numberOfFrames || 1;
-                if (nFrames > 1) {
-                  const base = toCornerstoneImageId(imageId, imageFormat);
-                  const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
-                  await viewport.setStack(imageIds);
-                  setTotalFrames(nFrames);
-                } else {
-                  await viewport.setStack([csImageId]);
-                  setTotalFrames(1);
-                }
-              } catch {
-                await viewport.setStack([csImageId]);
-                setTotalFrames(1);
-              }
-            } else {
-              await viewport.setStack([csImageId]);
-              setTotalFrames(1);
+            // 帧元数据探测 (全格式): 决定总帧数; 真实多帧 DICOM 构建 #frame=N 栈,
+            // 演示占位图 (元数据多帧) 保持单帧栈但 totalFrames 用元数据值。
+            let metaFrames = 1;
+            try {
+              const frameData = (await dicomwebApi.getFrames(imageId)) as any;
+              metaFrames = frameData?.numberOfFrames || 1;
+            } catch {
+              metaFrames = 1;
             }
+            setTotalFrames(metaFrames);
+
+            let stackIds: string[] = [csImageId];
+            if (imageFormat === 'dicom' && metaFrames > 1) {
+              const base = toCornerstoneImageId(imageId, imageFormat);
+              stackIds = Array.from({ length: metaFrames }, (_, i) => `${base}#frame=${i}`);
+            }
+            await viewport.setStack(stackIds);
+            stackLengthRef.current = stackIds.length;
             viewport.render();
+            applyStoreVoi(viewport);
           }
 
           // Track current image and restore saved annotations
           currentImageIdRef.current = imageId;
           currentCsImageIdRef.current = csImageId;
           void restoreAnnotations(imageId, csImageId);
+          syncMeasurementsToStore(element, imageId);
 
           setIsLoading(false);
         }
@@ -337,33 +370,31 @@ export function CornerstoneViewport({
         setIsLoading(true);
         const csImageId = toCornerstoneImageId(imageId, imageFormat);
 
-        if (imageFormat === 'dicom') {
-          try {
-            const frameData = (await dicomwebApi.getFrames(imageId)) as any;
-            const nFrames = frameData?.numberOfFrames || 1;
-            if (nFrames > 1) {
-              const base = toCornerstoneImageId(imageId, imageFormat);
-              const imageIds = Array.from({ length: nFrames }, (_, i) => `${base}#frame=${i}`);
-              await viewport.setStack(imageIds);
-              setTotalFrames(nFrames);
-            } else {
-              await viewport.setStack([csImageId]);
-              setTotalFrames(1);
-            }
-          } catch {
-            await viewport.setStack([csImageId]);
-            setTotalFrames(1);
-          }
-        } else {
-          await viewport.setStack([csImageId]);
-          setTotalFrames(1);
+        // 帧元数据探测 (全格式): 同 setupViewport, 元数据多帧驱动 Cine UI。
+        let metaFrames = 1;
+        try {
+          const frameData = (await dicomwebApi.getFrames(imageId)) as any;
+          metaFrames = frameData?.numberOfFrames || 1;
+        } catch {
+          metaFrames = 1;
         }
+        setTotalFrames(metaFrames);
+
+        let stackIds: string[] = [csImageId];
+        if (imageFormat === 'dicom' && metaFrames > 1) {
+          const base = toCornerstoneImageId(imageId, imageFormat);
+          stackIds = Array.from({ length: metaFrames }, (_, i) => `${base}#frame=${i}`);
+        }
+        await viewport.setStack(stackIds);
+        stackLengthRef.current = stackIds.length;
         viewport.render();
+        applyStoreVoi(viewport);
 
         // Track current image and restore saved annotations
         currentImageIdRef.current = imageId;
         currentCsImageIdRef.current = csImageId;
         void restoreAnnotations(imageId, csImageId);
+        syncMeasurementsToStore(elementRef.current, imageId);
 
         // Extract DICOM metadata
         try {
@@ -401,6 +432,33 @@ export function CornerstoneViewport({
     loadNewImage();
   }, [imageId, viewportId, imageFormat, setDicomMetadata, restoreAnnotations, retryNonce]);
 
+  // 真实 Cornerstone VOI: viewerStore 窗宽窗位 (预设/滑杆/⌘K) → viewport
+  // suppressEvents=true 避免写回循环 (VOI_MODIFIED → store → 本 effect);
+  // 显式 render() 保证重绘 (setProperties 不总是触发重绘)。
+  useEffect(() => {
+    const renderingEngine = getRenderingEngine();
+    const viewport = renderingEngine?.getViewport(viewportId) as any;
+    if (viewport?.setProperties) {
+      applyStoreVoi(viewport);
+    }
+  }, [storeViewport.windowWidth, storeViewport.windowLevel, viewportId, applyStoreVoi]);
+
+  // 用户拖拽 WindowLevel 工具 → 回写 store (HUD 角标实时联动)
+  useEffect(() => {
+    const onVoi = (evt: any) => {
+      const range = evt?.detail?.range;
+      if (!range || range.lower == null || range.upper == null) return;
+      const ww = Math.abs(range.upper - range.lower);
+      const wl = (range.upper + range.lower) / 2;
+      const cur = useViewerStore.getState().viewport;
+      if (Math.abs(ww - cur.windowWidth) > 0.5 || Math.abs(wl - cur.windowLevel) > 0.5) {
+        useViewerStore.getState().setViewport({ windowWidth: ww, windowLevel: wl });
+      }
+    };
+    eventTarget.addEventListener(Enums.Events.VOI_MODIFIED, onVoi);
+    return () => eventTarget.removeEventListener(Enums.Events.VOI_MODIFIED, onVoi);
+  }, []);
+
   // Update active tool
   useEffect(() => {
     const toolGroup = ToolGroupManager.getToolGroup(TOOL_GROUP_ID);
@@ -420,7 +478,7 @@ export function CornerstoneViewport({
 
   // Navigate to frame (CinePlayer)
   useEffect(() => {
-    if (totalFrames <= 1) return;
+    if (totalFrames <= 1 || stackLengthRef.current <= 1) return;
 
     const renderingEngine = getRenderingEngine();
     if (!renderingEngine) return;

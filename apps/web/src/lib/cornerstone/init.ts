@@ -28,6 +28,7 @@ import {
   StackScrollTool,
   MagnifyTool,
   CrosshairsTool,
+  annotation as toolsAnnotation,
 } from '@cornerstonejs/tools';
 import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
 import { useAuthStore } from '@/stores/authStore';
@@ -76,6 +77,26 @@ export async function initCornerstone(): Promise<void> {
   // Reuse existing rendering engine if present (prevents WebGL context leak on HMR)
   const existing = csGetRenderingEngine(RENDERING_ENGINE_ID);
   renderingEngine = existing ?? new RenderingEngine(RENDERING_ENGINE_ID);
+
+  // 标注深色视觉 (决议 #122-5 / 调研 #120 §5): 默认 teal + 阴影描边保证
+  // 亮/暗图上可读 (GSPS OUTLINED 语义的 CS 对应物), 选中/悬停琥珀高亮。
+  try {
+    toolsAnnotation.config.style.setDefaultToolStyles({
+      global: {
+        color: 'rgb(45, 212, 191)',        // teal #2DD4BF
+        colorHighlighted: 'rgb(245, 158, 11)', // amber 悬停
+        colorSelected: 'rgb(245, 158, 11)',    // amber 选中
+        colorLocked: 'rgb(209, 193, 90)',
+        lineWidth: '2',
+        shadow: true,
+        textBoxColor: 'rgb(45, 212, 191)',
+        textBoxColorHighlighted: 'rgb(245, 158, 11)',
+        textBoxColorSelected: 'rgb(245, 158, 11)',
+      },
+    });
+  } catch (err) {
+    console.warn('[Cornerstone] 设置标注默认样式失败:', err);
+  }
 
   // Register tools
   addTool(WindowLevelTool);

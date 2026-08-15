@@ -1,70 +1,51 @@
+/**
+ * ViewerPage — 查看器入口 (wayfinder #126)。
+ *
+ * 数据加载 (检查/序列/图像) 保留原逻辑, 渲染层切换到电影级工作台
+ * CinematicWorkspace (视口中心/HUD/浮动底条工具条/⌘K/Cine/全屏)。
+ * 加载期间显示近黑骨架。
+ */
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { studyApi, imageApi, annotationApi } from '@/services/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ImageViewer } from '@/components/viewer/ImageViewer';
-import { ViewportToolbar } from '@/components/viewer/Toolbar';
-import { ImageToolsToolbar } from '@/components/viewer/AnnotationToolbar';
-import { CinePlayer } from '@/components/viewer/CinePlayer';
-import { ImageList } from '@/components/viewer/ImageList';
-import { WindowLevel } from '@/components/viewer/WindowLevel';
-import { DicomTagViewer } from '@/components/viewer/DicomTagViewer';
-import { SeriesNavigator } from '@/components/viewer/SeriesNavigator';
-import { KeyboardShortcutsHelp } from '@/components/viewer/KeyboardShortcutsHelp';
-import { Badge } from '@/components/ui/badge';
+import { studyApi, imageApi } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useViewerStore } from '@/stores/viewerStore';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { ArrowLeft, FileText, Tag, Keyboard } from 'lucide-react';
-
-interface Series {
-  id: string;
-  modality: string;
-  seriesNumber: number;
-}
+import { CinematicWorkspace } from '@/components/viewer/workspace/CinematicWorkspace';
+import type { WsSeries, WsImage } from '@/components/viewer/workspace/WorkspacePanels';
 
 interface Study {
   id: string;
   patientId: string;
-  studyDate: string;
-  status: string;
+  studyDate?: string;
+  description?: string;
+  modality?: string;
+  status?: string;
   patient?: {
     name: string;
-    mrn: string;
+    gender?: string;
+    birthDate?: string;
+    mrn?: string;
   };
-  series?: Series[];
-}
-
-interface Image {
-  id: string;
-  filePath: string;
-  thumbnailPath?: string;
-  width: number;
-  height: number;
-  format: string;
-  instanceNumber: number;
+  physician?: { displayName?: string };
 }
 
 export function ViewerPage() {
   const { studyId } = useParams<{ studyId: string }>();
   const { t } = useTranslation();
   const [study, setStudy] = useState<Study | null>(null);
-  const [images, setImages] = useState<Image[]>([]);
+  const [series, setSeries] = useState<WsSeries[]>([]);
+  const [images, setImages] = useState<WsImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSeriesId, setCurrentSeriesId] = useState<string | undefined>();
-  const [showDicomTags, setShowDicomTags] = useState(false);
-  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  
+
   const { currentImageId, setCurrentImage } = useViewerStore();
-  const [studyAnnotations, setStudyAnnotations] = useState<any[]>([]);
 
   useEffect(() => {
     if (studyId) {
       loadStudy(studyId);
+      loadSeries(studyId);
       loadImages(studyId);
-      loadStudyAnnotations(studyId);
     }
   }, [studyId]);
 
@@ -77,23 +58,49 @@ export function ViewerPage() {
     }
   };
 
+  const loadSeries = async (id: string) => {
+    try {
+      const response = await studyApi.getSeries(id);
+      const list = (response.data || []).map((s: any) => ({
+        id: s.id,
+        seriesNumber: s.seriesNumber || 0,
+        modality: s.modality || 'N/A',
+        description: s.description,
+        imageCount: s.imageCount ?? 0,
+        bodyPart: s.bodyPart,
+      }));
+      list.sort((a: WsSeries, b: WsSeries) => a.seriesNumber - b.seriesNumber);
+      setSeries(list);
+      if (list.length > 0) setCurrentSeriesId((prev) => prev ?? list[0].id);
+    } catch (error) {
+      console.error('Failed to load series:', error);
+    }
+  };
+
   const loadImages = async (id: string, seriesId?: string) => {
     try {
       let targetSeriesId = seriesId;
-      
+
       if (!targetSeriesId) {
         const seriesResponse = await studyApi.getSeries(id);
-        const series = seriesResponse.data || [];
-        if (series.length > 0) {
-          targetSeriesId = series[0].id;
+        const list = seriesResponse.data || [];
+        if (list.length > 0) {
+          targetSeriesId = list[0].id;
           setCurrentSeriesId(targetSeriesId);
         }
       }
 
       if (targetSeriesId) {
         const imagesResponse = await imageApi.search({ seriesId: targetSeriesId });
-        const imageList = imagesResponse.data?.items || [];
-        setImages(imageList);
+        const imageList: any[] = imagesResponse.data?.items || [];
+        setImages(
+          imageList.map((img) => ({
+            id: img.id,
+            instanceNumber: img.instanceNumber ?? 1,
+            format: img.format ?? 'png',
+            numberOfFrames: img.numberOfFrames ?? null,
+          }))
+        );
         if (imageList.length > 0) {
           setCurrentImage(imageList[0].id);
         }
@@ -105,15 +112,6 @@ export function ViewerPage() {
     }
   };
 
-  const loadStudyAnnotations = async (id: string) => {
-    try {
-      const response = await annotationApi.getByStudy(id);
-      setStudyAnnotations(response.data || []);
-    } catch (error) {
-      console.error('Failed to load study annotations:', error);
-    }
-  };
-
   const handleSeriesSelect = (seriesId: string) => {
     setCurrentSeriesId(seriesId);
     if (studyId) {
@@ -121,260 +119,42 @@ export function ViewerPage() {
     }
   };
 
-  const handleNextImage = () => {
-    if (!currentImageId || images.length === 0) return;
-    const currentIndex = images.findIndex(i => i.id === currentImageId);
-    if (currentIndex < images.length - 1) {
-      setCurrentImage(images[currentIndex + 1].id);
-    }
-  };
-
-  const handlePrevImage = () => {
-    if (!currentImageId || images.length === 0) return;
-    const currentIndex = images.findIndex(i => i.id === currentImageId);
-    if (currentIndex > 0) {
-      setCurrentImage(images[currentIndex - 1].id);
-    }
-  };
-
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onNextImage: handleNextImage,
-    onPrevImage: handlePrevImage,
-    onToggleHelp: () => setShowShortcutsHelp(prev => !prev),
-    onEscape: () => {
-      setShowDicomTags(false);
-      setShowShortcutsHelp(false);
-    },
-  });
-
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-8rem)] space-x-4" role="status" aria-label={t('viewer.header.loading')}>
-        {/* 主查看区骨架 */}
-        <div className="flex flex-1 flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Skeleton className="h-9 w-9 rounded-md" />
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-64" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-            </div>
-            <Skeleton className="h-8 w-32" />
-          </div>
-          <Skeleton className="h-10 w-full rounded-md" />
-          <div className="flex flex-1 gap-4">
-            <Skeleton className="w-16 shrink-0 rounded-md" />
-            <Skeleton className="flex-1 rounded-md" />
-          </div>
-          <Skeleton className="h-8 w-full rounded-md" />
+      <div className="fixed inset-0 z-40 flex flex-col bg-background text-foreground" role="status" aria-label={t('viewer.header.loading')}>
+        <div className="flex h-10 items-center gap-2 border-b border-border bg-background/95 px-3">
+          <Skeleton className="h-7 w-24 rounded-sm" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="ml-auto h-7 w-32 rounded-sm" />
         </div>
-
-        {/* 侧栏骨架 */}
-        <div className="flex w-80 flex-col space-y-4">
-          <Skeleton className="h-36 w-full rounded-md" />
-          <Skeleton className="h-28 w-full rounded-md" />
-          <Skeleton className="h-28 w-full rounded-md" />
-          <Skeleton className="flex-1 rounded-md" />
-          <Skeleton className="h-24 w-full rounded-md" />
+        <div className="flex min-h-0 flex-1">
+          <Skeleton className="h-full w-64 shrink-0 rounded-none border-r border-border" />
+          <div className="ws-viewport-bg relative flex-1">
+            <div className="skeleton-shimmer absolute inset-6 rounded-lg" />
+          </div>
+          <Skeleton className="h-full w-72 shrink-0 rounded-none border-l border-border" />
         </div>
       </div>
     );
   }
 
+  if (!study || !currentImageId) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-background text-muted-foreground">
+        <p className="text-sm">{t('viewer.header.noImages')}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-[calc(100vh-8rem)] space-x-4">
-      {/* Main viewer */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={`/patients/${study?.patientId}`}>
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">
-                {study?.patient?.name || t('viewer.header.patient')} - {study?.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {study?.studyDate} | {study?.patient?.mrn}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDicomTags(!showDicomTags)}
-            >
-              <Tag className="mr-2 h-4 w-4" />
-              {t('viewer.header.dicomTags')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowShortcutsHelp(true)}
-              title={t('viewer.header.keyboardShortcuts')}
-            >
-              <Keyboard className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* 视图工具栏 */}
-        <Card className="mb-4" data-tour="viewer-toolbar">
-          <CardContent className="p-2">
-            <ViewportToolbar />
-          </CardContent>
-        </Card>
-
-        {/* 图像工具栏 */}
-        <div className="flex gap-4 flex-1">
-          <Card className="w-16 shrink-0" data-tour="measurement-tools">
-            <CardContent className="p-1">
-              <ImageToolsToolbar studyId={studyId} />
-            </CardContent>
-          </Card>
-
-          {/* Image canvas */}
-          <Card className="flex-1">
-            <CardContent className="p-0 h-full">
-              <ImageViewer imageId={currentImageId || ''} imageFormat={images.find(i => i.id === currentImageId)?.format} />
-            </CardContent>
-          </Card>
-
-          {/* Cine Player (multi-frame navigation) */}
-          <CinePlayer className="mt-2" />
-        </div>
-
-        {/* Image info */}
-        <Card className="mt-4">
-          <CardContent className="p-2">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                {currentImageId
-                  ? `${images.find(i => i.id === currentImageId)?.width || 0} x ${images.find(i => i.id === currentImageId)?.height || 0}`
-                  : '-'}
-              </span>
-              <span>
-                {currentImageId
-                  ? `${images.findIndex(i => i.id === currentImageId) + 1} / ${images.length}`
-                  : '-'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sidebar */}
-      <div className="w-80 flex flex-col space-y-4">
-        {/* Series Navigator */}
-        <SeriesNavigator
-          studyId={studyId || ''}
-          currentSeriesId={currentSeriesId}
-          onSeriesSelect={handleSeriesSelect}
-        />
-
-        {/* Study info */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t('viewer.header.studyInfo')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {study && (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('viewer.header.studyType')}</span>
-                  <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ').toUpperCase() || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('viewer.header.studyDate')}</span>
-                  <span>{study.studyDate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('viewer.header.modality')}</span>
-                  <span>{study.series?.map(s => s.modality).filter(Boolean).join(', ') || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('viewer.header.status')}</span>
-                  <Badge variant={study.status === 'reported' ? 'default' : study.status === 'diagnosed' ? 'secondary' : 'outline'}>
-                    {study.status === 'reported' ? t('viewer.header.statusReported') :
-                     study.status === 'diagnosed' ? t('viewer.header.statusDiagnosed') : t('viewer.header.statusPending')}
-                  </Badge>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Study-level annotations */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5" />
-              {t('viewer.header.studyLevelAnnotations')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {studyAnnotations.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t('viewer.header.noAnnotations')}</p>
-            ) : (
-              <div className="space-y-2">
-                {studyAnnotations.map((ann) => (
-                  <div key={ann.id} className="rounded border p-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{ann.label || ann.type}</span>
-                      <span className="text-muted-foreground">{ann.user?.displayName || ''}</span>
-                    </div>
-                    {ann.notes && (
-                      <p className="text-muted-foreground mt-1">{ann.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Image list */}
-        <Card className="flex-1 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t('viewer.header.imageList')}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 overflow-y-auto max-h-[400px]">
-            <ImageList images={images} />
-          </CardContent>
-        </Card>
-
-        {/* Window/Level */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t('viewer.windowLevel')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <WindowLevel />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* DICOM Tags Panel */}
-      {showDicomTags && currentImageId && (
-        <div className="w-96 border-l">
-          <DicomTagViewer
-            imageId={currentImageId}
-            onClose={() => setShowDicomTags(false)}
-          />
-        </div>
-      )}
-
-      {/* Keyboard Shortcuts Help */}
-      <KeyboardShortcutsHelp
-        open={showShortcutsHelp}
-        onOpenChange={setShowShortcutsHelp}
-      />
-    </div>
+    <CinematicWorkspace
+      study={study}
+      series={series}
+      images={images}
+      currentImageId={currentImageId}
+      activeSeriesId={currentSeriesId}
+      onSeriesSelect={handleSeriesSelect}
+      onImageSelect={setCurrentImage}
+    />
   );
 }
