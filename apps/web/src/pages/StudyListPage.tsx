@@ -18,13 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, Eye, FileText, Trash2 } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, Eye, FileText, Trash2, Upload } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { StudyUploadDialog } from '@/components/upload/StudyUploadDialog';
 
 interface Study {
   id: string;
@@ -66,6 +67,10 @@ export function StudyListPage() {
   const [studyToDelete, setStudyToDelete] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const pageSize = 10;
+
+  // Upload (wayfinder #131): append images to an existing study
+  const [uploadStudy, setUploadStudy] = useState<{ id: string; patientId: string; modality?: string } | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
     loadStudies();
@@ -109,6 +114,15 @@ export function StudyListPage() {
   const handleDeleteClick = (id: string) => {
     setStudyToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  const openUpload = (study: Study) => {
+    setUploadStudy({
+      id: study.id,
+      patientId: study.patientId,
+      modality: study.modality,
+    });
+    setUploadOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -270,6 +284,10 @@ export function StudyListPage() {
                               {t('study.view')}
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openUpload(study)}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            追加图像
+                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link to={`/reports/${study.id}`}>
                               <FileText className="mr-2 h-4 w-4" />
@@ -338,6 +356,14 @@ export function StudyListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Append images dialog */}
+      <StudyUploadDialog
+        study={uploadStudy}
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onUploaded={loadStudies}
+      />
     </div>
   );
 }

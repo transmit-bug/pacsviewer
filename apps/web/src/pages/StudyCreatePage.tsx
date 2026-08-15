@@ -206,6 +206,7 @@ export function StudyCreatePage() {
               <ImageUpload
                 studyId={studyId}
                 patientId={patientId}
+                modality={formData.modality}
                 onUploadComplete={handleUploadComplete}
               />
             </CardContent>

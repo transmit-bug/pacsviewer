@@ -18,7 +18,12 @@ interface UploadFile {
 
 interface ImageUploadProps {
   studyId?: string;
+  seriesId?: string;
   patientId?: string;
+  /** Modality sent to the server when a new Series must be auto-created. */
+  modality?: string;
+  /** Force a brand-new Series for this batch (first file only). */
+  createSeries?: boolean;
   onUploadComplete?: (imageIds: string[]) => void;
   maxFiles?: number;
   className?: string;
@@ -26,7 +31,10 @@ interface ImageUploadProps {
 
 export function ImageUpload({
   studyId,
+  seriesId,
   patientId,
+  modality,
+  createSeries,
   onUploadComplete,
   maxFiles = 20,
   className,
@@ -105,7 +113,7 @@ export function ImageUpload({
   }, []);
 
   const addFiles = (newFiles: File[]) => {
-    const allowedExtensions = ['.dcm', '.dicom', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
+    const allowedExtensions = ['.dcm', '.dicom', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'];
     
     // Check for DICOMDIR
     const dicomdir = newFiles.find(f => f.name.toUpperCase() === 'DICOMDIR');
@@ -123,9 +131,7 @@ export function ImageUpload({
       const isAllowedType = [
         'image/jpeg',
         'image/png',
-        'image/gif',
         'image/bmp',
-        'image/webp',
         'image/tiff',
         'application/dicom',
         'application/octet-stream',
@@ -155,11 +161,18 @@ export function ImageUpload({
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const uploadFile = async (uploadFile: UploadFile): Promise<string | null> => {
+  const uploadFile = async (uploadFile: UploadFile, isFirstInBatch = false): Promise<string | null> => {
     const formData = new FormData();
     formData.append('file', uploadFile.file);
+    // seriesId wins when appending to an existing series; otherwise studyId
+    // lets the server auto-create a Series under the study. createSeries is
+    // sent only for the first file of a batch so a multi-file upload lands in
+    // ONE new series (subsequent files append to it).
+    if (seriesId) formData.append('seriesId', seriesId);
     if (studyId) formData.append('studyId', studyId);
     if (patientId) formData.append('patientId', patientId);
+    if (modality) formData.append('modality', modality);
+    if (createSeries && isFirstInBatch) formData.append('createSeries', 'true');
 
     try {
       setFiles((prev) =>
@@ -168,7 +181,10 @@ export function ImageUpload({
         )
       );
 
-      const response = await imageApi.upload(formData);
+      const isDicom = /\.(dcm|dicom)$/i.test(uploadFile.file.name);
+      const response = isDicom
+        ? await imageApi.uploadDicom(formData)
+        : await imageApi.upload(formData);
 
       setFiles((prev) =>
         prev.map((f) =>
@@ -176,7 +192,8 @@ export function ImageUpload({
         )
       );
 
-      return response.data?.id || null;
+      // DICOM upload returns { imageId, ... }; image upload returns the image row.
+      return response.data?.imageId ?? response.data?.id ?? null;
     } catch (error) {
       const message = error instanceof Error ? error.message : t('upload.uploadFailed');
       setFiles((prev) =>
@@ -208,7 +225,12 @@ export function ImageUpload({
     const pendingFiles = files.filter((f) => f.status === 'pending');
     if (pendingFiles.length === 0) return;
 
-    const results = await Promise.all(pendingFiles.map(uploadFile));
+    // Sequential uploads: the first file (with createSeries) creates the new
+    // series; the rest append to it — a multi-file batch lands in ONE series.
+    const results: (string | null)[] = [];
+    for (let i = 0; i < pendingFiles.length; i++) {
+      results.push(await uploadFile(pendingFiles[i], i === 0));
+    }
     const successIds = results.filter((id): id is string => id !== null);
 
     if (successIds.length > 0) {
@@ -294,7 +316,7 @@ export function ImageUpload({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".dcm,.dicom,.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.tif"
+          accept=".dcm,.dicom,.jpg,.jpeg,.png,.bmp,.tiff,.tif"
           onChange={handleFileSelect}
           className="hidden"
         />
