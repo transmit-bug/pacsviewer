@@ -22,10 +22,9 @@ import type { ThicknessType } from '@pacsviewer/image-processing/browser';
 import './workspace/workspace.css'; // 继承工作台动效/HUD 视觉层 (#126)
 import { Layers, Grid3X3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useViewerStore } from '@/stores/viewerStore';
-import { computeScaleBar } from '@/lib/cornerstone/scale-bar';
+import { ScaleBar } from '@/components/viewer/ScaleBar';
 import { MAIN_VIEWPORT_ID } from '@/lib/cornerstone/viewportRegistry';
-import { useMemo, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 interface OctViewerProps {
   imageId: string;
@@ -34,7 +33,6 @@ interface OctViewerProps {
 }
 
 export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
-  const { dicomMetadata, viewport } = useViewerStore();
   const {
     currentFrame,
     totalFrames,
@@ -65,17 +63,15 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
     }
   }, [showThicknessMap, thicknessData, isGenerating, generateThicknessMap]);
 
-  // 校准比例尺: 图像有真实像素间距时按世界坐标测量 (随缩放更新); 无则隐藏
-  const scaleBar = useMemo(() => {
-    if (!dicomMetadata?.pixelSpacing) return null;
-    return computeScaleBar(MAIN_VIEWPORT_ID);
-  }, [dicomMetadata, viewport.zoom]);
-
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       {/* Main B-scan viewport (近黑视口 + HUD 帧角标, #126 令牌化) */}
       <div className="ws-viewport-bg relative flex-1 overflow-hidden rounded-md border border-border">
         <CornerstoneViewport imageId={imageId} imageFormat={imageFormat} />
+        {/* 校准比例尺 (左下角玻璃 chip, 与帧角标分离; 未校准回退 5mm) */}
+        <div className="glass-surface pointer-events-none absolute bottom-3 left-3 z-20 flex items-center rounded-md border border-white/10 px-2.5 py-1.5 shadow-lg">
+          <ScaleBar viewportId={MAIN_VIEWPORT_ID} />
+        </div>
         {totalFrames > 1 && (
           <div className="glass-surface pointer-events-none absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-md border border-white/10 px-2 py-1 shadow-lg">
             <span className="hud-numeric ws-hud-text text-[11px] text-white/90">
@@ -87,21 +83,6 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
                 <span className="ws-hud-text hud-numeric text-[10px] text-white/70">
                   {(sliceLocations[currentFrame] ?? 0).toFixed(2)} mm
                 </span>
-              </>
-            )}
-            {scaleBar && (
-              <>
-                <span className="h-3 w-px bg-white/15" />
-                <div className="flex flex-col items-center">
-                  <div className="flex items-end">
-                    <div className="h-1.5 w-px bg-white/80" />
-                    <div className="h-px bg-white/80" style={{ width: scaleBar.px }} />
-                    <div className="h-1.5 w-px bg-white/80" />
-                  </div>
-                  <span className="ws-hud-text hud-numeric mt-0.5 text-[9px] text-white/70">
-                    {scaleBar.mm} mm
-                  </span>
-                </div>
               </>
             )}
           </div>

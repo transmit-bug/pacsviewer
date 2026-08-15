@@ -10,9 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useWorkspaceStore, matchPreset } from '@/stores/workspaceStore';
-import { computeScaleBar } from '@/lib/cornerstone/scale-bar';
+import { ScaleBar } from '@/components/viewer/ScaleBar';
 import { Command as CommandIcon, Minimize, Maximize } from 'lucide-react';
-import { useMemo } from 'react';
 
 export interface HudModel {
   patientName: string;
@@ -40,18 +39,11 @@ interface WorkspaceHudProps {
 
 export function WorkspaceHud({ model, hasFrames, frameCount, frameSliceLocation, viewportId, onOpenPalette }: WorkspaceHudProps) {
   const { t } = useTranslation();
-  const { viewport, currentFrame, dicomMetadata } = useViewerStore();
+  const { viewport, currentFrame } = useViewerStore();
   const { isFullscreen } = useWorkspaceStore();
 
   const preset = matchPreset(viewport.windowWidth, viewport.windowLevel);
   const zoomPct = Math.round(viewport.zoom * 100);
-
-  // 校准比例尺: 图像有真实像素间距时按世界坐标测量 (随缩放更新);
-  // 无像素间距 (未校准) 回退 display-relative 固定 5mm (HUD 惯例)。
-  const scaleBar = useMemo(() => {
-    if (!viewportId || !dicomMetadata?.pixelSpacing) return null;
-    return computeScaleBar(viewportId);
-  }, [viewportId, dicomMetadata, viewport.zoom]);
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
@@ -129,19 +121,7 @@ export function WorkspaceHud({ model, hasFrames, frameCount, frameSliceLocation,
         )}
         {/* 比例尺: 有像素间距时真实校准 (worldToCanvas 测量, 随缩放变化);
          * 无间距 (未校准图) 回退固定 5mm display-relative (HUD 惯例) */}
-        <div className="flex flex-col items-center">
-          <div className="flex items-end">
-            <div className="h-1.5 w-px bg-white/80" />
-            <div
-              className="h-px w-12 bg-white/80"
-              style={scaleBar ? { width: scaleBar.px } : undefined}
-            />
-            <div className="h-1.5 w-px bg-white/80" />
-          </div>
-          <span className="ws-hud-text hud-numeric mt-0.5 text-[9px] text-white/70">
-            {scaleBar ? `${scaleBar.mm} mm` : '5 mm'}
-          </span>
-        </div>
+        <ScaleBar viewportId={viewportId} />
         {hasFrames && frameCount > 1 && frameSliceLocation !== undefined && (
           <>
             <span className="h-3 w-px bg-white/15" />

@@ -12,7 +12,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Enums, eventTarget } from '@cornerstonejs/core';
 import { annotation, utilities as ToolUtilities } from '@cornerstonejs/tools';
 import { Badge } from '@/components/ui/badge';
 import { CornerstoneViewport } from '@/components/viewer/CornerstoneViewport';
@@ -103,6 +102,8 @@ export function CinematicWorkspace({
   const lastWheel = useRef(0);
 
   const activeSeries = series.find((s) => s.id === activeSeriesId) ?? series[0];
+  /** OCT 序列才显示「OCT 工作台」入口 (专用查看器按模态门控) */
+  const isOctSeries = (activeSeries?.modality || '').toUpperCase().includes('OCT');
   const isMultiframe = frames.length > 1;
   const currentImage = images.find((i) => i.id === currentImageId);
   const currentFrameSlice =
@@ -176,20 +177,9 @@ export function CinematicWorkspace({
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, [setIsFullscreen]);
 
-  /* ─── 相机缩放 → HUD (CAMERA_MODIFIED) ─── */
-  useEffect(() => {
-    const onCamera = (evt: any) => {
-      const scale = evt.detail?.camera?.scale;
-      if (typeof scale === 'number') {
-        const cur = useViewerStore.getState().viewport.zoom;
-        if (Math.abs(scale - cur) > 0.005) {
-          useViewerStore.getState().setViewport({ zoom: scale });
-        }
-      }
-    };
-    eventTarget.addEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
-    return () => eventTarget.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
-  }, []);
+  /* ─── 相机缩放 → HUD (CAMERA_MODIFIED) ───
+   * 监听已下沉到 CornerstoneViewport (视口所有者, 覆盖工作台 + OCT 工作台),
+   * 此处不再重复监听 (单写者, 避免双写)。 */
 
   /* ─── 帧/图像步进 ─── */
   const stepForward = useCallback(() => {
@@ -546,7 +536,7 @@ export function CinematicWorkspace({
           {t('viewer.workspace.productionBadge')}
         </Badge>
         <div className="ml-auto flex items-center gap-1">
-          {currentImageId && (
+          {currentImageId && isOctSeries && (
             <Link
               to={`/viewer/${study.id}/oct/${currentImageId}`}
               className="ws-tool-btn flex h-7 items-center gap-1.5 rounded-sm border border-border bg-muted/40 px-2 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
