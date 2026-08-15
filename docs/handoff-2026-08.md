@@ -1,53 +1,83 @@
-# Handoff — PACS Viewer 演示级打磨(wayfinder 地图推进)
+# Handoff — PACS Viewer 演示级打磨(wayfinder #119/#104 全闭环)
 
 > 交接时间:2026-08 · 仓库:`/Users/pony/codehub/bun/pacsviewer`(transmit-bug/pacsviewer)
-> 上一会话完成了:**两张 wayfinder 地图的全部决策票(grilling/research)已闭合,决策层清零**。剩余工作全是实施型任务(AFK),按用户指示"不急着实现"。
+> 本会话完成了:**两张 wayfinder 地图的全部 24 张票闭合(决策→实施→验证),产品达到"演示级"状态,可现场走全流程演示**。
 
 ## 1. 当前状态(事实)
 
-- **分支**: 当前 checkout 在 `research/cinematic-viewer-design`(干净)。master 已被并发会话推进,含 #110 相关修复(commit `c524e6c` dicomweb 双挂载+dev fallback、`ef58995` 401 刷新竞态+时间戳、`4b717bb` CRUD JSON 解析)。
-- **并发会话**: 仓库内有其他 pi 会话活跃(往 master 提交修复)。操作前先 `git fetch` + 核对,勿覆盖。
-- **调研文档(只读产物,勿改)**: `research/export-path.md`(#128, 分支 `research/export-path`, commit `b6a0ddd`)、`research/cinematic-viewer-design.md`(#120, 分支 `research/cinematic-viewer-design`, commit `2a7ccfd`)。
+- **master = `af9c7a7`**(干净,仅 master 分支;本地无多余 worktree)
+- **服务端测试 103 全过**,每票 typecheck/build 验证;验证期总报告:78 项、74 通过 + 4 复查通过
+- **已关闭全部 24 张票**:地图 #119(演示级打磨,15 张:#108/#109/#120/#121/#122/#123/#124/#125/#126/#127/#128/#129/#130/#131/#133/#134 + #111 + #132)→ **CLOSED**;地图 #104(编辑套件)→ **CLOSED**;验证票 #113-#117 → **CLOSED**
+- **演示现场已跑通**:后端 `:3000`、前端 `:5173` 在 master 上运行(DEV_FALLBACK 资产在 `apps/server/data/images/`,gitignored,勿删)
 
-## 2. 地图与票据(全部决策已定)
+## 2. 产物清单(实现均已合入 master,勿重复实现)
 
-| 地图 | 状态 | 说明 |
+| 产物 | 位置 | 票 |
 |---|---|---|
-| [#119 演示级产品打磨](https://github.com/transmit-bug/pacsviewer/issues/119) | OPEN | 15 张子票;3 张 research/grilling 已闭(#120/#121/#122/#128/#129),剩实施票 |
-| [#104 图像编辑套件](https://github.com/transmit-bug/pacsviewer/issues/104) | OPEN | 13 张子票;决策票(#108/#109 及 research #105-107)全闭,剩任务票 |
-| [#85 随访对比](https://github.com/transmit-bug/pacsviewer/issues/85) | CLOSED 7/7 | 已实现;雾区已敲定为"通用折线+5% 阈值" |
+| 设计令牌(近黑三层/teal 173°/玻璃面/锐圆角) | `apps/web/src/index.css` + `tailwind.config` | #124 |
+| 品牌加载页/路由过渡/骨架屏/数字动效 | `components/brand/*`、`components/transition/*`、`components/ui/animated-number.tsx` | #134 |
+| 明瞳登录页 + 仪表盘(HUD 卡/环形图/14 天趋势/sparkline) | `pages/LoginPage.tsx`、`pages/DashboardPage.tsx` | #125 |
+| **查看器电影级工作台**(视口中心/双侧玻璃栏/HUD/浮动底条/⌘K 预览/24 帧 Cine/全屏) | `components/viewer/workspace/*`(`CinematicWorkspace.tsx` 为编排层) | #126 |
+| 查看器错误面+重试/DEV_FALLBACK 打标/多帧鉴权修复 | `components/viewer/CornerstoneViewport.tsx`、`server/routes/images.ts` | #110 |
+| 编辑套件接线(图层 A+B+C/9 滤镜/测量展示/⌘E) | `components/editor/*`(`LayerManager`/`ImageFilters`/`FilterLayer`/`AiResultOverlay`/`EditorPanel`) | #112 |
+| 撤销/重做(动作级快照 50 步/CS 同步/⌘Z·⌘⇧Z·工具图标) | `stores/historyStore.ts`、`lib/cornerstone/history-apply.ts` | #132 |
+| 演示模式(一键登录/全局标识/7 步走查引导) | `server/routes/auth.ts` demo-login、`components/tour/*` | #127 |
+| 演示数据集(主角周建国 5 访/配角家族/DEV_FALLBACK 幂等) | `server/db/seed.ts` §7.5 | #111 |
+| 上传接线(双入口批量/StudyUploadDialog/后端链路) | `components/upload/*`、`server/routes/images.ts` | #131 |
+| i18n 补全(zh/en 657/657 键对齐/语言切换修复) | `apps/web/src/i18n/locales/*` | #133 |
+| 报告 PDF 导出(print CSS)+ 测量 BOM CSV | `server/routes/measurements.ts`、报告页 | #130 |
+| 查看器深色工作台原型(保留,`/prototype/viewer` 路由仍可访问) | `prototypes/viewer/*` | #123 |
 
-**决策记录位置**: 地图 #119 Notes 的「演示口径(已敲定)」块 + 各实施票的注释(#111/#112/#125/#126/#127/#131/#133/#134);#104 地图 Decisions so far。**不再重复抄录,直接读地图。**
+**调研文档(只读)**:`research/cinematic-viewer-design.md`(#120)、`research/export-path.md`(#128)、`research/image-filter-paths.md`(#107)。
+**验证总报告**:`docs/verification-2026-08.md`(#117)——含 78 项明细、4 项复查说明、6 项已知缺口、5-8 分钟演示脚本骨架。**新会话先读它**。
 
-关键决策速查: 品牌=明瞳(英文副标 PACS Viewer) · 深色 teal+钛灰,三级近黑分层(#0F1115→#171A20→#1F232B) · 系统字体栈 · framer-motion 已特批(边界=路由过渡+入场+数字) · 查看器=视口中心+可折叠面板+⌘K+全屏+交叉淡入 · 撤销=annotationState 快照 50 步 · 图层=A+B+C 模型+确认级联删除 · 滤镜 9 种全接(亮度/对比度走 CS 原生 WindowLevel) · CinePlayer=完整播放器契约(8fps 可调/进度/循环/步进/rAF) · 上传=双入口批量 · i18n=中主英辅核心路径 · 感知=品牌加载页+高频骨架屏+渐进 · 导出=报告 print CSS+测量 BOM CSV+当前视图 PNG。
+## 3. 演示运行指南(5-8 分钟主线)
 
-## 3. 解锁/阻塞图
+```bash
+cd apps/server && bun run dev   # :3000(必要时先 bun run db:seed 重置演示数据)
+cd apps/web && bun run dev      # :5173
+```
 
-- ✅ 已解锁可实施: #112(编辑套件接线, #104)、#124(设计令牌)、#130(报告/测量导出)、#131(上传)、#132(撤销重做)、#133(i18n)、#134(感知性能)
-- 🟢 前沿无阻塞: #131/#133/#134(一直可跑)
-- ⛔ #123(查看器原型)被 #110(查看器加载与认证链路修复)阻塞 —— #110 5 项中 1/2 已由并发会话修复,**3/4/5 仍开**(toWadoRsImageId 死代码用 wadouri scheme 指 WADO-RS 且无调用方、CornerstoneViewport 缺"错误详情+重试按钮"统一错误面、DEV_FALLBACK 前端未打标)
-- ⛔ 实施链: #125←#124、#126←#123、#127←#111+#125、#113-#117(验证)←#110/#111/#112
-- #118(needs-triage): audit_logs.user_id 'anonymous' 违反 FK —— 顺带修,低优先
+1. 登录页点「进入演示模式」→ 7 步走查引导(可关,localStorage 记住)
+2. 仪表盘:14 天检查量趋势/模态占比环形图/今日 sparkline
+3. 患者页搜索周建国(MRN20260001)→ 5 访趋势(RNFL 92→58μm,5×5 真值)
+4. 查看器(2025-03-05 随访):HUD 真实临床信息 → W/L 高对比预设(真实改像素)→ 24 帧 Cine(播放/跳帧/循环/单步,mm 位置)→ 画长度标注(测量列表实时)→ 图层(建/显隐/级联删)→ 9 滤镜(brightness 走 VOI + 高斯走 Canvas2D,重置)→ ⌘Z/⌘⇧Z 撤销重做 → ⌘K → F 全屏 → CSV 导出
+5. 报告:3 版本切换 + PDF 导出(打印 CSS)
+6. 随访对比工作台(三模式)+ 测量 CSV 导出(25 行 BOM+RFC4180)
+7. 上传:双入口(患者详情/检查页)批量拖拽,上传后进查看器
 
-## 4. 下一步建议(按序)
+演示账号见 AGENTS.md "Default Accounts"(**勿写入本文档**)。
 
-1. **#110 收尾**(3/4/5 项)→ 解锁 #123 原型;或先做 **#124 设计令牌**(唯一无前置的解锁票,`apps/web/src/index.css` 令牌重写 + tailwind.config + 高频 15 组件,遵循 #121 决议)
-2. #124 → #125(登录页+仪表盘,品牌明瞳)→ #127(演示模式);#111(演示数据:主角+配角家族规格已定)可与 #126 并行
-3. #131/#133/#134 为 AFK 可随时跑;实施时遵守用户约束:**基于现有 shadcn/ui 组件,优先 Tailwind className 扩展,不新增组件库、不大范围重写**;framer-motion 是唯一特批新依赖
-4. 验证票 #113-#117 依赖 #110/#111/#112 落地后开跑,最终 #117 汇总报告
+## 4. 已知缺口(验证报告 §3 详述,诚实清单)
 
-## 5. 环境注意
+1. OctViewer(厚度图专用页)已令牌化但**未路由**(无入口)
+2. 比例尺为显示相对(固定 5mm 视觉),非像素校准
+3. 演示多帧为单帧文件+元数据,Cine 像素不变(DEV_FALLBACK 徽标说明;真多帧 DICOM 走 `#frame=N`)
+4. ⌘K 被全局搜索占用 → 编辑套件用 ⌘E(#112 已注明)
+5. admin 深度 CRUD 未覆盖验证
+6. annotation-persistence E2E 测试假设过期(instanceNumber:-5 被新路由拒绝)
 
-- 领域术语见 `CONTEXT.md`;AGENTS.md 有开发命令(dev:server / dev:web / db:push / db:seed)
-- 演示账号在 seed 中(见 AGENTS.md "Default Accounts"),勿写入文档
-- 验证/类型检查:`bun run typecheck`、`bun run test`(各包)
-- 工作区曾有过未提交 WIP,现已被并发会话提交;动手前 `git status` 确认干净
+## 5. 遗留事项(按优先级)
 
-## 6. Suggested skills
+1. **远端清理**:origin 上仍有 17 个已合并的特性分支(`feat/*`、`research/*`、`prototype/*`、`fix/*`)——已确认全部合入 master,可 `git push origin --delete` 批量清理(需用户确认)
+2. 缺口 1(OctViewer 路由)与缺口 2(校准比例尺)可作后续小票
+3. #118(needs-triage FK):audit_logs.user_id 'anonymous' 违反 FK —— 未处理,低优先
+4. 交接文档本身:每轮会话结束后更新 §1/§3(commit 号、演示路径)
+5. 真 DICOM 上传后的多帧 Cine 未用真数据复验(演示数据占位)
 
-- **wayfinder** — 推进/新建地图,认领-决议-闭合-更新 Decisions so far 的流程
-- **grilling + domain-modeling** — 任何新的 HITL 决策票(按 grilling 分轮问、每轮带推荐答案)
-- **code-review** — 实施完成后评审(标准 + 规格两轴)
-- **tdd / diagnosing-bugs** — 实施 #110/#131 等涉及加载链、上传链时测试优先
-- **create-readme** — 若实施完成到演示版,更新 README 品牌与演示说明
-- **research** — 遇到需一级来源的事实问题(如 dicomFrames 与 Cine 的关系)
+## 6. 环境注意
+
+- 领域术语见 `CONTEXT.md`;命令见 AGENTS.md(dev:server/dev:web/db:push/db:seed/typecheck/test)
+- DEV_FALLBACK 资产 gitignored(`apps/server/data/images/_fundus_*.png` + 服务端按需生成),**勿提交**;fresh worktree 缺 codec wasm 运行时资产时本地补(勿提交)
+- `GET /api/studies` 不存在;仪表盘聚合数据源=`GET /api/dashboard/recent-studies?limit=300`;多帧=`/api/dicomweb/images/{id}/frames` + `#frame=N`
+- 已知坑:merge 前先 checkout master;`gh issue close` 不加 `-q`;bun 而非 node;`bun install` 在根目录
+- 并行纪律:subagent 用 worktree 隔离(分支预建 + 各自 bun install),最多 4 并发;票间文件隔离
+
+## 7. Suggested skills
+
+- **wayfinder** — 新地图的认领-决议-闭合-更新 Decisions so far 流程(本项目两地图已闭,新需求可开新地图)
+- **grilling + domain-modeling** — 任何新的 HITL 决策票(分轮问、每轮带推荐答案、决议落库)
+- **code-review** — 新实施完成后评审(标准 + 规格两轴)
+- **create-readme** — 演示版已达成,可把 README 升级为品牌+演示指引(尚未做)
+- **diagnosing-bugs** — 若真 DICOM 多帧 Cine/上传链路出问题
+- **handoff** — 每轮收尾更新本文档(§1 事实 + §3 演示路径)
