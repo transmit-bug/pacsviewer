@@ -90,7 +90,7 @@ export function ViewerPage() {
         id: s.id,
         seriesNumber: s.seriesNumber || 0,
         modality: s.modality || 'N/A',
-        description: s.description,
+        description: s.seriesDescription ?? s.description,
         imageCount: s.imageCount ?? 0,
         bodyPart: s.bodyPart,
       }));

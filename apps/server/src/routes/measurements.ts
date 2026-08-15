@@ -336,7 +336,7 @@ measurementsRouter.get('/export', async (c) => {
         r.capturedAt,
       ].join(',')
     ),
-  ].join('\n');
+  ].join('\r\n');
 
   return new Response('\uFEFF' + csv, { // Add BOM for Excel UTF-8 support
     headers: {

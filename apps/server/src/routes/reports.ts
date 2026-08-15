@@ -1,7 +1,8 @@
 import { eq, desc } from 'drizzle-orm';
-import { db, reports, reportVersions, insertReportSchema } from '../db';
+import { db, reports, reportVersions, insertReportSchema, studies } from '../db';
 import { createCrudRouter } from '../lib/crud';
 import { requirePermission } from '../middleware/auth';
+import { ValidationError } from '../lib/errors';
 import { log } from '../lib/audit';
 import { AuditEvents } from '../lib/audit-events';
 import { v4 as uuid } from 'uuid';
@@ -11,9 +12,24 @@ const reportsRouter = createCrudRouter(reports, {
   queryKey: 'reports',
   createSchema: insertReportSchema,
   middleware: [[requirePermission('reports', 'create')] as any],
-  beforeCreate: (data, c) => {
+  beforeCreate: async (data, c) => {
     const userId = (c as any).get('userId');
-    return { ...data, createdBy: data.createdBy || userId || 'system' };
+    const body = { ...data, createdBy: data.createdBy || userId || 'system' };
+
+    // 新建报告只选了患者+模板（无检查上下文）时，自动挂到该患者最近一次检查上。
+    // reports.study_id 为 NOT NULL，缺省会 500；此处补齐保证 /reports/new 闭环。
+    if (!body.studyId && body.patientId) {
+      const latest = await db.query.studies.findFirst({
+        where: eq(studies.patientId, body.patientId),
+        orderBy: [desc(studies.studyDate)],
+      });
+      if (latest) {
+        body.studyId = latest.id;
+      } else {
+        throw new ValidationError('该患者暂无检查，无法创建报告');
+      }
+    }
+    return body;
   },
   listWhere: (c) => {
     const studyId = c.req.query('studyId');
