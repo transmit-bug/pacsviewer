@@ -489,7 +489,9 @@
       "presetStandard": "标准",
       "presetHighContrast": "高对比",
       "presetLowNoise": "低噪声",
-      "presetRnfl": "RNFL"
+      "presetRnfl": "RNFL",
+      "descEscape": "取消当前操作",
+      "descEditor": "打开/关闭编辑工作区 (图层/滤镜/测量) (⌘E)"
     },
     "editor": {
       "title": "编辑工作区",
