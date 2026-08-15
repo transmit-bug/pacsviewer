@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 import {
   ViewportState,
   defaultViewport,
@@ -31,6 +32,7 @@ export function SliderMode({
   className,
 }: SliderModeProps) {
   const { t } = useTranslation();
+  const token = useAuthStore((s) => s.token);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgARef = useRef<HTMLImageElement | null>(null);
@@ -56,10 +58,10 @@ export function SliderMode({
           imgRef.current = null;
           resolve();
         };
-        img.src = `/api/images/${imageId}/file`;
+        img.src = `/api/images/${imageId}/file?token=${encodeURIComponent(token ?? '')}`;
       });
     },
-    []
+    [token]
   );
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 import {
   ViewportState,
   defaultViewport,
@@ -38,6 +39,7 @@ export function SideBySideMode({
   className,
 }: SideBySideModeProps) {
   const { t } = useTranslation();
+  const token = useAuthStore((s) => s.token);
   const canvasARef = useRef<HTMLCanvasElement>(null);
   const canvasBRef = useRef<HTMLCanvasElement>(null);
   const containerARef = useRef<HTMLDivElement>(null);
@@ -78,9 +80,9 @@ export function SideBySideMode({
         imgRef.current = null;
         setLoaded(false);
       };
-      img.src = `/api/images/${imageId}/file`;
+      img.src = `/api/images/${imageId}/file?token=${encodeURIComponent(token ?? '')}`;
     },
-    []
+    [token]
   );
 
   useEffect(() => {
