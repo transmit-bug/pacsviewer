@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { isDemoPatient } from '@/lib/demo';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ interface Patient {
   birthDate: string;
   phone?: string;
   tags?: string[] | null;
+  notes?: string | null;
 }
 
 export function PatientListPage() {
@@ -121,6 +123,7 @@ export function PatientListPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           className="max-w-sm"
+          data-tour-search="patient-search"
         />
         <Button variant="outline" onClick={handleSearch}>
           <Search className="h-4 w-4" />
@@ -160,6 +163,7 @@ export function PatientListPage() {
                 {patients.map((patient) => (
                   <div
                     key={patient.id}
+                    data-tour={isDemoPatient(patient) ? 'demo-patient' : undefined}
                     className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors"
                   >
                     <Link to={`/patients/${patient.id}`} className="flex-1">
@@ -168,7 +172,14 @@ export function PatientListPage() {
                           {patient.name[0]}
                         </div>
                         <div>
-                          <p className="font-medium">{patient.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{patient.name}</p>
+                            {isDemoPatient(patient) && (
+                              <span className="rounded-full border border-brand-400/30 bg-brand-400/10 px-1.5 py-px text-[10px] font-medium leading-4 text-brand-300">
+                                {t('demo.badge')}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             {t('patient.mrn')}: {patient.mrn} | {patient.gender === 'male' ? t('patient.male') : t('patient.female')} | {patient.birthDate}
                           </p>

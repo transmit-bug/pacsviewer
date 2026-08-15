@@ -98,6 +98,8 @@ export default api;
 export const authApi = {
   login: (username: string, password: string) =>
     api.post('/auth/login', { username, password }),
+  /** 一键演示登录 — 凭据只在服务端, 前端不接触账号密码 */
+  demoLogin: () => api.post('/auth/demo-login'),
   logout: () => api.post('/auth/logout'),
   refreshToken: (refreshToken: string) =>
     api.post('/auth/refresh', { refreshToken }),

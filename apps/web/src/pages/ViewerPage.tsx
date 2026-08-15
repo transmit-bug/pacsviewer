@@ -225,7 +225,7 @@ export function ViewerPage() {
         </div>
 
         {/* 视图工具栏 */}
-        <Card className="mb-4">
+        <Card className="mb-4" data-tour="viewer-toolbar">
           <CardContent className="p-2">
             <ViewportToolbar />
           </CardContent>
@@ -233,7 +233,7 @@ export function ViewerPage() {
 
         {/* 图像工具栏 */}
         <div className="flex gap-4 flex-1">
-          <Card className="w-16 shrink-0">
+          <Card className="w-16 shrink-0" data-tour="measurement-tools">
             <CardContent className="p-1">
               <ImageToolsToolbar studyId={studyId} />
             </CardContent>

@@ -7,6 +7,8 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  /** 是否通过一键演示登录进入 (演示模式全局标识的依据) */
+  isDemo: boolean;
   isLoading: boolean;
   isHydrated: boolean;
   error: string | null;
@@ -14,11 +16,25 @@ interface AuthState {
 
 interface AuthActions {
   login: (username: string, password: string) => Promise<void>;
+  demoLogin: () => Promise<void>;
   logout: () => void;
   refreshTokenAction: () => Promise<void>;
   setUser: (user: any) => void;
   clearError: () => void;
   setHydrated: (hydrated: boolean) => void;
+}
+
+/** 登录成功后的会话落库 (login / demoLogin 共用) */
+function applySession(set: any, data: any, extra?: Partial<AuthState>) {
+  set({
+    user: data.user,
+    token: data.token,
+    refreshToken: data.refreshToken,
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    ...extra,
+  });
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -28,6 +44,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       token: null,
       refreshToken: null,
       isAuthenticated: false,
+      isDemo: false,
       isLoading: false,
       isHydrated: false,
       error: null,
@@ -46,15 +63,29 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error(error.message || i18n.t('auth.loginFailed'));
           }
 
-          const responseData = await response.json();
-          const data = responseData.data;
+          applySession(set, (await response.json()).data);
+        } catch (error) {
           set({
-            user: data.user,
-            token: data.token,
-            refreshToken: data.refreshToken,
-            isAuthenticated: true,
+            error: error instanceof Error ? error.message : '登录失败',
             isLoading: false,
           });
+        }
+      },
+
+      demoLogin: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await fetch('/api/auth/demo-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || '登录失败');
+          }
+
+          applySession(set, (await response.json()).data, { isDemo: true });
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : i18n.t('auth.loginFailed'),
@@ -69,6 +100,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           token: null,
           refreshToken: null,
           isAuthenticated: false,
+          isDemo: false,
         });
       },
 
@@ -110,6 +142,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         token: state.token,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        isDemo: state.isDemo,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

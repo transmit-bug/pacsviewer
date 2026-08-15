@@ -426,7 +426,7 @@ export function ReportPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="report-body">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">{t('report.edit')}</h1>
           {report && <StatusBadge status={report.status} />}

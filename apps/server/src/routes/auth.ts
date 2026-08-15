@@ -5,6 +5,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { login, logout, refresh, getCurrentUser } from '../lib/auth';
+import { DEMO_ACCOUNT } from '../lib/demo';
+import type { LoginResult } from '../lib/auth';
 
 const auth = new Hono();
 
@@ -12,6 +14,22 @@ const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
 });
+
+/** 与 /login 一致的会话载荷形状 (user + token + refreshToken) */
+function toSessionPayload(result: LoginResult) {
+  return {
+    user: {
+      id: result.user.id,
+      username: result.user.username,
+      email: result.user.email,
+      displayName: result.user.displayName,
+      avatar: result.user.avatar,
+      role: result.user.role,
+    },
+    token: result.token,
+    refreshToken: result.refreshToken,
+  };
+}
 
 // Login
 auth.post('/login', async (c) => {
@@ -24,18 +42,20 @@ auth.post('/login', async (c) => {
 
   return c.json({
     success: true,
-    data: {
-      user: {
-        id: result.user.id,
-        username: result.user.username,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        avatar: result.user.avatar,
-        role: result.user.role,
-      },
-      token: result.token,
-      refreshToken: result.refreshToken,
-    },
+    data: toSessionPayload(result),
+  });
+});
+
+// Demo login — 一键演示登录: 使用播种的演示账号 (凭据只在服务端, 前端无感知)
+auth.post('/demo-login', async (c) => {
+  const result = await login(DEMO_ACCOUNT.username, DEMO_ACCOUNT.password, {
+    userAgent: c.req.header('User-Agent'),
+    ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+  });
+
+  return c.json({
+    success: true,
+    data: toSessionPayload(result),
   });
 });
 
