@@ -77,9 +77,12 @@ api.interceptors.response.use(
       try {
         const token = await currentRefresh;
         originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
+        // 刷新后重试: 显式 await —— 若重试仍失败 (如孤儿会话: 刷新"成功"
+        // 但用户已不存在), 走 catch 登出并跳转登录页, 而不是静默 reject
+        // 导致控制台刷 401、主界面空数据且永不跳转 (2026-08-15 排查)。
+        return await api(originalRequest);
       } catch (refreshError) {
-        // 刷新失败，清除登录状态并跳转
+        // 刷新失败或刷新后重试仍失败: 清除登录状态并跳转
         useAuthStore.getState().logout();
         redirectToLogin();
         return Promise.reject(refreshError);
