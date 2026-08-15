@@ -96,13 +96,14 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // 可用 VITE_PROXY_TARGET 覆盖 (并行开发/隔离 worktree 验证用), 默认主后端
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3000',
         changeOrigin: true,
         ws: true,
       },
       '/dicomweb': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3000',
         changeOrigin: true,
       },
     },

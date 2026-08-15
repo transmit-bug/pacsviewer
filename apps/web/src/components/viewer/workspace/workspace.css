@@ -1,0 +1,93 @@
+/* ============================================================
+ * 查看器电影级工作台 (wayfinder #126) — 生产工作台动效/视觉层
+ * 由原型 #123 prototype-viewer.css 移植并并入正式令牌体系。
+ * ============================================================ */
+
+/* 图像切换交叉淡入 200ms（决议 #122-6） */
+@keyframes ws-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ws-fade-in {
+  animation: ws-fade-in 200ms var(--ease-out) both;
+}
+
+/* ⌘K 面板悬浮预览交叉淡入（决议 #122-4） */
+@keyframes ws-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.ws-preview-in {
+  animation: ws-preview-in 200ms var(--ease-out) both;
+}
+
+/* 侧栏/工具条折叠 300ms（决议 #122-6） */
+.ws-collapse {
+  transition: width 300ms var(--ease-out), transform 300ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+/* HUD 数字: 等宽 + 1px 深色描边/微投影 (GSPS OUTLINED 语义, 保证图上可读) */
+.ws-hud-text {
+  text-shadow:
+    0 0 1px rgba(0, 0, 0, 0.9),
+    0 0 3px rgba(0, 0, 0, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.7);
+  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.55);
+}
+
+/* 标注文字底板 (半透明黑, 配合描边) */
+.ws-anno-label {
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* 视口底: 近黑 (决议 #121-2 三级近黑最底层) */
+.ws-viewport-bg {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(26, 32, 40, 0.55) 0%, transparent 60%),
+    #000;
+}
+
+/* 缩略图悬停放大预览 (决议 #122-8) */
+.ws-thumb {
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out),
+    border-color 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.ws-thumb:hover {
+  transform: scale(1.06);
+  z-index: 2;
+}
+
+/* 工具按钮微交互 100-150ms（决议 #121-5） */
+.ws-tool-btn {
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out),
+    border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.ws-tool-btn:active {
+  transform: scale(0.94);
+}
+
+/* Cine 进度条: 细条 + teal 填充 + 帧游标 */
+.ws-cine-track {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.ws-cine-fill {
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.55), hsl(var(--primary)));
+  border-radius: 2px;
+}

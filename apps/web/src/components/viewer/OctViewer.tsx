@@ -16,12 +16,13 @@ import { CinePlayer } from '@/components/viewer/CinePlayer';
 import { OctWindowPresets } from '@/components/viewer/OctWindowPresets';
 import { EnFacePreview } from '@/components/viewer/EnFacePreview';
 import { ThicknessMap } from '@/components/viewer/ThicknessMap';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
 import { Layers, Grid3X3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ThicknessType } from '@pacsviewer/image-processing/browser';
+import './workspace/workspace.css'; // 继承工作台动效/HUD 视觉层 (#126)
 
 interface OctViewerProps {
   imageId: string;
@@ -62,64 +63,68 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      {/* Main B-scan viewport */}
-      <Card className="flex-1">
-        <CardContent className="p-0 h-full">
-          <CornerstoneViewport imageId={imageId} imageFormat={imageFormat} />
-        </CardContent>
-      </Card>
+      {/* Main B-scan viewport (近黑视口 + HUD 帧角标, #126 令牌化) */}
+      <div className="ws-viewport-bg relative flex-1 overflow-hidden rounded-md border border-border">
+        <CornerstoneViewport imageId={imageId} imageFormat={imageFormat} />
+        {totalFrames > 1 && (
+          <div className="glass-surface pointer-events-none absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-md border border-white/10 px-2 py-1 shadow-lg">
+            <span className="hud-numeric ws-hud-text text-[11px] text-white/90">
+              {currentFrame + 1} <span className="text-white/50">/ {totalFrames}</span>
+            </span>
+            {sliceLocations.length > 0 && (
+              <>
+                <span className="h-3 w-px bg-white/15" />
+                <span className="ws-hud-text hud-numeric text-[10px] text-white/70">
+                  {(sliceLocations[currentFrame] ?? 0).toFixed(2)} mm
+                </span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Cine Player */}
       <CinePlayer />
 
-      {/* Bottom panel: presets + en-face */}
-      <div className="flex gap-3">
+      {/* Bottom panel: presets + en-face (玻璃浮层化, 逻辑不变) */}
+      <div className="glass-surface flex flex-wrap gap-3 rounded-md border border-white/10 p-2.5 shadow-lg">
         {/* Window/Level presets */}
-        <Card className="shrink-0">
-          <CardContent className="p-3">
-            <OctWindowPresets />
-          </CardContent>
-        </Card>
+        <div className="shrink-0">
+          <OctWindowPresets />
+        </div>
 
         {/* En-face preview */}
         {totalFrames > 1 && (
-          <Card className="flex-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs">En-face 预览</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EnFacePreview
-                sliceLocations={sliceLocations}
-                currentFrame={currentFrame}
-                totalFrames={totalFrames}
-                onFrameSelect={goToFrame}
-                height={80}
-              />
-            </CardContent>
-          </Card>
+          <div className="min-w-48 flex-1">
+            <p className="mb-1 text-xs">En-face 预览</p>
+            <EnFacePreview
+              sliceLocations={sliceLocations}
+              currentFrame={currentFrame}
+              totalFrames={totalFrames}
+              onFrameSelect={goToFrame}
+              height={80}
+            />
+          </div>
         )}
 
         {/* Frame info */}
         {totalFrames > 1 && (
-          <Card className="shrink-0">
-            <CardContent className="p-3">
-              <div className="text-xs space-y-1">
-                <p className="text-muted-foreground">帧信息</p>
-                <p className="font-mono">帧 {currentFrame + 1} / {totalFrames}</p>
-                {sliceLocations.length > 0 && (
-                  <p className="font-mono text-muted-foreground">
-                    位置: {sliceLocations[currentFrame]?.toFixed(2) ?? '-'} mm
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="shrink-0">
+            <div className="text-xs space-y-1">
+              <p className="text-muted-foreground">帧信息</p>
+              <p className="font-mono">帧 {currentFrame + 1} / {totalFrames}</p>
+              {sliceLocations.length > 0 && (
+                <p className="font-mono text-muted-foreground">
+                  位置: {sliceLocations[currentFrame]?.toFixed(2) ?? '-'} mm
+                </p>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Thickness Map Toggle */}
-        <Card className="shrink-0">
-          <CardContent className="p-3">
-            <div className="flex flex-col gap-2">
+        <div className="shrink-0">
+          <div className="flex flex-col gap-2">
               <Button
                 variant={showThicknessMap ? 'default' : 'outline'}
                 size="sm"
@@ -162,9 +167,8 @@ export function OctViewer({ imageId, imageFormat, className }: OctViewerProps) {
                   ETDRS
                 </Button>
               )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Thickness Map Panel (when enabled) */}
