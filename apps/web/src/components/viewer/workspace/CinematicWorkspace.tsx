@@ -31,7 +31,7 @@ import { CineBar } from './CineBar';
 import { MAIN_VIEWPORT_ID, lateralityKey } from './workspaceShared';
 import { cn } from '@/lib/utils';
 import './workspace.css';
-import { ArrowLeft, Eye, Keyboard, Hand as HandIcon, ZoomIn as ZoomIcon } from 'lucide-react';
+import { ArrowLeft, Eye, Keyboard, Hand as HandIcon, ZoomIn as ZoomIcon, ScanEye } from 'lucide-react';
 
 /* ─── 数据形状 (与 ViewerPage 载入的数据对齐) ─────────────── */
 
@@ -546,6 +546,16 @@ export function CinematicWorkspace({
           {t('viewer.workspace.productionBadge')}
         </Badge>
         <div className="ml-auto flex items-center gap-1">
+          {currentImageId && (
+            <Link
+              to={`/viewer/${study.id}/oct/${currentImageId}`}
+              className="ws-tool-btn flex h-7 items-center gap-1.5 rounded-sm border border-border bg-muted/40 px-2 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+              title={t('viewer.oct.open')}
+            >
+              <ScanEye className="h-3.5 w-3.5" />
+              {t('viewer.oct.open')}
+            </Link>
+          )}
           <button
             onClick={() => setPaletteOpen(true)}
             className="ws-tool-btn flex h-7 items-center gap-1.5 rounded-sm border border-border bg-muted/40 px-2 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -600,6 +610,7 @@ export function CinematicWorkspace({
             hasFrames={isMultiframe}
             frameCount={frames.length}
             frameSliceLocation={currentFrameSlice ?? undefined}
+            viewportId={MAIN_VIEWPORT_ID}
             onOpenPalette={() => setPaletteOpen(true)}
           />
 

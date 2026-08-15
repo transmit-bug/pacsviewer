@@ -31,6 +31,8 @@ export interface ConvertImageOptions {
   seriesInstanceUid?: string;
   /** Instance number within the series */
   instanceNumber?: number;
+  /** Physical pixel spacing [row, col] in mm/pixel — written to the DICOM PixelSpacing tag. */
+  pixelSpacing?: [number, number] | null;
 }
 
 export interface ConvertImageResult {
@@ -54,6 +56,7 @@ export async function convertImageToDicom(options: ConvertImageOptions): Promise
     studyInstanceUid,
     seriesInstanceUid,
     instanceNumber = 1,
+    pixelSpacing,
   } = options;
 
   // 1. Decode image to raw pixel data using Sharp
@@ -165,6 +168,10 @@ export async function convertImageToDicom(options: ConvertImageOptions): Promise
   setTag('HighBit', bitsAllocated - 1);
   setTag('PixelRepresentation', 0); // unsigned
   setTag('PlanarConfiguration', 0); // pixel interleaved (RGBRGBRGB...)
+  if (pixelSpacing) {
+    // DS values are encoded as strings (DICOM spec); parser normalizes to numbers.
+    setTag('PixelSpacing', [String(pixelSpacing[0]), String(pixelSpacing[1])]);
+  }
   setTag('PixelData', rawPixels);
 
   // 4. Encode DICOM binary
@@ -191,7 +198,7 @@ export async function convertImageToDicom(options: ConvertImageOptions): Promise
     samplesPerPixel,
     photometricInterpretation,
     planarConfiguration: 0,
-    pixelSpacing: null,
+    pixelSpacing: pixelSpacing ?? null,
     windowCenter: channels === 1 ? 128 : null,
     windowWidth: channels === 1 ? 256 : null,
     rescaleSlope: 1,

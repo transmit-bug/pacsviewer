@@ -517,6 +517,13 @@
       "toolProbe": "Probe",
       "toolBiDir": "Bidirectional",
       "toolArrow": "Arrow"
+    },
+    "oct": {
+      "open": "OCT Workbench",
+      "title": "OCT Thickness Workbench",
+      "backToViewer": "Back to Viewer",
+      "series": "Series",
+      "images": "Images"
     }
   },
   "report": {

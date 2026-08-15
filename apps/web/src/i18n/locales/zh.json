@@ -517,6 +517,13 @@
       "toolProbe": "探针",
       "toolBiDir": "双径线",
       "toolArrow": "箭头"
+    },
+    "oct": {
+      "open": "OCT 工作台",
+      "title": "OCT 厚度图工作台",
+      "backToViewer": "返回查看器",
+      "series": "序列",
+      "images": "图像"
     }
   },
   "report": {

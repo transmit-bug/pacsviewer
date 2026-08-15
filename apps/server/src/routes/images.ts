@@ -34,6 +34,12 @@ const FALLBACK_THUMBNAILS = [
   join(FALLBACK_DIR, '_fundus_dr_thumb.jpeg'),
 ];
 
+// Synthetic fundus placeholders are 512×512. A 45° fundus camera covers roughly
+// 20mm of retina across the frame → ~0.04 mm/px. Used only for DEV_FALLBACK
+// synthetic data so the viewer scale bar / measurements are calibrated in demo;
+// real uploads keep null (unknown optics) and fall back to display-relative HUD.
+const FUNDUS_FALLBACK_SPACING: [number, number] = [0.04, 0.04];
+
 function pickFallbackImage(paths: string[]): string {
   // Deterministic pick based on current time (changes every 10 seconds)
   const index = Math.floor(Date.now() / 10000) % paths.length;
@@ -433,6 +439,10 @@ imagesRouter.get('/:id/file', async (c) => {
     });
 
     const { convertImageToDicom } = await import('../services/image-to-dicom');
+    // Pixel spacing: prefer the image record (real calibration); fall back to a
+    // realistic fundus spacing only for synthetic DEV_FALLBACK placeholders.
+    const recordSpacing = image.pixelSpacing as [number, number] | null | undefined;
+    const pixelSpacing = recordSpacing ?? (usedFallback ? FUNDUS_FALLBACK_SPACING : null);
     const result = await convertImageToDicom({
       imageBuffer: buffer,
       filename: image.filePath,
@@ -441,6 +451,7 @@ imagesRouter.get('/:id/file', async (c) => {
       studyInstanceUid: seriesRecord?.study?.studyInstanceUid ?? undefined,
       seriesInstanceUid: seriesRecord?.seriesInstanceUid ?? undefined,
       instanceNumber: image.instanceNumber,
+      pixelSpacing,
     });
 
     return new Response(result.parseResult.buffer, {

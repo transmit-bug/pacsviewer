@@ -509,6 +509,22 @@ export function CornerstoneViewport({
     return () => eventTarget.removeEventListener(Enums.Events.VOI_MODIFIED, onVoi);
   }, []);
 
+  // 相机缩放 → viewerStore.zoom (HUD 缩放% + 校准比例尺跟随缩放)。
+  // 下沉到视口所有者: 工作台 (CinematicWorkspace) 与 OCT 工作台 (OctViewerPage)
+  // 共用同一 viewportId, 保证比例尺/缩放 HUD 在所有入口一致。幂等写入。
+  useEffect(() => {
+    const onCamera = (evt: any) => {
+      const scale = evt?.detail?.camera?.scale;
+      if (typeof scale !== 'number') return;
+      const cur = useViewerStore.getState().viewport.zoom;
+      if (Math.abs(scale - cur) > 0.005) {
+        useViewerStore.getState().setViewport({ zoom: scale });
+      }
+    };
+    eventTarget.addEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
+    return () => eventTarget.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
+  }, []);
+
   // Update active tool
   useEffect(() => {
     const toolGroup = ToolGroupManager.getToolGroup(TOOL_GROUP_ID);

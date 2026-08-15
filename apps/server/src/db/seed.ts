@@ -596,6 +596,7 @@ async function seed() {
             width: 512,
             height: 512,
             bitsAllocated: 8,
+            pixelSpacing: [0.04, 0.04], // 合成眼底图 512px ≈ 20mm 视野 (与 DEV_FALLBACK 转换一致)
             thumbnailPath: `${imageId}-thumb.jpeg`,
             createdAt: studyDate,
           });
@@ -640,6 +641,7 @@ async function seed() {
       width: 512,
       height: 512,
       bitsAllocated: 8,
+      pixelSpacing: [0.04, 0.04], // 合成眼底图 512px ≈ 20mm 视野 (与 DEV_FALLBACK 转换一致)
       numberOfFrames: opts.numberOfFrames ?? 1,
       thumbnailPath: `${imageId}-thumb.jpeg`,
       createdAt: `${opts.studyDate}T00:00:00.000Z`,

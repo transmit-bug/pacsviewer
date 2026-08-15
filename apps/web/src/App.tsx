@@ -14,6 +14,7 @@ import { PatientListPage } from '@/pages/PatientListPage';
 import { PatientDetailPage } from '@/pages/PatientDetailPage';
 import { PatientFormPage } from '@/pages/PatientFormPage';
 import { ViewerPage } from '@/pages/ViewerPage';
+import { OctViewerPage } from '@/pages/OctViewerPage';
 import { ReportPage } from '@/pages/ReportPage';
 import { ReportListPage } from '@/pages/ReportListPage';
 import { ReportCreatePage } from '@/pages/ReportCreatePage';
@@ -65,6 +66,7 @@ function AnimatedRoutes() {
           <Route path="patients/:id/edit" element={<PatientFormPage />} />
           <Route path="patients/:patientId/new-study" element={<StudyCreatePage />} />
           <Route path="viewer/:studyId" element={<ViewerPage />} />
+          <Route path="viewer/:studyId/oct/:imageId" element={<OctViewerPage />} />
           <Route path="reports" element={<ReportListPage />} />
           <Route path="reports/new" element={<ReportCreatePage />} />
           <Route path="reports/:studyId" element={<ReportPage />} />
