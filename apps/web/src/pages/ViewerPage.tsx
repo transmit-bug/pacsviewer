@@ -17,6 +17,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useMeasurementSync } from '@/hooks/useMeasurementSync';
+import { EditorPanel, FilterLayer, AiResultOverlay } from '@/components/editor';
+import { MAIN_VIEWPORT_ID } from '@/lib/cornerstone/viewportRegistry';
 import { ArrowLeft, FileText, Tag, Keyboard } from 'lucide-react';
 
 interface Series {
@@ -57,7 +60,11 @@ export function ViewerPage() {
   const [showDicomTags, setShowDicomTags] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   
-  const { currentImageId, setCurrentImage } = useViewerStore();
+  const { currentImageId, setCurrentImage, editorPanelOpen, setEditorPanelOpen } = useViewerStore();
+
+  // Keep the measurement store fed from Cornerstone's live annotation state
+  // (measurement list, annotation list, ai_result overlay all read it).
+  useMeasurementSync(MAIN_VIEWPORT_ID);
   const [studyAnnotations, setStudyAnnotations] = useState<any[]>([]);
 
   useEffect(() => {
@@ -142,9 +149,11 @@ export function ViewerPage() {
     onNextImage: handleNextImage,
     onPrevImage: handlePrevImage,
     onToggleHelp: () => setShowShortcutsHelp(prev => !prev),
+    onToggleEditor: () => setEditorPanelOpen(!editorPanelOpen),
     onEscape: () => {
       setShowDicomTags(false);
       setShowShortcutsHelp(false);
+      if (editorPanelOpen) setEditorPanelOpen(false);
     },
   });
 
@@ -242,7 +251,12 @@ export function ViewerPage() {
           {/* Image canvas */}
           <Card className="flex-1">
             <CardContent className="p-0 h-full">
-              <ImageViewer imageId={currentImageId || ''} imageFormat={images.find(i => i.id === currentImageId)?.format} />
+              <div className="relative w-full h-full">
+                <ImageViewer imageId={currentImageId || ''} imageFormat={images.find(i => i.id === currentImageId)?.format} />
+                {/* 滤镜 Canvas2D 管线 + ai_result SVG overlay (#112) */}
+                <FilterLayer viewportId={MAIN_VIEWPORT_ID} />
+                <AiResultOverlay viewportId={MAIN_VIEWPORT_ID} />
+              </div>
             </CardContent>
           </Card>
 
@@ -358,6 +372,11 @@ export function ViewerPage() {
             <WindowLevel />
           </CardContent>
         </Card>
+
+        {/* 编辑工作区: 图层 / 滤镜 / 测量 (工具栏"编辑"分组 / ⌘E 开关, ⌘K 被全局搜索占用) */}
+        {editorPanelOpen && (
+          <EditorPanel imageId={currentImageId || undefined} />
+        )}
       </div>
 
       {/* DICOM Tags Panel */}

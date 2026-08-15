@@ -222,7 +222,11 @@
       "show": "Show",
       "hide": "Hide",
       "delete": "Delete",
-      "empty": "No layers"
+      "empty": "No layers",
+      "needImage": "Select an image to manage layers",
+      "deleteConfirmTitle": "Delete layer",
+      "deleteConfirm": "Delete layer \"{{name}}\"?",
+      "deleteConfirmWithCount": "Layer \"{{name}}\" contains {{count}} annotation(s) which will be deleted together with the layer. Continue?"
     },
     "filter": {
       "add": "Add Filter",
@@ -294,7 +298,8 @@
       "exportMeasurements": "Export Measurements",
       "clearAll": "Clear All",
       "noAnnotations": "No annotations",
-      "exportCsv": "Export CSV"
+      "exportCsv": "Export CSV",
+      "editor": "Edit"
     },
     "cine": {
       "firstFrame": "First frame (Home)",
@@ -352,7 +357,33 @@
       "descUndo": "Undo",
       "descRedo": "Redo",
       "descHelp": "Show keyboard shortcuts help",
-      "descEscape": "Cancel current action"
+      "descEscape": "Cancel current action",
+      "descEditor": "Toggle editor workspace (layers / filters / measurements) (⌘E)"
+    },
+    "editor": {
+      "title": "Editor Workspace",
+      "tabLayers": "Layers",
+      "tabFilters": "Filters",
+      "tabMeasurements": "Measurements"
+    },
+    "measurement": {
+      "title": "Measurements & Annotations",
+      "switchUnit": "Switch unit: {{unit}}",
+      "export": "Export measurements",
+      "noPixelSpacing": "No PixelSpacing data — showing pixel values",
+      "empty": "No measurements or annotations yet",
+      "measurements": "Measurements",
+      "annotations": "Annotations",
+      "countMeasurements": "Measurements",
+      "countAnnotations": "Annotations",
+      "calibration": "Calibration",
+      "toolLength": "Length",
+      "toolAngle": "Angle",
+      "toolEllipse": "Ellipse ROI",
+      "toolRect": "Rectangle ROI",
+      "toolProbe": "Probe",
+      "toolBiDir": "Bidirectional",
+      "toolArrow": "Arrow"
     }
   },
   "report": {

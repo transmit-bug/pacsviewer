@@ -12,7 +12,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { db, layers } from '../db';
+import { db, layers, annotations } from '../db';
 
 const layersRouter = new Hono();
 
@@ -107,7 +107,7 @@ layersRouter.put('/:id', async (c) => {
   return c.json({ success: true, data: updated });
 });
 
-// DELETE /:id — Delete layer
+// DELETE /:id — Delete layer (cascade: annotations belonging to the layer)
 layersRouter.delete('/:id', async (c) => {
   const id = c.req.param('id');
 
@@ -119,9 +119,19 @@ layersRouter.delete('/:id', async (c) => {
     return c.json({ success: false, message: '图层未找到' }, 404);
   }
 
+  // 级联删除 (#108 决议): 图层 + 该图层下标注一并删除。
+  // Delete annotations first — the annotations.layer_id FK references layers.id,
+  // so orphaned rows would otherwise violate referential integrity.
+  const annResult = await db.delete(annotations).where(eq(annotations.layerId, id)).returning({ id: annotations.id });
+  const deletedAnnotationIds = annResult.map((r) => r.id);
+
   await db.delete(layers).where(eq(layers.id, id));
 
-  return c.json({ success: true, message: '图层已删除' });
+  return c.json({
+    success: true,
+    message: '图层已删除',
+    data: { id, deletedAnnotations: deletedAnnotationIds.length },
+  });
 });
 
 export default layersRouter;

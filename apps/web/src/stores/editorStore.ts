@@ -31,6 +31,8 @@ interface EditorState {
 
 interface EditorActions {
   // Layer actions
+  /** Replace the whole layer list (backend load / reset). */
+  setLayers: (layers: Layer[]) => void;
   addLayer: (layer: Layer) => void;
   removeLayer: (id: string) => void;
   updateLayer: (id: string, updates: Partial<Layer>) => void;
@@ -69,6 +71,12 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   brushColor: '#ff0000',
 
   // Layer actions
+  setLayers: (layers) =>
+    set(() => ({
+      layers: [...layers].sort((a, b) => a.order - b.order),
+      activeLayerId: null,
+    })),
+
   addLayer: (layer) =>
     set((state) => ({
       layers: [...state.layers, layer].sort((a, b) => a.order - b.order),
