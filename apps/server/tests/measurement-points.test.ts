@@ -472,7 +472,8 @@ describe('GET /measurements/export (CSV)', () => {
     expect(buf[2]).toBe(0xbf);
     const text = new TextDecoder('utf-8').decode(buf.subarray(3));
 
-    const lines = text.split('\n');
+    // RFC 4180 CRLF line endings (d9e725a 修复) — split on \r\n
+    const lines = text.split('\r\n');
     expect(lines[0]).toBe('患者姓名,病历号,检查日期,检查时间,检查类型,测量项,数值,单位,是否校准,测量时间');
     const row = lines[1].split(',');
     expect(row[0]).toBe('测试患者');      // patient name (patients join)
