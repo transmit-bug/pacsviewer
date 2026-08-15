@@ -58,6 +58,10 @@ export function serializeAnnotations(element: HTMLDivElement): SerializedAnnotat
         result.push({
           id: ann.annotationUID,
           toolName: ann.metadata?.toolName ?? toolName,
+          // layerId round-trip (#108): written into metadata when the annotation
+          // is created on an active layer, persisted by the backend sync, and
+          // restored back into metadata on load.
+          layerId: ann.metadata?.layerId ?? null,
           data: {
             handles: data.handles,      // verbatim — { points: Point3[], textBox?, ... }
             cachedStats: data.cachedStats,
@@ -122,6 +126,9 @@ export function deserializeAnnotations(
         toolName: serialized.toolName,
         FrameOfReferenceUID,
         referencedImageId,
+        // layerId round-trip (#108): restored so per-layer visibility / ai_result
+        // overlays can group annotations again after a reload.
+        ...(serialized.layerId ? { layerId: serialized.layerId } : {}),
       },
       data: {
         handles: serialized.data.handles,

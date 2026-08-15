@@ -20,6 +20,7 @@ import {
   FlipHorizontal,
   FlipVertical,
   Maximize,
+  Wand2,
 } from 'lucide-react';
 
 interface ViewportToolbarProps {
@@ -28,7 +29,7 @@ interface ViewportToolbarProps {
 
 export function ViewportToolbar({ className }: ViewportToolbarProps) {
   const { t } = useTranslation();
-  const { activeTool, setActiveTool, viewport, setViewport, resetViewport } = useViewerStore();
+  const { activeTool, setActiveTool, viewport, setViewport, resetViewport, editorPanelOpen, setEditorPanelOpen } = useViewerStore();
 
   /** 视图工具栏配置 */
   const TOOL_GROUPS: (ToolGroupConfig & { tools: ToolConfig[] })[] = [
@@ -53,6 +54,14 @@ export function ViewportToolbar({ className }: ViewportToolbarProps) {
         { id: 'fit', icon: Maximize, label: t('viewer.toolbar.fit') },
       ],
     },
+    {
+      id: 'edit',
+      icon: Wand2,
+      label: t('viewer.toolbar.editor'),
+      tools: [
+        { id: 'editor', icon: Wand2, label: t('viewer.toolbar.editor') },
+      ],
+    },
   ];
 
   const handleToolClick = (toolId: string) => {
@@ -69,6 +78,10 @@ export function ViewportToolbar({ className }: ViewportToolbarProps) {
       case 'fit':
         resetViewport();
         break;
+      case 'editor':
+        // 编辑工作区(图层/滤镜/测量)开关 — #109 决议: 工具栏"编辑"分组可达.
+        setEditorPanelOpen(!editorPanelOpen);
+        break;
       default:
         setActiveTool(toolId);
     }
@@ -84,7 +97,7 @@ export function ViewportToolbar({ className }: ViewportToolbarProps) {
               groupIcon={group.icon}
               groupLabel={group.label}
               tools={group.tools}
-              activeToolId={activeTool}
+              activeToolId={group.id === 'edit' && editorPanelOpen ? 'editor' : activeTool}
               onToolClick={handleToolClick}
               displayMode="direct"
               toolbarDirection="horizontal"

@@ -1,9 +1,11 @@
 /**
- * ViewerPage — 查看器入口 (wayfinder #126)。
+ * ViewerPage — 查看器入口 (wayfinder #126 工作台 + #112 编辑套件接线)。
  *
  * 数据加载 (检查/序列/图像) 保留原逻辑, 渲染层切换到电影级工作台
  * CinematicWorkspace (视口中心/HUD/浮动底条工具条/⌘K/Cine/全屏)。
- * 加载期间显示近黑骨架。
+ * 编辑套件 (#112) 接线: useMeasurementSync 保持测量 store 与 Cornerstone
+ * 实时同步; ⌘E 开关编辑工作区 (图层/滤镜/测量, 面板渲染在
+ * CinematicWorkspace 内部视口右侧)。加载期间显示近黑骨架。
  */
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -11,7 +13,10 @@ import { useTranslation } from 'react-i18next';
 import { studyApi, imageApi } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useViewerStore } from '@/stores/viewerStore';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useMeasurementSync } from '@/hooks/useMeasurementSync';
 import { CinematicWorkspace } from '@/components/viewer/workspace/CinematicWorkspace';
+import { MAIN_VIEWPORT_ID } from '@/lib/cornerstone/viewportRegistry';
 import type { WsSeries, WsImage } from '@/components/viewer/workspace/WorkspacePanels';
 
 interface Study {
@@ -39,7 +44,17 @@ export function ViewerPage() {
   const [loading, setLoading] = useState(true);
   const [currentSeriesId, setCurrentSeriesId] = useState<string | undefined>();
 
-  const { currentImageId, setCurrentImage } = useViewerStore();
+  const { currentImageId, setCurrentImage, editorPanelOpen, setEditorPanelOpen } = useViewerStore();
+
+  // Keep the measurement store fed from Cornerstone's live annotation state
+  // (measurement list, annotation list, ai_result overlay all read it). (#112)
+  useMeasurementSync(MAIN_VIEWPORT_ID);
+
+  // Ctrl/Cmd+E toggles the editor workspace (layers / filters / measurements).
+  // 箭头键归工作台帧步进所有 (#126), 此处只留编辑器开关。
+  useKeyboardShortcuts({
+    onToggleEditor: () => setEditorPanelOpen(!editorPanelOpen),
+  });
 
   useEffect(() => {
     if (studyId) {

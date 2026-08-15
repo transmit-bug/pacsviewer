@@ -6,3 +6,8 @@ export type { AnnotationData } from './AnnotationTools';
 
 export { AnnotationLayer } from './AnnotationLayer';
 export { MeasurementDisplay } from './MeasurementDisplay';
+export { LayerManager } from './LayerManager';
+export { ImageFilters } from './ImageFilters';
+export { EditorPanel } from './EditorPanel';
+export { FilterLayer } from './FilterLayer';
+export { AiResultOverlay } from './AiResultOverlay';

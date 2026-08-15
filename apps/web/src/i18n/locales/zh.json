@@ -267,7 +267,11 @@
       "show": "显示",
       "hide": "隐藏",
       "delete": "删除",
-      "empty": "暂无图层"
+      "empty": "暂无图层",
+      "needImage": "请先选择图像以管理图层",
+      "deleteConfirmTitle": "删除图层",
+      "deleteConfirm": "确定删除图层「{{name}}」吗?",
+      "deleteConfirmWithCount": "图层「{{name}}」下有 {{count}} 条标注,删除图层将一并删除这些标注。确定继续吗?"
     },
     "filter": {
       "add": "添加滤镜",
@@ -339,7 +343,8 @@
       "exportMeasurements": "导出测量结果",
       "clearAll": "清除全部",
       "noAnnotations": "暂无标注",
-      "exportCsv": "导出 CSV"
+      "exportCsv": "导出 CSV",
+      "editor": "编辑"
     },
     "cine": {
       "firstFrame": "第一帧 (Home)",
@@ -397,7 +402,8 @@
       "descUndo": "撤销",
       "descRedo": "重做",
       "descHelp": "显示快捷键帮助",
-      "descEscape": "取消当前操作"
+      "descEscape": "取消当前操作",
+      "descEditor": "打开/关闭编辑工作区 (图层/滤镜/测量) (⌘E)"
     },
     "workspace": {
       "gender": {
@@ -482,6 +488,31 @@
       "presetHighContrast": "高对比",
       "presetLowNoise": "低噪声",
       "presetRnfl": "RNFL"
+    },
+    "editor": {
+      "title": "编辑工作区",
+      "tabLayers": "图层",
+      "tabFilters": "滤镜",
+      "tabMeasurements": "测量"
+    },
+    "measurement": {
+      "title": "测量与标注",
+      "switchUnit": "切换单位: {{unit}}",
+      "export": "导出测量数据",
+      "noPixelSpacing": "无 PixelSpacing 数据,显示像素值",
+      "empty": "暂无测量或标注",
+      "measurements": "测量",
+      "annotations": "标注",
+      "countMeasurements": "测量数",
+      "countAnnotations": "标注数",
+      "calibration": "校准",
+      "toolLength": "长度",
+      "toolAngle": "角度",
+      "toolEllipse": "椭圆ROI",
+      "toolRect": "矩形ROI",
+      "toolProbe": "探针",
+      "toolBiDir": "双径线",
+      "toolArrow": "箭头"
     }
   },
   "report": {

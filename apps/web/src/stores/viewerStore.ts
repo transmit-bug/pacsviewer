@@ -56,6 +56,8 @@ interface ViewerState {
   activeTool: string;
   annotations: Annotation[];
   layers: Layer[];
+  /** 编辑工作区面板(图层/滤镜/测量)开合状态 — 工具栏"编辑"分组 / ⌘K 控制 (#109 决议)。 */
+  editorPanelOpen: boolean;
   // Multi-frame state
   isPlaying: boolean;
   currentFrame: number;
@@ -70,6 +72,7 @@ interface ViewerActions {
   setViewport: (viewport: Partial<ViewportState>) => void;
   resetViewport: () => void;
   setActiveTool: (tool: string) => void;
+  setEditorPanelOpen: (open: boolean) => void;
   addAnnotation: (annotation: Annotation) => void;
   updateAnnotation: (id: string, data: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
@@ -106,6 +109,7 @@ export const useViewerStore = create<ViewerState & ViewerActions>((set, get) => 
   activeTool: 'pan',
   annotations: [],
   layers: [],
+  editorPanelOpen: false,
   // Multi-frame
   isPlaying: false,
   currentFrame: 0,
@@ -125,6 +129,8 @@ export const useViewerStore = create<ViewerState & ViewerActions>((set, get) => 
   resetViewport: () => set({ viewport: { ...defaultViewport } }),
 
   setActiveTool: (tool) => set({ activeTool: tool }),
+
+  setEditorPanelOpen: (open) => set({ editorPanelOpen: open }),
 
   addAnnotation: (annotation) =>
     set((state) => ({

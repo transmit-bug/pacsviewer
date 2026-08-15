@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { CornerstoneViewport } from '@/components/viewer/CornerstoneViewport';
 import { DicomTagViewer } from '@/components/viewer/DicomTagViewer';
 import { KeyboardShortcutsHelp } from '@/components/viewer/KeyboardShortcutsHelp';
+import { EditorPanel, FilterLayer, AiResultOverlay } from '@/components/editor';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useWorkspaceStore, WS_WL_PRESETS } from '@/stores/workspaceStore';
 import { dicomwebApi } from '@/services/api';
@@ -80,6 +81,7 @@ export function CinematicWorkspace({
     setCurrentFrame,
     setPlaybackFPS,
   } = useViewerStore();
+  const editorPanelOpen = useViewerStore((s) => s.editorPanelOpen);
   const {
     leftOpen,
     rightOpen,
@@ -576,7 +578,17 @@ export function CinematicWorkspace({
               imageId={currentImageId || ''}
               imageFormat={currentImage?.format}
             />
+            {/* 编辑套件叠加 (#112): 滤镜 Canvas2D 管线 + ai_result SVG 覆盖层 */}
+            <FilterLayer viewportId={MAIN_VIEWPORT_ID} />
+            <AiResultOverlay viewportId={MAIN_VIEWPORT_ID} />
           </div>
+
+          {/* 编辑工作区 (⌘E): 图层/滤镜/测量 — 视口右侧浮层 (#112) */}
+          {editorPanelOpen && (
+            <div className="absolute bottom-14 right-2 top-14 z-30 w-80">
+              <EditorPanel imageId={currentImageId ?? undefined} className="h-full" />
+            </div>
+          )}
 
           {/* HUD 浮层 */}
           <WorkspaceHud

@@ -273,6 +273,10 @@ annotationsRouter.get('/image/:imageId', async (c) => {
 
     return {
       id: r.id,
+      // layerId round-trip (#108 决议): sent by the client on sync, persisted
+      // in the DB, and restored here so the viewer can rebuild per-layer
+      // grouping / visibility after a reload.
+      layerId: r.layerId ?? null,
       toolName: geometry.toolName || r.type,
       data: {
         handles: geometry.handles || [],

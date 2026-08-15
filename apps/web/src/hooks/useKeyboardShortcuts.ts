@@ -15,6 +15,7 @@ interface KeyboardShortcuts {
   onNextImage?: () => void;
   onPrevImage?: () => void;
   onToggleHelp?: () => void;
+  onToggleEditor?: () => void;
   onEscape?: () => void;
 }
 
@@ -44,6 +45,7 @@ export function useKeyboardShortcuts({
   onNextImage,
   onPrevImage,
   onToggleHelp,
+  onToggleEditor,
   onEscape,
 }: KeyboardShortcuts) {
   const handleKeyDown = useCallback(
@@ -155,6 +157,15 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // 编辑工作区 (⌘E) — 图层/滤镜/测量面板开关.
+      // NOTE: ⌘K 已被全局搜索(GlobalSearch)占用,故用 ⌘E (#109 决议"⌘K 可达"的
+      // 实现注记:工具栏"编辑"分组为主入口,⌘E 为键盘入口).
+      if (ctrl && key === 'e') {
+        e.preventDefault();
+        onToggleEditor?.();
+        return;
+      }
+
       // Escape
       if (key === 'escape') {
         e.preventDefault();
@@ -177,6 +188,7 @@ export function useKeyboardShortcuts({
       onNextImage,
       onPrevImage,
       onToggleHelp,
+      onToggleEditor,
       onEscape,
     ]
   );
@@ -218,6 +230,7 @@ export const KEYBOARD_SHORTCUTS: {
     { key: '→ / ↓', descriptionKey: 'viewer.keyboard.descNextImage' },
   ]},
   { categoryKey: 'viewer.keyboard.catEdit', shortcuts: [
+    { key: '⌘E', descriptionKey: 'viewer.keyboard.descEditor' },
     { key: 'Delete', descriptionKey: 'viewer.keyboard.descDelete' },
     { key: 'Ctrl+Z', descriptionKey: 'viewer.keyboard.descUndo' },
     { key: 'Ctrl+Shift+Z', descriptionKey: 'viewer.keyboard.descRedo' },

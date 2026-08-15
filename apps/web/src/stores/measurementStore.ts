@@ -15,6 +15,8 @@ import { create } from 'zustand';
 export interface SerializedAnnotation {
   id: string;
   toolName: string;   // Length, Angle, EllipticalROI, RectangleROI, etc.
+  /** Owning layer id (wayfinder #108 — annotation 层带 metadata.layerId). */
+  layerId?: string | null;
   data: {
     /** Verbatim Cornerstone handles object ({ points: Point3[], textBox?, ... }) — round-trip fidelity */
     handles: Record<string, any>;

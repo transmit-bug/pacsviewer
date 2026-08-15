@@ -31,6 +31,8 @@ import { serializeAnnotations, deserializeAnnotations, scheduleAutoSave, cancelA
 import { annotationApi, dicomwebApi, imageApi } from '@/services/api';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
+import { useEditorStore } from '@/stores/editorStore';
+import { registerViewportElement, unregisterViewportElement } from '@/lib/cornerstone/viewportRegistry';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -176,9 +178,26 @@ export function CornerstoneViewport({
   // Subscribe to Cornerstone annotation events once. Saves happen immediately
   // on completion/removal, debounced (1.5s) on modification.
   useEffect(() => {
-    const onCompleted = (evt: any) => { handleAnnotationChange(evt, false); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
-    const onModified = (evt: any) => { handleAnnotationChange(evt, true); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
-    const onRemoved = (evt: any) => { handleAnnotationChange(evt, false); syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined); };
+    // Tag freshly drawn annotations with the active layer (wayfinder #108):
+    // metadata.layerId flows into serializeAnnotations → backend sync, so every
+    // new measurement/annotation belongs to the currently selected layer.
+    const onCompleted = (evt: any) => {
+      const ann = evt?.detail?.annotation;
+      const activeLayerId = useEditorStore.getState().activeLayerId;
+      if (ann && !ann.metadata?.layerId && activeLayerId) {
+        ann.metadata = { ...ann.metadata, layerId: activeLayerId };
+      }
+      handleAnnotationChange(evt, false);
+      syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+    };
+    const onModified = (evt: any) => {
+      handleAnnotationChange(evt, true);
+      syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+    };
+    const onRemoved = (evt: any) => {
+      handleAnnotationChange(evt, false);
+      syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+    };
 
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_MODIFIED, onModified);
@@ -230,6 +249,9 @@ export function CornerstoneViewport({
   useEffect(() => {
     const element = elementRef.current;
     if (!element) return;
+
+    // Register for side components (layer visibility, filter pipeline, ai overlay).
+    registerViewportElement(viewportId, element);
 
     let cancelled = false;
 
@@ -345,6 +367,7 @@ export function CornerstoneViewport({
 
     return () => {
       cancelled = true;
+      unregisterViewportElement(viewportId);
       const renderingEngine = getRenderingEngine();
       if (renderingEngine) {
         try { renderingEngine.disableElement(viewportId); } catch { /* ignore */ }
