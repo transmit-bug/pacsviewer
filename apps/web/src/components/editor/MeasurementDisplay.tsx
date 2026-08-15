@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { useMeasurementSync, highlightAnnotation, removeCsAnnotation } from '@/hooks/useMeasurementSync';
 import { MAIN_VIEWPORT_ID } from '@/lib/cornerstone/viewportRegistry';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,6 +93,8 @@ export function MeasurementDisplay({ className }: MeasurementDisplayProps) {
   };
 
   const handleDelete = (id: string) => {
+    // #132: 变更前记录 pre-op (列表删除标注/测量 = 一次完整操作, 撤销恢复画布 + 列表)。
+    useHistoryStore.getState().recordBefore();
     removeCsAnnotation(MAIN_VIEWPORT_ID, id);
     removeAnnotation(id);
     if (selectedId === id) setSelectedId(null);

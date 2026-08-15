@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { studyApi, imageApi } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useViewerStore } from '@/stores/viewerStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useMeasurementSync } from '@/hooks/useMeasurementSync';
 import { CinematicWorkspace } from '@/components/viewer/workspace/CinematicWorkspace';
@@ -52,9 +53,18 @@ export function ViewerPage() {
 
   // Ctrl/Cmd+E toggles the editor workspace (layers / filters / measurements).
   // 箭头键归工作台帧步进所有 (#126), 此处只留编辑器开关。
+  // #132: ⌘Z/⌘⇧Z (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y) → 撤销/重做快照。
   useKeyboardShortcuts({
     onToggleEditor: () => setEditorPanelOpen(!editorPanelOpen),
+    onUndo: () => useHistoryStore.getState().undo(),
+    onRedo: () => useHistoryStore.getState().redo(),
   });
+
+  // #132: 历史栈按图像隔离 — 快照含当前图像内标注/图层, 切换图像即清空
+  // (跨图像撤销会往新图像恢复旧标注, 无意义且破坏 CS 状态)。
+  useEffect(() => {
+    useHistoryStore.getState().clear();
+  }, [currentImageId]);
 
   useEffect(() => {
     if (studyId) {

@@ -32,6 +32,7 @@ import { annotationApi, dicomwebApi, imageApi } from '@/services/api';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useMeasurementStore } from '@/stores/measurementStore';
 import { useEditorStore } from '@/stores/editorStore';
+import { useHistoryStore, isHistoryApplying } from '@/stores/historyStore';
 import { registerViewportElement, unregisterViewportElement } from '@/lib/cornerstone/viewportRegistry';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -166,7 +167,9 @@ export function CornerstoneViewport({
   const handleAnnotationChange = useCallback((_evt: any, debounced: boolean) => {
     const targetImageId = currentImageIdRef.current;
     const element = elementRef.current;
-    if (!targetImageId || !element || restoringRef.current) return;
+    // isHistoryApplying: 撤销/重做应用快照期间, 事件驱动的半成品状态
+    // 不写回后端 —— 由 history-apply 的显式持久化统一兜底 (#132)。
+    if (!targetImageId || !element || restoringRef.current || isHistoryApplying()) return;
 
     if (debounced) {
       scheduleAutoSave(targetImageId, element, saveAnnotations, 1500);
@@ -178,6 +181,14 @@ export function CornerstoneViewport({
   // Subscribe to Cornerstone annotation events once. Saves happen immediately
   // on completion/removal, debounced (1.5s) on modification.
   useEffect(() => {
+    // #132: 交互起点 (视口 mousedown) 记忆 pre-op 状态 — 画/拖/删标注的事件在
+    // 变更之后才触发, 撤销需要的是变更前的状态, 故在起点记忆、事件到来时压栈。
+    const onMouseDown = () => useHistoryStore.getState().beginInteraction();
+    const element = elementRef.current;
+    if (element) {
+      element.addEventListener('mousedown', onMouseDown, { capture: true });
+    }
+
     // Tag freshly drawn annotations with the active layer (wayfinder #108):
     // metadata.layerId flows into serializeAnnotations → backend sync, so every
     // new measurement/annotation belongs to the currently selected layer.
@@ -189,14 +200,29 @@ export function CornerstoneViewport({
       }
       handleAnnotationChange(evt, false);
       syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+      // #132 撤销/重做: 创建完成 = 一次完整操作 → 压入交互起点记忆的 pre-op
+      // (#129 决议粒度: 一次交互完成即快照)。
+      if (!restoringRef.current && !isHistoryApplying()) {
+        useHistoryStore.getState().recordInteraction('completed');
+      }
     };
     const onModified = (evt: any) => {
       handleAnnotationChange(evt, true);
       syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+      // 拖拽/移动过程 MODIFIED 高频触发 → 尾部去抖合并为一次快照,
+      // 一次交互 (松手) 完成才算一步撤销 (#129 决议: 拖拽中间态不压栈)。
+      if (!restoringRef.current && !isHistoryApplying()) {
+        useHistoryStore.getState().recordDebounced();
+      }
     };
     const onRemoved = (evt: any) => {
       handleAnnotationChange(evt, false);
       syncMeasurementsToStore(elementRef.current, currentImageIdRef.current ?? undefined);
+      // #132 / #108: 删除 = 一次完整操作 → 压入 pre-op (撤销恢复该标注)。
+      // 列表删除已由调用方 recordBefore 记录, 此处仅在存在交互记忆时再压。
+      if (!restoringRef.current && !isHistoryApplying()) {
+        useHistoryStore.getState().recordInteraction('removed');
+      }
     };
 
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
@@ -204,6 +230,7 @@ export function CornerstoneViewport({
     eventTarget.addEventListener(ToolEnums.Events.ANNOTATION_REMOVED, onRemoved);
 
     return () => {
+      element?.removeEventListener('mousedown', onMouseDown, { capture: true } as EventListenerOptions);
       eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_COMPLETED, onCompleted);
       eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_MODIFIED, onModified);
       eventTarget.removeEventListener(ToolEnums.Events.ANNOTATION_REMOVED, onRemoved);

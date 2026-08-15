@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEditorStore, Layer } from '@/stores/editorStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { layerApi, annotationApi } from '@/services/api';
 import { setLayerVisibility } from '@/lib/cornerstone/layerVisibility';
 import { MAIN_VIEWPORT_ID } from '@/lib/cornerstone/viewportRegistry';
@@ -115,6 +116,8 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
 
   const handleDragStart = (index: number) => {
     setDragIndex(index);
+    // #132: 拖拽排序起点记录 pre-op (松手后撤销恢复原排序)。
+    useHistoryStore.getState().recordBefore();
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -145,6 +148,8 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
       const resp = await layerApi.create(imageId, payload) as any;
       const row = resp?.data?.data ?? resp?.data;
       if (row?.id) {
+        // #132 撤销/重做: 变更前记录 pre-op (图层创建 = 一次完整操作)。
+        useHistoryStore.getState().recordBefore();
         addLayer(fromBackend(row));
         setNewLayerName('');
       }
@@ -155,6 +160,8 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
 
   const handleToggleVisibility = useCallback(
     async (layer: Layer) => {
+      // #132: 变更前记录 pre-op (显隐切换 = 一次完整操作, 撤销恢复上一可见性)。
+      useHistoryStore.getState().recordBefore();
       toggleLayerVisibility(layer.id);
       const nextVisible = !layer.visible;
       // AnnotationGroup 显隐: flip Cornerstone annotation visibility for the layer.
@@ -183,6 +190,15 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
     [imageId],
   );
 
+  const handleToggleLock = useCallback(
+    (layer: Layer) => {
+      // #132: 变更前记录 pre-op (锁定切换可撤销)。
+      useHistoryStore.getState().recordBefore();
+      toggleLayerLock(layer.id);
+    },
+    [toggleLayerLock],
+  );
+
   const handleDeleteClick = useCallback(
     async (layer: Layer) => {
       const count = await countLayerAnnotations(layer.id);
@@ -198,6 +214,8 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
     try {
       // 后端级联: 图层 + 该图层下标注一并删除 (#108 决议).
       await layerApi.delete(deleteTarget.id);
+      // #132 / #108: 级联删除可撤销 — 变更前记录 pre-op (含图层 + 其下标注)。
+      useHistoryStore.getState().recordBefore();
       removeLayer(deleteTarget.id);
       setDeleteTarget(null);
     } catch (err) {
@@ -314,7 +332,7 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
                       className="h-6 w-6"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleLayerLock(layer.id);
+                        handleToggleLock(layer);
                       }}
                       title={layer.locked ? t('viewer.layer.unlock') : t('viewer.layer.lock')}
                     >
@@ -358,6 +376,10 @@ export function LayerManager({ className, imageId }: LayerManagerProps) {
             max="100"
             value={Math.round((layers.find((l) => l.id === activeLayerId)?.opacity || 1) * 100)}
             onChange={(e) => setLayerOpacity(activeLayerId, Number(e.target.value) / 100)}
+            onPointerDown={() => {
+              // #132: 滑杆拖动起点记录 pre-op (撤销恢复拖动前的不透明度)。
+              useHistoryStore.getState().recordBefore();
+            }}
           />
         </div>
       )}

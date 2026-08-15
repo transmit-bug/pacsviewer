@@ -416,6 +416,8 @@
       "presetDrivesVoi": "预设驱动真实 Cornerstone 窗宽窗位",
       "expandToolbar": "展开工具条",
       "collapseToolbar": "折叠为图标窄条",
+      "undo": "撤销",
+      "redo": "重做",
       "tools": "工具",
       "palettePlaceholder": "输入命令或搜索工具 / 图像 / 患者…",
       "paletteEmpty": "未找到匹配命令",

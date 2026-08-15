@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useViewerStore } from '@/stores/viewerStore';
 import { useWorkspaceStore, WS_WL_PRESETS } from '@/stores/workspaceStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { measurementApi } from '@/services/api';
 import { downloadBlob, measurementsCsvFilename } from '@/utils/download';
 import { IconBtn, ToolbarGroupSep } from './workspaceShared';
@@ -34,6 +35,8 @@ import {
   ChevronRight,
   Frame,
   PenTool,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 
 interface WorkspaceToolbarProps {
@@ -44,6 +47,7 @@ export function WorkspaceToolbar({ studyId }: WorkspaceToolbarProps) {
   const { t } = useTranslation();
   const { activeTool, setActiveTool, setViewport } = useViewerStore();
   const { toolbarCollapsed, toggleToolbarCollapsed, isFullscreen } = useWorkspaceStore();
+  const { canUndo, canRedo, undo, redo } = useHistoryStore();
 
   const applyPreset = (id: string) => {
     const p = WS_WL_PRESETS.find((x) => x.id === id);
@@ -179,6 +183,25 @@ export function WorkspaceToolbar({ studyId }: WorkspaceToolbarProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ToolbarGroupSep />
+
+      {/* 撤销/重做 (#132 / #129 决议: 工具条图标按钮, 栈空置灰) */}
+      <div className="flex items-center gap-0.5">
+        <IconBtn
+          icon={Undo2}
+          label={t('viewer.workspace.undo')}
+          shortcut="⌘Z"
+          disabled={!canUndo}
+          onClick={undo}
+        />
+        <IconBtn
+          icon={Redo2}
+          label={t('viewer.workspace.redo')}
+          shortcut="⌘⇧Z"
+          disabled={!canRedo}
+          onClick={redo}
+        />
+      </div>
       <ToolbarGroupSep />
 
       {/* 导出 CSV (#130 保留) */}

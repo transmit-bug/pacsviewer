@@ -9,16 +9,20 @@ function cornerstoneCodecPlugin() {
   return {
     name: 'cornerstone-codec-fix',
     transform(code: string, id: string) {
-      // Fix imports for cornerstone codec modules
-      if (id.includes('@cornerstonejs/codec-') && id.endsWith('_decode.js')) {
-        // Add default export if missing
-        if (!code.includes('export default')) {
-          // Extract the variable name from the code
-          const varMatch = code.match(/var\s+(\w+)\s*=/);
-          if (varMatch) {
-            return code + '\nexport default ' + varMatch[1] + ';';
-          }
-        }
+      // Strip Vite's `?v=` version query — the transform id for a re-requested
+      // module ends with `_decode.js?v=<hash>`, which broke the endsWith match
+      // and left the UMD codec without a default export (fresh-worktree dev
+      // servers crashed on module load). See wayfinder #132 verification.
+      const cleanId = id.split('?')[0];
+      if (!cleanId.includes('@cornerstonejs/codec-') || !cleanId.endsWith('.js')) return null;
+      if (code.includes('export default')) return null;
+      // Emscripten UMD codecs declare `var <name> = (() => { ... })()`, then
+      // set module.exports — Vite needs a default export instead. This covers
+      // the *_decode.js codecs (jpeg/charls/openjpeg) AND the openjph codec
+      // (`openjphjs.js`), which dicom-image-loader default-imports.
+      const varMatch = code.match(/var\s+(\w+)\s*=\s*\(\(\)\s*=>/);
+      if (varMatch) {
+        return code + '\nexport default ' + varMatch[1] + ';';
       }
       return null;
     },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEditorStore, ImageFilter } from '@/stores/editorStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -101,6 +102,8 @@ export function ImageFilters({ className }: ImageFiltersProps) {
       params,
     };
 
+    // #132: 变更前记录 pre-op (滤镜添加 = 一次完整操作, 撤销移除滤镜并复原图像)。
+    useHistoryStore.getState().recordBefore();
     addFilter(newFilter);
   };
 
@@ -115,7 +118,11 @@ export function ImageFilters({ className }: ImageFiltersProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={resetFilters}
+          onClick={() => {
+            // #132: 变更前记录 pre-op (一键重置 = 一次完整操作)。
+            useHistoryStore.getState().recordBefore();
+            resetFilters();
+          }}
           className="h-7 px-2 text-xs"
         >
           <RotateCcw className="h-3 w-3 mr-1" />
@@ -172,7 +179,11 @@ export function ImageFilters({ className }: ImageFiltersProps) {
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={filter.enabled}
-                      onCheckedChange={() => toggleFilter(filter.id)}
+                      onCheckedChange={() => {
+                        // #132: 变更前记录 pre-op (滤镜开关 = 一次完整操作)。
+                        useHistoryStore.getState().recordBefore();
+                        toggleFilter(filter.id);
+                      }}
                       className="scale-75"
                     />
                     <span className="text-sm font-medium">{filter.name}</span>
@@ -181,7 +192,11 @@ export function ImageFilters({ className }: ImageFiltersProps) {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 text-destructive hover:text-destructive"
-                    onClick={() => removeFilter(filter.id)}
+                    onClick={() => {
+                      // #132: 变更前记录 pre-op (滤镜删除 = 一次完整操作)。
+                      useHistoryStore.getState().recordBefore();
+                      removeFilter(filter.id);
+                    }}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -205,6 +220,10 @@ export function ImageFilters({ className }: ImageFiltersProps) {
                           onChange={(e) =>
                             setFilterParam(filter.id, param.key, Number(e.target.value))
                           }
+                          onPointerDown={() => {
+                            // #132: 滑杆拖动起点记录 pre-op (撤销恢复拖动前参数)。
+                            useHistoryStore.getState().recordBefore();
+                          }}
                           disabled={!filter.enabled}
                         />
                       </div>

@@ -14,6 +14,7 @@ export function IconBtn({
   label,
   shortcut,
   active,
+  disabled,
   onClick,
   side = 'bottom',
 }: {
@@ -21,6 +22,7 @@ export function IconBtn({
   label: string;
   shortcut?: string;
   active?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
   side?: 'bottom' | 'right';
 }) {
@@ -29,12 +31,15 @@ export function IconBtn({
       <TooltipTrigger asChild>
         <button
           onClick={onClick}
+          disabled={disabled}
           title={label}
           className={cn(
             'ws-tool-btn flex h-8 w-8 items-center justify-center rounded-sm border',
             active
               ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
-              : 'border-transparent text-foreground/70 hover:bg-white/10 hover:text-foreground'
+              : 'border-transparent text-foreground/70 hover:bg-white/10 hover:text-foreground',
+            // #132: 栈空时置灰 (决议: 工具条撤销/重做按钮置灰当栈空)。
+            disabled && 'cursor-not-allowed opacity-35 hover:bg-transparent hover:text-foreground/70'
           )}
         >
           <Icon className="h-4 w-4" />

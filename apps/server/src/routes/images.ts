@@ -684,8 +684,13 @@ imagesRouter.post('/:id/layers', async (c) => {
   if (!body.name || !body.type) {
     return c.json({ success: false, message: '缺少必填字段 (name, type)' }, 400);
   }
+  // 撤销/重做 (#132): 级联删除的图层恢复时按原 id 重建, 保持 annotation
+  // layerId 引用与前端快照一致 (可选字段, 默认仍生成 uuid)。
+  if (body.id !== undefined && (typeof body.id !== 'string' || !body.id.trim())) {
+    return c.json({ success: false, message: 'id 必须是字符串' }, 400);
+  }
 
-  const id = uuid();
+  const id = body.id || uuid();
 
   await db.insert(layers).values({
     id,

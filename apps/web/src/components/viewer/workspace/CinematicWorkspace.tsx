@@ -233,6 +233,10 @@ export function CinematicWorkspace({
         return;
       }
       if (paletteOpen || typing) return;
+      // ⌘/Ctrl 组合键 (⌘Z 撤销 / ⌘⇧Z 重做 / ⌘E 编辑开关 / ⌘K 已拦截) 归全局
+      // 快捷键 (useKeyboardShortcuts) — 不触发工作台工具切换, 否则 Ctrl+Z 会
+      // 同时把工具切到缩放 (#132 撤销/重做接线)。
+      if (e.metaKey || e.ctrlKey) return;
       const k = e.key.toLowerCase();
       if (e.key === 'ArrowLeft') { e.preventDefault(); stepBack(); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); stepForward(); }

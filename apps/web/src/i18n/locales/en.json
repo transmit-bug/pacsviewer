@@ -416,6 +416,8 @@
       "presetDrivesVoi": "Presets drive real Cornerstone window/level",
       "expandToolbar": "Expand toolbar",
       "collapseToolbar": "Collapse to icon rail",
+      "undo": "Undo",
+      "redo": "Redo",
       "tools": "Tools",
       "palettePlaceholder": "Type a command or search tools / images / patients…",
       "paletteEmpty": "No matching command",
@@ -487,9 +489,8 @@
       "presetStandard": "Standard",
       "presetHighContrast": "High contrast",
       "presetLowNoise": "Low noise",
-      "presetRnfl": "RNFL"
-,
-"descEscape": "Cancel current action",
+      "presetRnfl": "RNFL",
+      "descEscape": "Cancel current action",
       "descEditor": "Toggle editor workspace (layers / filters / measurements) (⌘E)"
     },
     "editor": {
