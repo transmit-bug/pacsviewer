@@ -10,6 +10,8 @@ import { mkdir, writeFile } from 'fs/promises';
 import { db, images, series, studies, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
+import { log } from '../lib/audit';
+import { AuditEvents } from '../lib/audit-events';
 import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
 import { parseDicomFile, isDicomFile, storeDicomFile, getDicomFilePath } from '../services/dicom';
 import {
@@ -156,6 +158,20 @@ imagesRouter.post('/upload-dicom', async (c) => {
 
   // Store file and create database records
   const result = await storeDicomFile(parseResult);
+
+  // Fine-grained explicit audit event (#138): data import via DICOM upload
+  log({
+    userId: (c as any).get('userId') ?? null,
+    action: AuditEvents.DATA_IMPORT,
+    resource: 'image',
+    resourceId: result.imageId,
+    details: {
+      source: 'upload-dicom',
+      fileName: file.name,
+      isNew: result.isNew,
+    },
+    ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+  });
 
   return c.json({
     success: true,
@@ -342,6 +358,16 @@ imagesRouter.post('/upload', async (c) => {
     format,
   });
 
+  // Fine-grained explicit audit event (#138): data import via upload
+  log({
+    userId: (c as any).get('userId') ?? null,
+    action: AuditEvents.DATA_IMPORT,
+    resource: 'image',
+    resourceId: image?.id,
+    details: { source: 'upload', fileName: file.name },
+    ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+  });
+
   return c.json({ success: true, data: image }, 201);
 });
 
@@ -379,6 +405,16 @@ imagesRouter.post('/upload/batch', async (c) => {
     items.push(image);
     instanceNumber += 1;
   }
+
+  // Fine-grained explicit audit event (#138): batch data import
+  log({
+    userId: (c as any).get('userId') ?? null,
+    action: AuditEvents.DATA_IMPORT,
+    resource: 'image',
+    resourceId: target.seriesId,
+    details: { source: 'upload/batch', count: files.length },
+    ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+  });
 
   return c.json(
     {
@@ -418,6 +454,21 @@ imagesRouter.get('/:id/file', async (c) => {
   });
 
   if (!image) throw new NotFoundError('图像');
+
+  // Explicit client-initiated download (?download=1) is audited as a
+  // fine-grained event (#138). Plain viewer fetches stay suppressed by the
+  // middleware's LOG_ON_ERROR_ONLY rule to avoid per-frame noise.
+  const isDownload = c.req.query('download') === '1';
+  if (isDownload) {
+    log({
+      userId: (c as any).get('userId') ?? null,
+      action: AuditEvents.IMAGE_DOWNLOAD,
+      resource: 'image',
+      resourceId: id,
+      details: { fileName: image.filePath, format: image.format },
+      ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+    });
+  }
 
   // DICOM files are stored in the dicom store, not images dir
   if (image.format === 'dicom') {

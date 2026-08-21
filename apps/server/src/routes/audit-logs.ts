@@ -11,8 +11,13 @@ import { Hono } from 'hono';
 import { eq, and, desc, sql, gte, lte, like } from 'drizzle-orm';
 import { db, auditLogs } from '../db';
 import { AuditEventLabels } from '../lib/audit-events';
+import { requireRole } from '../middleware/auth';
 
 const auditLogsRouter = new Hono();
+
+// Append-only + admin-only (#138 决议): 仅 admin 角色可查询/导出审计日志;
+// 本路由不提供任何 UPDATE/DELETE 端点 (防篡改在 API 层保证)。
+auditLogsRouter.use('*', requireRole('管理员'));
 
 // GET / — List logs with pagination and filtering
 auditLogsRouter.get('/', async (c) => {

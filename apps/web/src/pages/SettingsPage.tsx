@@ -24,8 +24,11 @@ import { toast } from '@/components/ui/toast';
 
 interface LogEntry {
   id: string;
-  userId: string;
+  /** Nullable (#118): null = 未认证请求 */
+  userId: string | null;
   action: string;
+  /** Server-provided human-readable label aligned with audit-events taxonomy */
+  actionLabel?: string;
   resource: string;
   resourceId?: string;
   details?: Record<string, any>;
@@ -152,12 +155,13 @@ export function SettingsPage() {
     } catch (error) {
       // Fallback: export from current logs
       const csv = [
-        '时间,用户,操作,资源,资源ID,IP地址',
+        '时间,用户,操作,操作标签,资源,资源ID,IP地址',
         ...logs.map((l) =>
           [
             l.createdAt,
-            l.user?.displayName || l.userId,
+            l.user?.displayName || l.userId || '未认证',
             l.action,
+            l.actionLabel || l.action,
             l.resource,
             l.resourceId || '',
             l.ipAddress || '',
@@ -175,17 +179,24 @@ export function SettingsPage() {
     }
   };
 
-  const getActionBadge = (action: string) => {
-    const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+  const getActionBadge = (log: LogEntry) => {
+    // Prefer the server-side label aligned with audit-events.ts taxonomy;
+    // fall back to the local coarse-verb map for offline resilience.
+    const label = log.actionLabel;
+    const coarseMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       create: { variant: 'default', label: '创建' },
       update: { variant: 'secondary', label: '更新' },
       delete: { variant: 'destructive', label: '删除' },
+      view: { variant: 'outline', label: '查看' },
+      read: { variant: 'outline', label: '查询' },
       get: { variant: 'outline', label: '查询' },
       login: { variant: 'secondary', label: '登录' },
       logout: { variant: 'secondary', label: '登出' },
+      export: { variant: 'outline', label: '导出' },
+      import: { variant: 'outline', label: '导入' },
     };
-    const cfg = map[action] || { variant: 'outline' as const, label: action };
-    return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+    const cfg = coarseMap[log.action] || { variant: 'outline' as const, label: label || log.action };
+    return <Badge variant={cfg.variant}>{label || cfg.label}</Badge>;
   };
 
   const renderSaveButton = (category: string) => {
@@ -418,7 +429,7 @@ export function SettingsPage() {
               <div className="flex gap-3 mb-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="按操作筛选 (create, update, delete, login)"
+                    placeholder="按操作筛选 (view, create, update, delete, user.login…)"
                     value={logFilters.action}
                     onChange={(e) => setLogFilters({ ...logFilters, action: e.target.value })}
                     onKeyDown={(e) => e.key === 'Enter' && loadLogs()}
@@ -461,8 +472,8 @@ export function SettingsPage() {
                           <td className="p-2 text-muted-foreground whitespace-nowrap">
                             {formatDate(log.createdAt)}
                           </td>
-                          <td className="p-2">{log.user?.displayName || log.userId}</td>
-                          <td className="p-2">{getActionBadge(log.action)}</td>
+                          <td className="p-2">{log.user?.displayName || log.userId || '未认证'}</td>
+                          <td className="p-2">{getActionBadge(log)}</td>
                           <td className="p-2">
                             {log.resource}
                             {log.resourceId && (

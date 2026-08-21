@@ -11,7 +11,7 @@ import { describe, test, expect, beforeAll, afterAll, afterEach } from 'bun:test
 import { createTestApp, request } from './helpers';
 import { v4 as uuid } from 'uuid';
 import { eq } from 'drizzle-orm';
-import { db, annotations } from '../src/db';
+import { db, annotations, patients, studies, series, images, measurementPoints } from '../src/db';
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 
@@ -29,17 +29,59 @@ afterAll(() => {
 });
 
 afterEach(async () => {
-  // Clean up rows created by this test (tests run against the shared dev DB)
+  // Clean up in reverse dependency order. FK enforcement (#118):
+  // measurement_points must go before images/studies.
   for (const imageId of createdImageIds.splice(0)) {
+    await db.delete(measurementPoints).where(eq(measurementPoints.imageId, imageId));
     await db.delete(annotations).where(eq(annotations.imageId, imageId));
+    await db.delete(images).where(eq(images.id, imageId));
+  }
+  for (const studyId of createdStudyIds.splice(0)) {
+    const seriesRows = await db.query.series.findMany({ where: eq(series.studyId, studyId) });
+    for (const s of seriesRows) {
+      await db.delete(series).where(eq(series.id, s.id));
+    }
+    await db.delete(studies).where(eq(studies.id, studyId));
+  }
+  for (const patientId of createdPatientIds.splice(0)) {
+    await db.delete(patients).where(eq(patients.id, patientId));
   }
 });
 
-function newImageId(): string {
+/**
+ * Create a real image chain (patient → study → series → image) and return the
+ * image id. FK enforcement (#118) requires annotations.image_id to reference
+ * an existing image — phantom-id fixtures only worked under
+ * PRAGMA foreign_keys=OFF.
+ */
+async function newImageId(): Promise<string> {
   const id = `test-image-${uuid()}`;
+  const patientId = uuid();
+  const studyId = uuid();
+  const seriesId = uuid();
+  const now = new Date().toISOString();
+
+  await db.insert(patients).values({
+    id: patientId, mrn: `mrn-ann-${uuid().slice(0, 8)}`, name: '标注测试', gender: 'male', createdAt: now, updatedAt: now,
+  });
+  await db.insert(studies).values({
+    id: studyId, patientId, studyDate: '2025-01-01', modality: 'OCT', createdAt: now, updatedAt: now,
+  });
+  await db.insert(series).values({
+    id: seriesId, studyId, seriesNumber: 1, modality: 'OCT', createdAt: now,
+  });
+  await db.insert(images).values({
+    id, seriesId, instanceNumber: 1, filePath: `${id}.png`, fileSize: 1, fileHash: `h-${id}`, format: 'png', width: 512, height: 512, createdAt: now,
+  });
+
   createdImageIds.push(id);
+  createdPatientIds.push(patientId);
+  createdStudyIds.push(studyId);
   return id;
 }
+
+const createdPatientIds: string[] = [];
+const createdStudyIds: string[] = [];
 
 function validAnnotation(overrides: Record<string, any> = {}) {
   return {
@@ -87,22 +129,22 @@ describe('POST /api/annotations/sync — contract validation', () => {
     const cases: Array<{ name: string; body: any }> = [
       { name: 'missing imageId', body: { annotations: [validAnnotation()] } },
       { name: 'non-string imageId', body: { imageId: 123, annotations: [] } },
-      { name: 'annotations not array', body: { imageId: newImageId(), annotations: {} } },
-      { name: 'annotation is null', body: { imageId: newImageId(), annotations: [null] } },
-      { name: 'annotation is string', body: { imageId: newImageId(), annotations: ['Length'] } },
-      { name: 'annotation is array', body: { imageId: newImageId(), annotations: [[]] } },
-      { name: 'missing toolName', body: { imageId: newImageId(), annotations: [validAnnotation({ toolName: undefined })] } },
-      { name: 'empty toolName', body: { imageId: newImageId(), annotations: [validAnnotation({ toolName: '  ' })] } },
-      { name: 'missing data', body: { imageId: newImageId(), annotations: [validAnnotation({ data: undefined })] } },
-      { name: 'missing handles', body: { imageId: newImageId(), annotations: [validAnnotation({ data: { points: [] } })] } },
-      { name: 'empty points', body: { imageId: newImageId(), annotations: [validAnnotation({ data: { handles: { points: [] } } })] } },
-      { name: 'bad point shape', body: { imageId: newImageId(), annotations: [validAnnotation({ data: { handles: { points: ['abc'] } } })] } },
-      { name: 'cachedStats not object', body: { imageId: newImageId(), annotations: [validAnnotation({ data: { handles: { points: [[1, 2, 3]] }, cachedStats: 'nope' } })] } },
-      { name: 'id not string', body: { imageId: newImageId(), annotations: [validAnnotation({ id: 42 })] } },
+      { name: 'annotations not array', body: { imageId: `phantom-${uuid()}`, annotations: {} } },
+      { name: 'annotation is null', body: { imageId: `phantom-${uuid()}`, annotations: [null] } },
+      { name: 'annotation is string', body: { imageId: `phantom-${uuid()}`, annotations: ['Length'] } },
+      { name: 'annotation is array', body: { imageId: `phantom-${uuid()}`, annotations: [[]] } },
+      { name: 'missing toolName', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ toolName: undefined })] } },
+      { name: 'empty toolName', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ toolName: '  ' })] } },
+      { name: 'missing data', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ data: undefined })] } },
+      { name: 'missing handles', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ data: { points: [] } })] } },
+      { name: 'empty points', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ data: { handles: { points: [] } } })] } },
+      { name: 'bad point shape', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ data: { handles: { points: ['abc'] } } })] } },
+      { name: 'cachedStats not object', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ data: { handles: { points: [[1, 2, 3]] }, cachedStats: 'nope' } })] } },
+      { name: 'id not string', body: { imageId: `phantom-${uuid()}`, annotations: [validAnnotation({ id: 42 })] } },
     ];
 
     for (const tc of cases) {
-      const imageId = typeof tc.body.imageId === 'string' ? tc.body.imageId : newImageId();
+      const imageId = typeof tc.body.imageId === 'string' ? tc.body.imageId : `phantom-${uuid()}`;
       const res = await syncRaw(tc.body);
       expect(res.status, tc.name).toBe(400);
       const data = await res.json();
@@ -113,7 +155,7 @@ describe('POST /api/annotations/sync — contract validation', () => {
   });
 
   test('valid single annotation → 200 and count 1', async () => {
-    const imageId = newImageId();
+    const imageId = await newImageId();
     const ann = validAnnotation();
     const res = await sync(imageId, [ann]);
     expect(res.status).toBe(200);
@@ -123,7 +165,7 @@ describe('POST /api/annotations/sync — contract validation', () => {
   });
 
   test('valid mixed-tool annotations → 200 and count N', async () => {
-    const imageId = newImageId();
+    const imageId = await newImageId();
     const anns = [
       validAnnotation({ toolName: 'Length' }),
       validAnnotation({
@@ -148,7 +190,7 @@ describe('POST /api/annotations/sync — contract validation', () => {
   });
 
   test('empty array clears all annotations for the image', async () => {
-    const imageId = newImageId();
+    const imageId = await newImageId();
     await sync(imageId, [validAnnotation()]);
     const res = await sync(imageId, []);
     expect(res.status).toBe(200);
@@ -159,7 +201,7 @@ describe('POST /api/annotations/sync — contract validation', () => {
 
 describe('POST /api/annotations/sync — round-trip fidelity', () => {
   test('GET /annotations/image/:id returns stored toolName/handles/cachedStats verbatim', async () => {
-    const imageId = newImageId();
+    const imageId = await newImageId();
     const ann = validAnnotation();
     const resSync = await sync(imageId, [ann]);
     expect(resSync.status).toBe(200);
@@ -179,7 +221,7 @@ describe('POST /api/annotations/sync — round-trip fidelity', () => {
   });
 
   test('sync replaces previous annotations (last write wins)', async () => {
-    const imageId = newImageId();
+    const imageId = await newImageId();
     const first = validAnnotation({ id: 'first-uid', toolName: 'Length' });
     const second = validAnnotation({
       id: 'second-uid',
@@ -204,7 +246,7 @@ describe('POST /api/annotations/sync — round-trip fidelity', () => {
 
 describe('POST /api/annotations/sync — auth', () => {
   test('returns 401 without valid token', async () => {
-    const res = await sync(newImageId(), [validAnnotation()], {});
+    const res = await sync(`phantom-${uuid()}`, [validAnnotation()], {});
     expect(res.status).toBe(401);
   });
 });

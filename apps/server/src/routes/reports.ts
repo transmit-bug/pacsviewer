@@ -94,7 +94,7 @@ const reportsRouter = createCrudRouter(reports, {
       const auditEvent = statusEventMap[status as string] || AuditEvents.REPORT_EDIT;
 
       log({
-        userId: userId || 'system',
+        userId: userId ?? null,
         action: auditEvent,
         resource: 'report',
         resourceId: id,

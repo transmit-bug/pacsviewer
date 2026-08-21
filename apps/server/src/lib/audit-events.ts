@@ -66,10 +66,25 @@ export const AuditEvents = {
 
 export type AuditEvent = typeof AuditEvents[keyof typeof AuditEvents];
 
+// Coarse fallback verbs used by the audit middleware (grilling 决议 #138:
+// "中间件粗粒度兜底 + 关键点细粒度显式埋点"). Kept alongside the dotted
+// taxonomy so every row renders a human-readable label.
+export const CoarseActions = {
+  VIEW: 'view',
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+} as const;
+
 /**
  * Human-readable labels for audit events (Chinese).
  */
 export const AuditEventLabels: Record<string, string> = {
+  [CoarseActions.VIEW]: '查看',
+  [CoarseActions.CREATE]: '创建',
+  [CoarseActions.UPDATE]: '更新',
+  [CoarseActions.DELETE]: '删除',
+
   [AuditEvents.IMAGE_VIEW]: '查看图像',
   [AuditEvents.IMAGE_DOWNLOAD]: '下载图像',
   [AuditEvents.IMAGE_EXPORT]: '导出图像',
