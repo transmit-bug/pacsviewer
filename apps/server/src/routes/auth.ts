@@ -18,7 +18,6 @@ import { log } from '../lib/audit';
 import { db, users } from '../db';
 import { UnauthorizedError, ValidationError } from '../lib/errors';
 import { DEMO_ACCOUNT } from '../lib/demo';
-import { log } from '../lib/audit';
 import { AuditEvents } from '../lib/audit-events';
 import type { LoginResult } from '../lib/auth';
 

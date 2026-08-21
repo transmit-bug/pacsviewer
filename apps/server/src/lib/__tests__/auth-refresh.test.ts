@@ -49,13 +49,13 @@ function seed() {
   db.insert(sessions).values({
     id: 's-normal-1', userId: USER_ID,
     token: 'tok-normal', refreshToken: 'ref-normal',
-    expiresAt: future(),
+    expiresAt: future(), absoluteExpiresAt: future(),
   }).run();
   // 孤儿会话: userId 不存在
   db.insert(sessions).values({
     id: 's-orphan-1', userId: ORPHAN_USER_ID,
     token: 'tok-orphan', refreshToken: 'ref-orphan',
-    expiresAt: future(),
+    expiresAt: future(), absoluteExpiresAt: future(),
   }).run();
 }
 
