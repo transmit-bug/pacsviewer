@@ -325,4 +325,3 @@ describe('POST /api/images/upload — upload chain (wayfinder #131)', () => {
     expect(createdSeries!.imageCount).toBe(2);
   });
 });
-
