@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/toast';
-import { Upload, X, FileImage, CheckCircle, AlertCircle, FolderOpen, RotateCw } from 'lucide-react';
+import { Upload, X, FileImage, CheckCircle, AlertCircle, FolderOpen, RotateCw, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { imageApi } from '@/services/api';
 
@@ -29,6 +29,11 @@ interface ImageUploadProps {
   className?: string;
 }
 
+/** Per-file upload size cap — mirrored server-side (#136 决议：单文件上限 100MB). */
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+const isDicomName = (name: string) => /\.(dcm|dicom)$/i.test(name);
+
 export function ImageUpload({
   studyId,
   seriesId,
@@ -36,7 +41,8 @@ export function ImageUpload({
   modality,
   createSeries,
   onUploadComplete,
-  maxFiles = 20,
+  // OCT sequences routinely exceed 100 frames (#136 决议：maxFiles=200/批).
+  maxFiles = 200,
   className,
 }: ImageUploadProps) {
   const { t } = useTranslation();
@@ -114,18 +120,32 @@ export function ImageUpload({
 
   const addFiles = (newFiles: File[]) => {
     const allowedExtensions = ['.dcm', '.dicom', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'];
-    
-    // Check for DICOMDIR
-    const dicomdir = newFiles.find(f => f.name.toUpperCase() === 'DICOMDIR');
-    if (dicomdir) {
+
+    // DICOMDIR is NOT supported (#136: the old toast falsely claimed
+    // server-side handling that never existed). Skip it with an accurate
+    // notice instead of silently letting it fail later.
+    const hasDicomdir = newFiles.some((f) => f.name.toUpperCase() === 'DICOMDIR');
+    if (hasDicomdir) {
       toast({
-        title: t('upload.dicomdirDetected'),
-        description: t('upload.dicomdirDesc'),
+        title: t('upload.dicomdirNotSupported'),
+        variant: 'destructive',
       });
-      // DICOMDIR processing would be handled by the server
+    }
+
+    const oversized = newFiles.filter((f) => f.size > MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      const names = oversized.map((f) => f.name).slice(0, 3).join('、');
+      toast({
+        title: t('upload.fileTooLarge', {
+          name: oversized.length > 3 ? `${names} …` : names,
+        }),
+        variant: 'destructive',
+      });
     }
 
     const validFiles = newFiles.filter((file) => {
+      if (file.name.toUpperCase() === 'DICOMDIR') return false;
+      if (file.size > MAX_FILE_SIZE) return false;
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
       const isAllowedExt = allowedExtensions.includes(ext);
       const isAllowedType = [
@@ -136,7 +156,7 @@ export function ImageUpload({
         'application/dicom',
         'application/octet-stream',
       ].includes(file.type);
-      return isAllowedExt || isAllowedType || file.name.toUpperCase() === 'DICOMDIR';
+      return isAllowedExt || isAllowedType;
     });
 
     if (validFiles.length + files.length > maxFiles) {
@@ -181,10 +201,16 @@ export function ImageUpload({
         )
       );
 
-      const isDicom = /\.(dcm|dicom)$/i.test(uploadFile.file.name);
+      const isDicom = isDicomName(uploadFile.file.name);
+      const onProgress = (percent: number) => {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === uploadFile.id ? { ...f, progress: percent } : f))
+        );
+      };
+      // Real upload progress via axios onUploadProgress (see api.ts uploadConfig).
       const response = isDicom
-        ? await imageApi.uploadDicom(formData)
-        : await imageApi.upload(formData);
+        ? await imageApi.uploadDicom(formData, onProgress)
+        : await imageApi.upload(formData, onProgress);
 
       setFiles((prev) =>
         prev.map((f) =>
@@ -321,6 +347,16 @@ export function ImageUpload({
           className="hidden"
         />
       </div>
+
+      {/* DICOM attribution notice (#136 决议): tag-driven find-or-create must
+          be explicit at the upload point — uploading may create NEW patient /
+          study / series records from the tags inside the file. */}
+      {files.some((f) => isDicomName(f.file.name)) && (
+        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <p>{t('upload.dicomAttributionNotice')}</p>
+        </div>
+      )}
 
       {/* File List */}
       {files.length > 0 && (

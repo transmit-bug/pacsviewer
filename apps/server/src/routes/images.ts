@@ -12,6 +12,11 @@ import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { generatePyramid, getPyramidFilePath, selectPyramidLevel, type PyramidLevel } from '../services/pyramid';
 import { parseDicomFile, isDicomFile, storeDicomFile, getDicomFilePath } from '../services/dicom';
+import {
+  checkFileSize,
+  checkImageFormat,
+  partitionBatchFiles,
+} from '../services/upload-validation';
 
 const imagesRouter = new Hono();
 
@@ -135,6 +140,10 @@ imagesRouter.post('/upload-dicom', async (c) => {
 
   if (!file) throw new ValidationError('请选择 DICOM 文件');
 
+  // Per-file size cap (#136): reject BEFORE reading bytes into memory.
+  const dicomSizeError = checkFileSize(file.size);
+  if (dicomSizeError) throw new ValidationError(`${dicomSizeError}: ${file.name}`);
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Check if it's a DICOM file
@@ -164,18 +173,7 @@ imagesRouter.post('/upload-dicom', async (c) => {
 
 // ── Upload helpers ──────────────────────────────────────────────────────────
 
-/** Formats the images table can store (schema enum) and /upload accepts. */
-const UPLOADABLE_FORMATS = ['jpeg', 'png', 'tiff', 'bmp'];
-
-/** Normalize a file extension to the images.format enum value. */
-function normalizeImageFormat(ext: string | undefined): string {
-  const e = (ext || '').toLowerCase();
-  if (e === 'jpg' || e === 'jpeg') return 'jpeg';
-  if (e === 'tif' || e === 'tiff') return 'tiff';
-  if (e === 'png') return 'png';
-  if (e === 'bmp') return 'bmp';
-  return e;
-}
+// normalizeImageFormat / UPLOADABLE_FORMATS now live in services/upload-validation.
 
 /** Next instanceNumber for a series (max existing + 1, or 1). */
 async function nextInstanceNumber(seriesId: string): Promise<number> {
@@ -316,12 +314,15 @@ imagesRouter.post('/upload', async (c) => {
   const file = formData.get('file') as File;
   if (!file) throw new ValidationError('请选择文件');
 
-  const format = normalizeImageFormat(file.name.split('.').pop());
-  if (!UPLOADABLE_FORMATS.includes(format)) {
-    throw new ValidationError(
-      `不支持的文件格式: ${file.name}（支持 PNG/JPEG/TIFF/BMP，DICOM 请使用 DICOM 上传）`
-    );
+  // Per-file size cap (#136): reject before any processing.
+  const sizeError = checkFileSize(file.size);
+  if (sizeError) throw new ValidationError(`${sizeError}: ${file.name}`);
+
+  const formatCheck = checkImageFormat(file.name);
+  if (!formatCheck.ok) {
+    throw new ValidationError(formatCheck.error);
   }
+  const format = formatCheck.format;
 
   const target = await resolveTargetSeries(uploadContext(formData));
 
@@ -345,22 +346,27 @@ imagesRouter.post('/upload', async (c) => {
 });
 
 // Upload multiple images in one request — all into the same series.
+// Batch failure policy (#136 决议): skip failed files, continue, and report
+// per-file results — one unsupported/oversized file must NOT abort the batch.
 imagesRouter.post('/upload/batch', async (c) => {
   const formData = await c.req.formData();
   const files = formData.getAll('file') as File[];
   if (files.length === 0) throw new ValidationError('请选择文件');
 
+  const { accepted, rejected } = partitionBatchFiles(files);
+  if (accepted.length === 0) {
+    throw new ValidationError(
+      rejected.map((r) => r.reason).join('；') || '没有可上传的文件'
+    );
+  }
+
   const target = await resolveTargetSeries(uploadContext(formData));
 
   const items: any[] = [];
   let instanceNumber = await nextInstanceNumber(target.seriesId);
-  for (const file of files) {
-    const format = normalizeImageFormat(file.name.split('.').pop());
-    if (!UPLOADABLE_FORMATS.includes(format)) {
-      throw new ValidationError(
-        `不支持的文件格式: ${file.name}（支持 PNG/JPEG/TIFF/BMP，DICOM 请使用 DICOM 上传）`
-      );
-    }
+  for (const candidate of accepted) {
+    // `accepted` entries are the original File objects augmented with `format`.
+    const file: File = candidate;
     const buffer = Buffer.from(await file.arrayBuffer());
     const image = await storeImageFile({
       buffer,
@@ -368,13 +374,24 @@ imagesRouter.post('/upload/batch', async (c) => {
       seriesId: target.seriesId,
       instanceNumber,
       fileSize: file.size,
-      format,
+      format: candidate.format,
     });
     items.push(image);
     instanceNumber += 1;
   }
 
-  return c.json({ success: true, data: { seriesId: target.seriesId, items } }, 201);
+  return c.json(
+    {
+      success: true,
+      data: {
+        seriesId: target.seriesId,
+        items,
+        // Per-file failure report so clients can surface retryable errors.
+        failed: rejected,
+      },
+    },
+    201
+  );
 });
 
 // Get image by ID

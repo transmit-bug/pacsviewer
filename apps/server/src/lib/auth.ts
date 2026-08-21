@@ -128,10 +128,18 @@ export async function logout(token: string): Promise<void> {
 export async function refresh(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
   const session = await db.query.sessions.findFirst({
     where: eq(sessions.refreshToken, refreshToken),
+    with: { user: true },
   });
 
   if (!session) throw new UnauthorizedError('无效的刷新令牌');
   if (new Date(session.expiresAt) < new Date()) throw new UnauthorizedError('会话已过期');
+  if (!session.user) {
+    // 孤儿会话: 用户已被删除 (如 seed 重灌后残留)。若继续签发新 token,
+    // 前端会陷入“刷新成功 → 重试仍 401 → 永不跳登录页”的死循环。
+    // 拒绝刷新并清理孤儿会话, 前端 refresh 失败路径会登出并跳转登录页。
+    await db.delete(sessions).where(eq(sessions.id, session.id));
+    throw new UnauthorizedError('账号已不存在，请重新登录');
+  }
 
   const newToken = uuid();
   const newRefreshToken = uuid();

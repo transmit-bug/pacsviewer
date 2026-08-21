@@ -23,6 +23,8 @@
 
 import { db } from './index';
 import { eq, and } from 'drizzle-orm';
+import { existsSync, copyFileSync, mkdirSync } from 'node:fs';
+import { resolve, dirname, basename, join } from 'node:path';
 import {
   roles, users, patients, patientTags,
   studies, series, images, dicomFrames,
@@ -30,7 +32,7 @@ import {
   annotations, layers,
   devices, deviceAdapters,
   comparisons, systemSettings,
-  measurementPoints,
+  measurementPoints, sessions,
 } from './schema';
 import { ensurePresetDefinitions } from './measurement-definitions';
 import { DEMO_ACCOUNT } from '../lib/demo';
@@ -60,8 +62,36 @@ function pickN<T>(arr: T[], n: number): T[] {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+/** 清库前把现有数据库文件备份到 data/backups/ (含 WAL/SHM, 防丢数据) */
+function backupDatabase() {
+  const dbPath = resolve(process.env.DATABASE_URL || './data/pacsviewer.db');
+  if (!existsSync(dbPath)) return;
+  const backupDir = resolve(dirname(dbPath), 'backups');
+  mkdirSync(backupDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  for (const suffix of ['', '-wal', '-shm']) {
+    const src = dbPath + suffix;
+    if (existsSync(src)) {
+      copyFileSync(src, join(backupDir, `${basename(dbPath)}-${stamp}${suffix}`));
+    }
+  }
+  console.log(`💾 清库前已备份 → ${backupDir}/pacsviewer.db-${stamp}`);
+}
+
 async function seed() {
   console.log('🌱 Seeding database...\n');
+
+  // 安全护栏: 已有业务数据时, 必须显式 --reset 才会清库重灌
+  const forceReset = process.argv.includes('--reset') || process.argv.includes('--force');
+  const existing = await db.select({ id: users.id }).from(users).limit(1);
+  if (existing.length > 0 && !forceReset) {
+    console.log('⚠️  数据库已有数据，跳过播种（防止误清真实数据）。');
+    console.log('   如需清空并重新播种（会自动备份），运行: bun run db:seed -- --reset');
+    return;
+  }
+
+  // 清库前自动备份
+  backupDatabase();
 
   // Clear existing data (in reverse order of dependencies)
   console.log('🧹 Clearing existing data...');
@@ -79,6 +109,9 @@ async function seed() {
   await db.delete(patientTags);
   await db.delete(deviceAdapters);
   await db.delete(devices);
+  // 旧登录会话一并清掉: 否则 localStorage 里的旧 token 仍有效,
+  // 重灌后用户会被"永久登录", 永远看不到登录页 (2026-08-15 排查发现)
+  await db.delete(sessions);
   await db.delete(users);
   await db.delete(roles);
   console.log('✅ Existing data cleared\n');

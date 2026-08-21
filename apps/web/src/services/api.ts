@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosProgressEvent } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
 const api = axios.create({
@@ -77,9 +77,12 @@ api.interceptors.response.use(
       try {
         const token = await currentRefresh;
         originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
+        // 刷新后重试: 显式 await —— 若重试仍失败 (如孤儿会话: 刷新"成功"
+        // 但用户已不存在), 走 catch 登出并跳转登录页, 而不是静默 reject
+        // 导致控制台刷 401、主界面空数据且永不跳转 (2026-08-15 排查)。
+        return await api(originalRequest);
       } catch (refreshError) {
-        // 刷新失败，清除登录状态并跳转
+        // 刷新失败或刷新后重试仍失败: 清除登录状态并跳转
         useAuthStore.getState().logout();
         redirectToLogin();
         return Promise.reject(refreshError);
@@ -93,6 +96,32 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/**
+ * Upload progress callback — receives 0–100 percent based on bytes sent
+ * (#136 决议：上传中显示真实进度).
+ */
+export type UploadProgressHandler = (percent: number) => void;
+
+/**
+ * Shared axios config for multipart uploads: no timeout (large DICOM/影像批次
+ * 远超默认 30s), plus real per-request progress via onUploadProgress.
+ */
+function uploadConfig(onProgress?: UploadProgressHandler) {
+  return {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 0,
+    ...(onProgress
+      ? {
+          onUploadProgress: (e: AxiosProgressEvent) => {
+            if (e.total && e.total > 0) {
+              onProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)));
+            }
+          },
+        }
+      : {}),
+  };
+}
 
 // API functions
 export const authApi = {
@@ -130,18 +159,12 @@ export const studyApi = {
 };
 
 export const imageApi = {
-  upload: (formData: FormData) =>
-    api.post('/images/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  uploadDicom: (formData: FormData) =>
-    api.post('/images/upload-dicom', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  uploadBatch: (formData: FormData) =>
-    api.post('/images/upload/batch', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  upload: (formData: FormData, onProgress?: UploadProgressHandler) =>
+    api.post('/images/upload', formData, uploadConfig(onProgress)),
+  uploadDicom: (formData: FormData, onProgress?: UploadProgressHandler) =>
+    api.post('/images/upload-dicom', formData, uploadConfig(onProgress)),
+  uploadBatch: (formData: FormData, onProgress?: UploadProgressHandler) =>
+    api.post('/images/upload/batch', formData, uploadConfig(onProgress)),
   getById: (id: string) => api.get(`/images/${id}`),
   getMetadata: (id: string) => api.get(`/images/${id}/dicom-metadata`),
   getFile: (id: string) => `/api/images/${id}/file`,
