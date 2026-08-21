@@ -159,14 +159,16 @@ afterEach(async () => {
   }
   for (const studyId of studyIds) {
     await db.delete(measurementPoints).where(eq(measurementPoints.studyId, studyId));
-    await db.delete(studies).where(eq(studies.id, studyId));
   }
-  // series rows reference studies — delete by studyIds via join-free query
+  // series rows reference studies — delete series BEFORE studies (FK #118)
   for (const studyId of studyIds) {
     const seriesRows = await db.query.series.findMany({ where: eq(series.studyId, studyId) });
     for (const s of seriesRows) {
       await db.delete(series).where(eq(series.id, s.id));
     }
+  }
+  for (const studyId of studyIds) {
+    await db.delete(studies).where(eq(studies.id, studyId));
   }
   for (const patientId of patientIds) {
     await db.delete(patients).where(eq(patients.id, patientId));
@@ -360,9 +362,9 @@ describe('POST /annotations/sync → measurement_points', () => {
     expect(await getPointsForStudy(baselineStudyId)).toHaveLength(0);
   });
 
-  test('annotation with no study-linked image does not crash', async () => {
+  test('annotation with nonexistent image returns 404 (FK enforced, #118)', async () => {
     const res = await sync('nonexistent-image', [annotation({})]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
   });
 
   test('two images in the same study → one point per key (last image wins)', async () => {

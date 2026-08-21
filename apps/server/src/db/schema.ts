@@ -341,9 +341,12 @@ export const systemSettings = sqliteTable('system_settings', {
 });
 
 // Audit logs table
+// userId is nullable (#118/#138): unauthenticated requests (e.g. failed logins,
+// brute-force attempts) are recorded with NULL — a fake 'anonymous' id would
+// violate the FK. NULL renders as 未认证 in the query UI.
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),
-  userId: text('user_id').references(() => users.id).notNull(),
+  userId: text('user_id').references(() => users.id),
   action: text('action').notNull(),
   resource: text('resource').notNull(),
   resourceId: text('resource_id'),

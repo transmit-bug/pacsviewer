@@ -11,7 +11,8 @@ import { v4 as uuid } from 'uuid';
 import { db, auditLogs } from '../db';
 
 export interface AuditEntry {
-  userId: string;
+  /** Nullable (#118): unauthenticated requests record null, not a fake id. */
+  userId: string | null;
   action: string;
   resource: string;
   resourceId?: string;
@@ -37,7 +38,7 @@ export interface AuditQueryOptions {
 export function log(entry: AuditEntry): void {
   const record = {
     id: uuid(),
-    userId: entry.userId,
+    userId: entry.userId ?? null,
     action: entry.action,
     resource: entry.resource,
     resourceId: entry.resourceId ?? null,
@@ -57,27 +58,27 @@ export function log(entry: AuditEntry): void {
  */
 export const audit = {
   /** Log a read/view action */
-  view(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+  view(userId: string | null, resource: string, resourceId: string | undefined, details?: Record<string, unknown>) {
     log({ userId, action: 'view', resource, resourceId, details });
   },
 
   /** Log a create action */
-  create(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+  create(userId: string | null, resource: string, resourceId: string | undefined, details?: Record<string, unknown>) {
     log({ userId, action: 'create', resource, resourceId, details });
   },
 
   /** Log an update action */
-  update(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+  update(userId: string | null, resource: string, resourceId: string | undefined, details?: Record<string, unknown>) {
     log({ userId, action: 'update', resource, resourceId, details });
   },
 
   /** Log a delete action */
-  delete(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+  delete(userId: string | null, resource: string, resourceId: string | undefined, details?: Record<string, unknown>) {
     log({ userId, action: 'delete', resource, resourceId, details });
   },
 
   /** Log an export/download action */
-  export(userId: string, resource: string, resourceId: string, details?: Record<string, unknown>) {
+  export(userId: string | null, resource: string, resourceId: string | undefined, details?: Record<string, unknown>) {
     log({ userId, action: 'export', resource, resourceId, details });
   },
 };

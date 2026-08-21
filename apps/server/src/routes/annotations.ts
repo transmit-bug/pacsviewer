@@ -14,6 +14,7 @@ import { Hono } from 'hono';
 import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import { db, annotations, insertAnnotationSchema, images, measurementPoints } from '../db';
+import { NotFoundError } from '../lib/errors';
 import { extractMeasurements } from '../lib/measurement-extract';
 import { getDefinitionMap } from '../db/measurement-definitions';
 import { log } from '../lib/audit';
@@ -216,6 +217,9 @@ annotationsRouter.post('/sync', async (c) => {
     where: eq(images.id, imageId),
     with: { series: true },
   });
+  // FK enforcement (#118): annotations.image_id references images — writing
+  // rows for a non-existent image would now fail. 404 like sibling routes.
+  if (!img) throw new NotFoundError('图像');
   const resolvedStudyId = img?.series?.studyId ?? null;
 
   // Delete existing annotations for this image

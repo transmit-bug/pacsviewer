@@ -12,7 +12,7 @@ import { describe, test, expect, beforeAll, afterAll, afterEach } from 'bun:test
 import { createTestApp, request } from './helpers';
 import { v4 as uuid } from 'uuid';
 import { eq } from 'drizzle-orm';
-import { db, patients, studies, series, images, annotations, followUpRecords } from '../src/db';
+import { db, patients, studies, series, images, annotations, followUpRecords, measurementPoints } from '../src/db';
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 
@@ -37,6 +37,8 @@ afterEach(async () => {
       const seriesRows = await db.query.series.findMany({ where: eq(series.studyId, studyId) });
       for (const s of seriesRows) {
         const imgs = await db.query.images.findMany({ where: eq(images.seriesId, s.id) });
+        // FK enforcement (#118): measurement_points reference images — purge first
+        await db.delete(measurementPoints).where(eq(measurementPoints.studyId, studyId));
         for (const img of imgs) {
           await db.delete(annotations).where(eq(annotations.imageId, img.id));
         }
