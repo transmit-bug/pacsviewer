@@ -10,7 +10,7 @@ import {
   parseSnapshotDate,
   selectSnapshotsToDelete,
   snapshotFilename,
-} from '../../src/lib/backup';
+} from '../backup';
 
 function at(iso: string): Date {
   return new Date(iso);
@@ -88,18 +88,19 @@ describe('selectSnapshotsToDelete', () => {
     expect(del.size).toBe(1);
   });
 
-  test('daily tier stops after N distinct days', () => {
+  test('daily tier stops after N distinct days (newest per day kept)', () => {
     const snaps = [
       ...names(['2026-08-21T00:00:00Z']), // day 1 (also hourly)
       ...names(['2026-08-20T00:00:00Z', '2026-08-20T06:00:00Z']), // day 2
       ...names(['2026-08-19T00:00:00Z']), // day 3 — beyond daily=2
     ];
     const del = selectSnapshotsToDelete(snaps, { hourly: 1, daily: 2, weekly: 0 });
-    // Day 3's snapshots are outside daily tier but inside weekly tier (weekly=0 here)
-    expect(del.size).toBeGreaterThan(0);
+    // Day 3 is outside the daily window and weekly=0 → deleted.
     expect(del.has(snapshotFilename(at('2026-08-19T00:00:00Z')))).toBe(true);
-    expect(del.has(snapshotFilename(at('2026-08-20T00:00:00Z')))).toBe(false);
-    expect(del.has(snapshotFilename(at('2026-08-20T06:00:00Z')))).toBe(true);
+    // Day 2 keeps only its newest snapshot.
+    expect(del.has(snapshotFilename(at('2026-08-20T06:00:00Z')))).toBe(false);
+    expect(del.has(snapshotFilename(at('2026-08-20T00:00:00Z')))).toBe(true);
+    expect(del.size).toBe(2);
   });
 
   test('weekly tier rescues one snapshot per week beyond the daily window', () => {
@@ -160,21 +161,23 @@ describe('VACUUM INTO integration', () => {
       src.run("INSERT INTO t (v) VALUES ('hello')");
       src.close();
 
-      // Same SQL path used by scripts/backup.ts (bound parameter expression).
+      // Same SQL path used by scripts/backup.ts (bound-parameter expression).
       const conn = new Database(srcPath);
       const target = join(dir, 'pacsviewer-2026-08-21T00-00-00-000Z.db');
-      conn.run('VACUUM INTO $path', { $path: target });
+      conn.run('VACUUM INTO ?', [target]);
       conn.close();
 
       expect(existsSync(target)).toBe(true);
       const copy = new Database(target, { readonly: true });
-      expect(copy.query<unknown[]>('SELECT * FROM t').all()).toEqual([[1, 'hello']]);
-      expect(copy.query<{ c: string }>('PRAGMA quick_check').get()?.c).toBe('ok');
+      const rows = copy.query('SELECT * FROM t').all() as { id: number; v: string }[];
+      expect(rows).toEqual([{ id: 1, v: 'hello' }]);
+      const quickCheck = copy.query('PRAGMA quick_check').get() as Record<string, string> | undefined;
+      expect(quickCheck && Object.values(quickCheck)[0]).toBe('ok');
       copy.close();
 
       // Second run into the same target must fail (filename must not pre-exist).
       const conn2 = new Database(srcPath);
-      expect(() => conn2.run('VACUUM INTO $path', { $path: target })).toThrow();
+      expect(() => conn2.run('VACUUM INTO ?', [target])).toThrow();
       conn2.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });

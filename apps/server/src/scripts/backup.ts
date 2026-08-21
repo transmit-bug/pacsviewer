@@ -100,7 +100,7 @@ function listSnapshots(): SnapshotInfo[] {
 /** Run VACUUM INTO; delete the partial target on failure. */
 function vacuumInto(source: Database, targetPath: string): void {
   try {
-    source.run('VACUUM INTO $path', { $path: targetPath });
+    source.run('VACUUM INTO ?', [targetPath]);
   } catch (err) {
     // The target "must not previously exist"; a failed attempt can leave a
     // partial file behind — remove it so the next run isn't blocked.
@@ -117,8 +117,8 @@ function vacuumInto(source: Database, targetPath: string): void {
 function verifySnapshot(path: string): string {
   const check = new Database(path, { readonly: true });
   try {
-    const row = check.query<{ c: string }>('PRAGMA quick_check').get();
-    const result = row?.c ?? 'unknown';
+    const row = check.query('PRAGMA quick_check').get() as Record<string, string> | undefined;
+    const result = row ? Object.values(row)[0] : 'unknown';
     if (result !== 'ok') throw new Error(`quick_check failed: ${result}`);
     return result;
   } finally {

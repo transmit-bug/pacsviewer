@@ -80,6 +80,13 @@ export function selectSnapshotsToDelete(
 
   const keep = new Set<string>();
 
+  // Hourly tier: the N most recent snapshots are always kept.
+  for (let i = 0; i < Math.min(retention.hourly, sorted.length); i++) {
+    keep.add(sorted[i].name);
+  }
+
+  // Daily/weekly tiers: keep the newest snapshot of each successive distinct
+  // bucket until the bucket count exceeds the tier limit.
   let tierCount = 0;
   let lastKey: string | null = null;
 
@@ -91,13 +98,12 @@ export function selectSnapshotsToDelete(
       if (key !== lastKey) {
         lastKey = key;
         tierCount++;
+        if (tierCount > limit) break;
+        keep.add(s.name);
       }
-      if (tierCount > limit) break;
-      keep.add(s.name);
     }
   };
 
-  walkTier(() => 'all', retention.hourly); // hourly: every snapshot is its own bucket
   walkTier(dayKey, retention.daily);
   walkTier(isoWeekKey, retention.weekly);
 

@@ -91,13 +91,14 @@ console.log(`[restore] copied snapshot → ${DB_PATH}`);
 // Validate before reopening traffic (research doc step 5).
 const check = new Database(DB_PATH, { readonly: true });
 try {
-  const integrity = check.query<{ c: string }>('PRAGMA integrity_check').get()?.c;
+  const checkRow = check.query('PRAGMA integrity_check').get() as Record<string, string> | undefined;
+  const integrity = checkRow ? Object.values(checkRow)[0] : undefined;
   if (integrity !== 'ok') fail(`integrity_check failed on restored DB: ${integrity}`);
   console.log('[restore] integrity_check: ok');
 
   for (const table of ['patients', 'studies', 'images']) {
     try {
-      const row = check.query<{ c: number }>(`SELECT count(*) AS c FROM ${table}`).get();
+      const row = check.query(`SELECT count(*) AS c FROM ${table}`).get() as { c?: number } | undefined;
       console.log(`[restore] smoke count ${table}: ${row?.c ?? 0}`);
     } catch {
       console.log(`[restore] smoke count ${table}: table missing (empty snapshot?)`);
