@@ -1,26 +1,56 @@
 version: '3.8'
 
+# 1.0 医院试点部署 (#139 安全加固):
+#   - gateway (Caddy) 终结 HTTPS, 自签证书 (`tls internal`), 对外仅 443
+#   - server 不再直接映射 3000 到宿主机; web nginx 仅内网
+#   - 工作站首次访问前需导入自签根证书 (见 docker/gateway/Caddyfile 头部说明)
+
 services:
+  gateway:
+    image: caddy:2-alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./docker/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # 内置 CA 根证书与签发的站点证书持久化
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
   server:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
-    ports:
-      - "3000:3000"
+    # 仅内网可达 (web nginx /api → server:3000); 不再暴露宿主机端口
+    expose:
+      - "3000"
     volumes:
       - ./data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=/app/data/pacsviewer.db
+      # 可选覆盖 (默认值见 .env.example):
+      # - CORS_ORIGIN=https://pacsviewer.hospital.internal
+      # - SESSION_IDLE_MINUTES=30
+      # - SESSION_ABSOLUTE_HOURS=12
+      # - RATE_LIMIT_MAX=5
+      # - RATE_LIMIT_WINDOW_MINUTES=15
+      # - INITIAL_ADMIN_PASSWORD=            # 缺省时首启随机生成并打印日志
     restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    ports:
-      - "80:80"
+    # 仅内网可达 (gateway → web:80)
+    expose:
+      - "80"
     depends_on:
       - server
     restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

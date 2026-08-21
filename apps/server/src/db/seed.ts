@@ -60,6 +60,18 @@ function pickN<T>(arr: T[], n: number): T[] {
   return shuffled.slice(0, n);
 }
 
+/**
+ * 首启随机初始密码 (#139)。前缀 A1 保证必然满足密码策略
+ * (≥8 位且含字母和数字)，其余 14 位取自无易混淆字符表。
+ */
+function generateInitialAdminPassword(): string {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(14));
+  let suffix = '';
+  for (const b of bytes) suffix += alphabet[b % alphabet.length];
+  return `A1${suffix}`;
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 /** 清库前把现有数据库文件备份到 data/backups/ (含 WAL/SHM, 防丢数据) */
@@ -115,6 +127,53 @@ async function seed() {
   await db.delete(users);
   await db.delete(roles);
   console.log('✅ Existing data cleared\n');
+
+  // ── 生产环境最小化播种 (#139) ───────────────────────────────────────────
+  // 只建系统角色 + 初始管理员；演示账号、演示数据集一律不进入生产库。
+  // 管理员密码首启随机生成（或 INITIAL_ADMIN_PASSWORD 指定），
+  // 打印一次且必须首次登录时修改。
+  if (process.env.NODE_ENV === 'production') {
+    const adminRoleId = uuid();
+    await db.insert(roles).values({
+      id: adminRoleId,
+      name: '管理员',
+      description: '系统管理员，拥有所有权限',
+      permissions: {
+        patients: { create: true, read: true, update: true, delete: true },
+        studies: { create: true, read: true, update: true, delete: true },
+        reports: { create: true, read: true, update: true, delete: true, approve: true },
+        users: { create: true, read: true, update: true, delete: true },
+        settings: { read: true, update: true },
+      },
+      isSystem: true,
+      createdAt: dateAgo(0),
+    });
+
+    const initialPassword = process.env.INITIAL_ADMIN_PASSWORD || generateInitialAdminPassword();
+    if (process.env.INITIAL_ADMIN_PASSWORD) {
+      console.log('🔑 使用 INITIAL_ADMIN_PASSWORD 环境变量设定的初始管理员密码。');
+    } else {
+      console.log('🔑 初始管理员账号: admin');
+      console.log(`🔑 初始管理员密码: ${initialPassword}`);
+      console.log('⚠️  密码仅此打印一次，请立即保存；首次登录时将被强制修改。');
+    }
+
+    await db.insert(users).values({
+      id: uuid(),
+      username: 'admin',
+      email: 'admin@pacsviewer.com',
+      passwordHash: Bun.password.hashSync(initialPassword),
+      displayName: '系统管理员',
+      roleId: adminRoleId,
+      status: 'active',
+      mustChangePassword: true,
+      createdAt: dateAgo(0),
+      updatedAt: dateAgo(0),
+    });
+
+    console.log('✅ Production seed complete (roles + admin only, no demo data)');
+    return;
+  }
 
   // ── 1. Roles ────────────────────────────────────────────────────────────────
 
@@ -201,7 +260,9 @@ async function seed() {
       id: userIds.admin,
       username: 'admin',
       email: 'admin@pacsviewer.com',
-      passwordHash: hashPassword('admin123'),
+      // 开发便利: 默认 admin123 (可用 INITIAL_ADMIN_PASSWORD 覆盖);
+      // 生产路径走上方最小化播种, 密码随机并强制首改 (#139)
+      passwordHash: hashPassword(process.env.INITIAL_ADMIN_PASSWORD || 'admin123'),
       displayName: '系统管理员',
       roleId: adminRoleId,
       status: 'active',

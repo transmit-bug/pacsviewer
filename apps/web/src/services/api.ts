@@ -91,6 +91,19 @@ api.interceptors.response.use(
       }
     }
 
+    // 首登强制改密的残留会话 (#139): 除改密闭环外全部 API 被 403 拦截。
+    // 本地存储里的旧会话没有 mustChangePassword 标记时走到这里,
+    // 登出后重新登录即可进入强制改密流程。
+    if (
+      error.response?.status === 403 &&
+      typeof error.response?.data?.message === 'string' &&
+      error.response.data.message.includes('修改初始密码') &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      useAuthStore.getState().logout();
+      redirectToLogin();
+    }
+
     return Promise.reject(error);
   }
 );
@@ -133,6 +146,9 @@ export const authApi = {
   refreshToken: (refreshToken: string) =>
     api.post('/auth/refresh', { refreshToken }),
   getProfile: () => api.get('/auth/me'),
+  /** 自助改密 (含首登强制改密) (#139) */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.put('/auth/change-password', { currentPassword, newPassword }),
 };
 
 export const patientApi = {

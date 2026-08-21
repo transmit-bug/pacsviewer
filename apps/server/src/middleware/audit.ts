@@ -72,7 +72,7 @@ function record(c: Context, caught: unknown, startTime: number) {
 
   // Fire-and-forget audit log; user_id is NULL for unauthenticated requests
   log({
-    userId: user?.id ?? null,
+    userId: user?.id ?? null, // null: 未认证请求无法关联用户 (audit_logs.userId 可空, #118/#139)
     action,
     resource,
     resourceId,

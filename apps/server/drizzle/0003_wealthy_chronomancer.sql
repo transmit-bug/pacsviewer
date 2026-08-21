@@ -1,7 +1,6 @@
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
--- #118 数据清洗: 存量 'anonymous' 违规行先置 NULL，再重建表。
--- 这些行在 users 表无对应记录，直接拷贝会让新表继续携带 FK 违规数据，
--- 并在任何启用 PRAGMA foreign_keys 的环境阻塞迁移。
+-- #118: legacy rows written with the fake 'anonymous' id (FK was off) must be
+-- NULLed before the audit_logs table rebuild, per the #138 resolution.
 UPDATE `audit_logs` SET `user_id` = NULL WHERE `user_id` = 'anonymous';--> statement-breakpoint
 CREATE TABLE `__new_audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -21,4 +20,7 @@ ALTER TABLE `__new_audit_logs` RENAME TO `audit_logs`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `audit_logs_user_id_idx` ON `audit_logs` (`user_id`);--> statement-breakpoint
 CREATE INDEX `audit_logs_created_at_idx` ON `audit_logs` (`created_at`);--> statement-breakpoint
-CREATE INDEX `audit_logs_resource_idx` ON `audit_logs` (`resource`);
+CREATE INDEX `audit_logs_resource_idx` ON `audit_logs` (`resource`);--> statement-breakpoint
+ALTER TABLE `sessions` ADD `last_active_at` text;--> statement-breakpoint
+ALTER TABLE `sessions` ADD `absolute_expires_at` text NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `must_change_password` integer DEFAULT false NOT NULL;

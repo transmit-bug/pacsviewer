@@ -11,7 +11,8 @@ import { v4 as uuid } from 'uuid';
 import { db, auditLogs } from '../db';
 
 export interface AuditEntry {
-  /** Nullable (#118): unauthenticated requests record null, not a fake id. */
+  /** Nullable (#118/#139): unauthenticated requests and unknown-username login
+   *  failures record null, not a fake id. */
   userId: string | null;
   action: string;
   resource: string;
