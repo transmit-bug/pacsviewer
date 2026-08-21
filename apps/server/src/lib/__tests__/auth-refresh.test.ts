@@ -51,12 +51,15 @@ function seed() {
     token: 'tok-normal', refreshToken: 'ref-normal',
     expiresAt: future(), absoluteExpiresAt: future(),
   }).run();
-  // 孤儿会话: userId 不存在
+  // 孤儿会话: userId 不存在。生产中此类行产生于用户被删后 FK 未拦截的残留,
+  // 因此这里临时关闭 FK 来构造同样的状态 (#138 起 tests 默认 foreign_keys=ON)
+  db.run('PRAGMA foreign_keys=OFF');
   db.insert(sessions).values({
     id: 's-orphan-1', userId: ORPHAN_USER_ID,
     token: 'tok-orphan', refreshToken: 'ref-orphan',
     expiresAt: future(), absoluteExpiresAt: future(),
   }).run();
+  db.run('PRAGMA foreign_keys=ON');
 }
 
 afterAll(() => {
