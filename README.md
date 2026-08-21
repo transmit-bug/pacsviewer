@@ -105,13 +105,16 @@ bun run dev:web    # 前端 @ http://localhost:5173
 ## Docker 部署
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-| 服务 | 端口 |
-|------|------|
-| 前端 | `80` |
-| 后端 API | `3000` |
+生产部署经 Caddy 网关终结 HTTPS（自签证书），对外仅暴露 443；首次启动前需在宿主机初始化数据库并导入自签根证书到工作站，详见 [安装与运维指南](docs/deployment-guide.md)。
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| gateway (Caddy) | `443`（对外唯一入口） | TLS 终结，反代到 web |
+| web (nginx) | 80 | 仅 Compose 内网（静态 SPA + `/api` 反代） |
+| server | 3000 | 仅 Compose 内网 |
 
 数据持久化挂载在 `./data` 目录。
 
@@ -127,6 +130,9 @@ NODE_ENV=development
 
 ## 文档
 
+- [安装与运维指南](docs/deployment-guide.md) — 医院试点部署、TLS/证书、备份计划任务、运维排障
+- [医生使用手册](docs/user-manual-doctors.md) — 登录、登记/上传、阅片、报告、随访对比
+- [备份与恢复 Runbook](docs/backup-restore-runbook.md) — 备份策略与恢复流程
 - [领域模型](docs/domain-alignment-summary.md) — 核心实体与术语定义
 - [架构决策](docs/adr/) — ADR 记录
 - [产品需求](docs/prd/) — PRD 文档
