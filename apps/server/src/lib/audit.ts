@@ -11,7 +11,8 @@ import { v4 as uuid } from 'uuid';
 import { db, auditLogs } from '../db';
 
 export interface AuditEntry {
-  userId: string;
+  /** 可 null: 登录失败审计可能无法关联到任何用户 (#139) */
+  userId: string | null;
   action: string;
   resource: string;
   resourceId?: string;
@@ -37,7 +38,7 @@ export interface AuditQueryOptions {
 export function log(entry: AuditEntry): void {
   const record = {
     id: uuid(),
-    userId: entry.userId,
+    userId: entry.userId ?? null,
     action: entry.action,
     resource: entry.resource,
     resourceId: entry.resourceId ?? null,

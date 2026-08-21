@@ -52,7 +52,7 @@ export async function auditMiddleware(c: Context, next: Next) {
 
   // Fire-and-forget audit log
   log({
-    userId: user?.id ?? 'anonymous',
+    userId: user?.id ?? null, // null: 未认证请求无法关联用户 (audit_logs.userId 可空, #139)
     action,
     resource,
     resourceId,

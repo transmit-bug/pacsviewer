@@ -9,6 +9,8 @@ interface AuthState {
   isAuthenticated: boolean;
   /** 是否通过一键演示登录进入 (演示模式全局标识的依据) */
   isDemo: boolean;
+  /** 首登强制改密: 登录响应携带 mustChangePassword 时为 true (#139) */
+  mustChangePassword: boolean;
   isLoading: boolean;
   isHydrated: boolean;
   error: string | null;
@@ -17,6 +19,8 @@ interface AuthState {
 interface AuthActions {
   login: (username: string, password: string) => Promise<void>;
   demoLogin: () => Promise<void>;
+  /** 自助改密 (含首登强制改密): 成功返回 true (#139) */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   logout: () => void;
   refreshTokenAction: () => Promise<void>;
   setUser: (user: any) => void;
@@ -30,6 +34,7 @@ function applySession(set: any, data: any, extra?: Partial<AuthState>) {
     user: data.user,
     token: data.token,
     refreshToken: data.refreshToken,
+    mustChangePassword: !!data.mustChangePassword,
     isAuthenticated: true,
     isLoading: false,
     error: null,
@@ -45,6 +50,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       refreshToken: null,
       isAuthenticated: false,
       isDemo: false,
+      mustChangePassword: false,
       isLoading: false,
       isHydrated: false,
       error: null,
@@ -94,6 +100,32 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
+      changePassword: async (currentPassword: string, newPassword: string) => {
+        const { token } = get();
+        if (!token) return false;
+        try {
+          const response = await fetch('/api/auth/change-password', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ currentPassword, newPassword }),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || '密码修改失败');
+          }
+          // 改密成功: 清除强制标记, 用户可正常使用系统
+          set({
+            mustChangePassword: false,
+            error: null,
+            user: get().user ? { ...get().user, mustChangePassword: false } : null,
+          });
+          return true;
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : '密码修改失败' });
+          return false;
+        }
+      },
+
       logout: () => {
         set({
           user: null,
@@ -101,6 +133,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           refreshToken: null,
           isAuthenticated: false,
           isDemo: false,
+          mustChangePassword: false,
         });
       },
 

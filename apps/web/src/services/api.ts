@@ -77,15 +77,31 @@ api.interceptors.response.use(
       try {
         const token = await currentRefresh;
         originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
+        // 刷新后重试: 显式 await —— 若重试仍失败 (如孤儿会话: 刷新"成功"
+        // 但用户已不存在), 走 catch 登出并跳转登录页, 而不是静默 reject
+        // 导致控制台刷 401、主界面空数据且永不跳转 (2026-08-15 排查)。
+        return await api(originalRequest);
       } catch (refreshError) {
-        // 刷新失败，清除登录状态并跳转
+        // 刷新失败或刷新后重试仍失败: 清除登录状态并跳转
         useAuthStore.getState().logout();
         redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         if (refreshPromise === currentRefresh) refreshPromise = null;
       }
+    }
+
+    // 首登强制改密的残留会话 (#139): 除改密闭环外全部 API 被 403 拦截。
+    // 本地存储里的旧会话没有 mustChangePassword 标记时走到这里,
+    // 登出后重新登录即可进入强制改密流程。
+    if (
+      error.response?.status === 403 &&
+      typeof error.response?.data?.message === 'string' &&
+      error.response.data.message.includes('修改初始密码') &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      useAuthStore.getState().logout();
+      redirectToLogin();
     }
 
     return Promise.reject(error);
@@ -104,6 +120,9 @@ export const authApi = {
   refreshToken: (refreshToken: string) =>
     api.post('/auth/refresh', { refreshToken }),
   getProfile: () => api.get('/auth/me'),
+  /** 自助改密 (含首登强制改密) (#139) */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.put('/auth/change-password', { currentPassword, newPassword }),
 };
 
 export const patientApi = {

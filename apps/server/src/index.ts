@@ -43,7 +43,11 @@ app.onError((err, c) => {
 // Middleware
 app.use('*', logger());
 app.use('*', cors({
-  origin: ['http://localhost:5173'],
+  // 允许多个 origin 用逗号分隔 (#139); 生产走同源代理时可直接不设或留空
+  origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   credentials: true,
 }));
 

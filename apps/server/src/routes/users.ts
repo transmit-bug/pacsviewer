@@ -2,30 +2,39 @@ import { eq } from 'drizzle-orm';
 import { db, users, insertUserSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
 import { requirePermission } from '../middleware/auth';
+import { passwordPolicySchema, validatePasswordPolicy } from '../lib/password-policy';
+
+// 创建用户: password 字段走密码策略校验 (#139);
+// 新账号一律持有初始密码 → 首登强制改密
+const createUserSchema = insertUserSchema
+  .omit({ passwordHash: true })
+  .extend({ password: passwordPolicySchema });
 
 const usersRouter = createCrudRouter(users, {
   name: '用户',
   queryKey: 'users',
-  createSchema: insertUserSchema,
+  createSchema: createUserSchema,
   with: { role: true },
   middleware: [[requirePermission('users', 'create')] as any],
   beforeCreate: async (data) => {
     const passwordHash = await Bun.password.hash(data.password);
     const { password, ...rest } = data;
-    return { ...rest, passwordHash };
+    return { ...rest, passwordHash, mustChangePassword: true };
   },
   routes: (router) => {
-    // PUT /:id/password - Update password
+    // PUT /:id/password - Update password (管理员重置)
     router.put('/:id/password', async (c) => {
       const id = c.req.param('id');
       const { password } = await c.req.json();
+      // 管理员下发的密码同样受策略约束, 且首登强制修改 (#139)
+      validatePasswordPolicy(password);
       const passwordHash = await Bun.password.hash(password);
 
       await db.update(users)
-        .set({ passwordHash, updatedAt: new Date().toISOString() } as any)
+        .set({ passwordHash, mustChangePassword: true, updatedAt: new Date().toISOString() } as any)
         .where(eq(users.id, id));
 
-      return c.json({ success: true, message: '密码已更新' });
+      return c.json({ success: true, message: '密码已更新，用户下次登录须修改密码' });
     });
 
     // PUT /:id/status - Update status
