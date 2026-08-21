@@ -11,8 +11,10 @@
 
 import { eq } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { db, users, sessions, auditLogs } from '../db';
+import { db, users, sessions } from '../db';
 import { UnauthorizedError, ForbiddenError } from './errors';
+import { log } from './audit';
+import { AuditEvents } from './audit-events';
 
 /** Authenticated user with role */
 export interface AuthUser {
@@ -60,6 +62,23 @@ export async function authenticate(token: string): Promise<AuthUser | null> {
   return session.user as AuthUser;
 }
 
+/** Record a failed login attempt (#138): userId is null when unknown. */
+function logLoginFailure(
+  userId: string | null,
+  username: string,
+  meta?: { userAgent?: string; ipAddress?: string },
+  reason?: string,
+): void {
+  log({
+    userId,
+    action: AuditEvents.USER_LOGIN,
+    resource: 'auth',
+    details: { success: false, username, reason },
+    ipAddress: meta?.ipAddress,
+    userAgent: meta?.userAgent,
+  });
+}
+
 /**
  * Login with username and password.
  * Throws UnauthorizedError on failure.
@@ -74,12 +93,22 @@ export async function login(
     with: { role: true },
   });
 
-  if (!user) throw new UnauthorizedError('用户名或密码错误');
+  if (!user) {
+    // 用户名不存在: 无从关联用户，记 NULL user_id (#118)
+    logLoginFailure(null, username, meta, 'user_not_found');
+    throw new UnauthorizedError('用户名或密码错误');
+  }
 
   const isValid = await Bun.password.verify(password, user.passwordHash);
-  if (!isValid) throw new UnauthorizedError('用户名或密码错误');
+  if (!isValid) {
+    logLoginFailure(user.id, username, meta, 'wrong_password');
+    throw new UnauthorizedError('用户名或密码错误');
+  }
 
-  if (user.status !== 'active') throw new ForbiddenError('账号已被禁用');
+  if (user.status !== 'active') {
+    logLoginFailure(user.id, username, meta, `status_${user.status}`);
+    throw new ForbiddenError('账号已被禁用');
+  }
 
   const token = uuid();
   const refreshToken = uuid();
@@ -98,13 +127,14 @@ export async function login(
     .set({ lastLoginAt: new Date().toISOString() })
     .where(eq(users.id, user.id));
 
-  await db.insert(auditLogs).values({
-    id: uuid(),
+  // Fine-grained explicit audit event (#138)
+  log({
     userId: user.id,
-    action: 'login',
+    action: AuditEvents.USER_LOGIN,
     resource: 'auth',
     details: { success: true },
-    ipAddress: meta?.ipAddress ?? null,
+    ipAddress: meta?.ipAddress,
+    userAgent: meta?.userAgent,
   });
 
   return {

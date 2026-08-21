@@ -6,6 +6,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { login, logout, refresh, getCurrentUser } from '../lib/auth';
 import { DEMO_ACCOUNT } from '../lib/demo';
+import { log } from '../lib/audit';
+import { AuditEvents } from '../lib/audit-events';
 import type { LoginResult } from '../lib/auth';
 
 const auth = new Hono();
@@ -69,7 +71,20 @@ auth.post('/refresh', async (c) => {
 // Logout
 auth.post('/logout', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (token) await logout(token);
+  if (token) {
+    // Fine-grained explicit audit event (#138): record who logged out
+    const user = await getCurrentUser(token);
+    await logout(token);
+    if (user) {
+      log({
+        userId: user.id,
+        action: AuditEvents.USER_LOGOUT,
+        resource: 'auth',
+        ipAddress: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP'),
+        userAgent: c.req.header('User-Agent'),
+      });
+    }
+  }
   return c.json({ success: true, message: '已退出登录' });
 });
 

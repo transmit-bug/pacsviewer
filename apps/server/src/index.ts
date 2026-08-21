@@ -27,6 +27,7 @@ import followUpRouter from './routes/follow-up';
 import measurementsRouter from './routes/measurements';
 import { authMiddleware } from './middleware/auth';
 import { auditMiddleware } from './middleware/audit';
+import { startAuditRetentionJob } from './lib/audit-retention';
 import { startDicomServer } from './dicom/server';
 
 const app = new Hono();
@@ -56,8 +57,11 @@ app.get('/health', (c) => {
 app.route('/api/auth', auth);
 
 // Protected routes
-app.use('/api/*', authMiddleware);
+// Protected routes.
+// Audit runs BEFORE auth so unauthenticated requests (401) are recorded with
+// user_id = NULL (#118) instead of being invisible to the audit trail.
 app.use('/api/*', auditMiddleware);
+app.use('/api/*', authMiddleware);
 
 // API routes
 app.route('/api/patients', patientsRouter);
@@ -91,6 +95,10 @@ const dicomPort = Number(process.env.DICOM_PORT) || 11112;
 startDicomServer({ port: dicomPort }).catch(err => {
   console.error('[DICOM] Failed to start DICOM server:', err);
 });
+
+// Audit retention: purge rows older than AUDIT_RETENTION_MONTHS (default 6)
+// at startup, then daily (#138).
+startAuditRetentionJob();
 
 export default {
   port: Number(process.env.PORT) || 3000,
