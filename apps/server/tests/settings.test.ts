@@ -16,7 +16,7 @@ afterAll(() => {
 });
 
 describe('Settings API', () => {
-  const headers = () => ({ Authorization: 'Bearer test' });
+  const _headers = () => ({ Authorization: 'Bearer test' });
 
   test('health check — server responds', async () => {
     const res = await request(ctx.app, 'GET', '/health');

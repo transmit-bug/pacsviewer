@@ -53,7 +53,7 @@ function resolveSnapshot(): string {
 const snapshotPath = resolveSnapshot();
 const snapshotSize = statSync(snapshotPath).size;
 const quarantineName = `pacsviewer-pre-restore-${Math.floor(Date.now() / 1000)}.db`;
-const journalPath = DB_PATH + '-journal';
+const journalPath = `${DB_PATH}-journal`;
 
 console.log('[restore] plan:');
 console.log(`  snapshot      : ${snapshotPath} (${(snapshotSize / 1024 / 1024).toFixed(1)} MiB)`);

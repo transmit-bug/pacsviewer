@@ -13,7 +13,7 @@ import { createTestApp } from './helpers';
 import { db, images, patients, series, studies } from '../src/db';
 import { eq } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { join as pathJoin } from 'path';
+import { join as pathJoin } from 'node:path';
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 

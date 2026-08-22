@@ -241,7 +241,7 @@ export function VersionHistoryDialog({
                       <div className="flex flex-wrap gap-1">
                         {selectedVersion.images.map((img, i) => (
                           <span key={i} className="text-xs bg-muted rounded px-2 py-0.5">
-                            {typeof img === 'string' ? img.slice(0, 12) + '...' : JSON.stringify(img).slice(0, 20)}
+                            {typeof img === 'string' ? `${img.slice(0, 12)}...` : JSON.stringify(img).slice(0, 20)}
                           </span>
                         ))}
                       </div>

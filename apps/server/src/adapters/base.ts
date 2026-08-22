@@ -127,7 +127,7 @@ export abstract class BaseAdapter implements DeviceAdapter {
     };
   }
 
-  async receiveImage(image: InboundImageData): Promise<void> {
+  async receiveImage(_image: InboundImageData): Promise<void> {
     if (this._status !== 'running') {
       throw new Error(
         `[${this.id}] Adapter is not running (status: ${this._status})`,

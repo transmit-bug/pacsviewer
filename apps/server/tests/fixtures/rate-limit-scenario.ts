@@ -33,7 +33,7 @@ async function createUser(username: string, password = 'abcd1234'): Promise<void
   const roleId = crypto.randomUUID();
   await db.insert(roles).values({
     id: roleId,
-    name: '角色_' + roleId.slice(0, 8),
+    name: `角色_${roleId.slice(0, 8)}`,
     description: 'test',
     permissions: {},
     isSystem: false,
@@ -65,7 +65,7 @@ await createUser('lockme');
 
 // 1. MAX 次失败全部 401
 for (let i = 0; i < MAX; i++) {
-  const res = await loginReq('lockme', 'wrongpass' + i);
+  const res = await loginReq('lockme', `wrongpass${i}`);
   console.log(`RESULT fail${i} ${res.status}`);
 }
 // 2. 锁定后正确密码也 429

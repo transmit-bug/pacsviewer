@@ -37,7 +37,7 @@ interface FollowUpStarterDialogProps {
 }
 
 function studyLabel(s: FollowUpStudyOption): string {
-  return `${s.studyDate}${s.studyTime ? ' ' + s.studyTime.slice(0, 5) : ''} · ${s.modality ?? 'N/A'} · ${s.status}`;
+  return `${s.studyDate}${s.studyTime ? ` ${s.studyTime.slice(0, 5)}` : ''} · ${s.modality ?? 'N/A'} · ${s.status}`;
 }
 
 export function FollowUpStarterDialog({

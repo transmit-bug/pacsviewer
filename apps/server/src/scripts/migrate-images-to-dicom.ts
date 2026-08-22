@@ -7,10 +7,10 @@
  * Usage: bun run apps/server/src/scripts/migrate-images-to-dicom.ts
  */
 
-import { db, images, series, studies } from '../db';
-import { eq, and, ne } from 'drizzle-orm';
-import { join } from 'path';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { db, images, } from '../db';
+import { eq, ne } from 'drizzle-orm';
+import { join } from 'node:path';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { v4 as uuid } from 'uuid';
 import { convertImageToDicom } from '../services/image-to-dicom';
 
@@ -34,7 +34,7 @@ async function migrateImages() {
   console.log(`📊 Found ${nonDicomImages.length} non-DICOM images to migrate`);
 
   let migrated = 0;
-  let skipped = 0;
+  const skipped = 0;
   let failed = 0;
 
   for (const image of nonDicomImages) {

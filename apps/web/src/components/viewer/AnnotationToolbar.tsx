@@ -99,7 +99,7 @@ export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps
       case 'list':
         setShowList(!showList);
         break;
-      case 'export':
+      case 'export': {
         const data = JSON.stringify(measurements, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -109,6 +109,7 @@ export function ImageToolsToolbar({ className, studyId }: ImageToolsToolbarProps
         a.click();
         URL.revokeObjectURL(url);
         break;
+      }
       case 'exportCsv':
         if (!studyId) return;
         measurementApi

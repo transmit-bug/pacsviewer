@@ -5,8 +5,8 @@
 import { Hono } from 'hono';
 import { eq, sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { join } from 'path';
-import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { db, images, series, studies, annotations, layers } from '../db';
 import { processImage } from '@pacsviewer/image-processing';
 import { NotFoundError, ValidationError } from '../lib/errors';

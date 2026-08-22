@@ -32,7 +32,7 @@ transfersRouter.get('/', async (c) => {
   }
 
   const where = conditions.length > 0
-    ? (t: any, { and: andFn, eq: eqFn }: any) => {
+    ? (_t: any, { and: andFn }: any) => {
         if (conditions.length === 1) return conditions[0];
         return andFn(...conditions);
       }

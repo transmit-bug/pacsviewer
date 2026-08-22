@@ -144,7 +144,7 @@ describe('POST /api/annotations/sync — contract validation', () => {
     ];
 
     for (const tc of cases) {
-      const imageId = typeof tc.body.imageId === 'string' ? tc.body.imageId : `phantom-${uuid()}`;
+      const _imageId = typeof tc.body.imageId === 'string' ? tc.body.imageId : `phantom-${uuid()}`;
       const res = await syncRaw(tc.body);
       expect(res.status, tc.name).toBe(400);
       const data = await res.json();

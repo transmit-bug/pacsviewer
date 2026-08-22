@@ -4,7 +4,7 @@
  * Tests for report version creation, retrieval, and diff functionality.
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeAll, afterAll, } from 'bun:test';
 import { createTestApp, request } from './helpers';
 import { v4 as uuid } from 'uuid';
 import * as schema from '../src/db/schema';

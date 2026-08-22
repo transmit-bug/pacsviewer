@@ -5,7 +5,7 @@
  * P-DATA-TF (command + dataset), A-RELEASE, and A-ABORT.
  */
 
-import { PDU_TYPE, TRANSFER_SYNTAX, PRESENTATION_CONTEXT_RESULT, SUPPORTED_TRANSFER_SYNTAXES } from './constants';
+import { PDU_TYPE, PRESENTATION_CONTEXT_RESULT, SUPPORTED_TRANSFER_SYNTAXES } from './constants';
 
 // --- PDU structures ---
 
@@ -46,7 +46,7 @@ const DEFAULT_MAX_PDU = 16384;
 export function parseAssociateRQ(buffer: Buffer, offset: number = 0): AssociateRQ {
   let pos = offset;
 
-  const pduType = buffer[pos++];
+  const _pduType = buffer[pos++];
   pos++; // reserved
   const pduLength = buffer.readUInt32BE(pos);
   pos += 4;
@@ -304,7 +304,7 @@ export function parsePDataTF(buffer: Buffer, offset: number = 0): { presentation
 
   pos++; // pduType
   pos++; // reserved
-  const pduLength = buffer.readUInt32BE(pos);
+  const _pduLength = buffer.readUInt32BE(pos);
   pos += 4;
 
   // Item

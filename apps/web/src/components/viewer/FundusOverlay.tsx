@@ -78,7 +78,7 @@ export function FundusOverlay({ className }: FundusOverlayProps) {
       ctx.stroke();
 
       // Semi-transparent fill
-      ctx.fillStyle = color + '40';
+      ctx.fillStyle = `${color}40`;
       ctx.fill();
     });
   }, [cupDiscMeasurements, lesions]);

@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, } from 'bun:test';
 import { getRegistry, resetRegistry } from '../registry';
 import { BaseAdapter } from '../base';
-import type { AdapterConfig, DeviceAdapter } from '../types';
+import type { AdapterConfig, } from '../types';
 
 // ── Test adapter implementation ────────────────────────────────────────────────
 

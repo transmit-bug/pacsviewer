@@ -1,5 +1,5 @@
-import { Hono } from 'hono';
-import { eq, or, like, sql } from 'drizzle-orm';
+
+import { eq, or, like, } from 'drizzle-orm';
 import { db, patients, studies, insertPatientSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
 import { requirePermission } from '../middleware/auth';

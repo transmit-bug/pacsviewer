@@ -179,10 +179,11 @@ export function parseAssociateRq(buffer: Buffer, offset: number = 0): AssociateR
         ).toString('ascii');
         break;
 
-      case ItemType.PRESENTATION_CONTEXT:
+      case ItemType.PRESENTATION_CONTEXT: {
         const pc = parsePresentationContextRq(buffer, offset + pos);
         presentationContexts.push(pc);
         break;
+      }
 
       case ItemType.USER_INFO:
         userInfo = parseUserInformation(buffer, offset + pos);
@@ -316,14 +317,14 @@ export function parsePDataTf(buffer: Buffer, offset: number = 0): PDataTf {
 /**
  * Parse A-RELEASE-RQ PDU.
  */
-export function parseReleaseRq(buffer: Buffer, offset: number = 0): void {
+export function parseReleaseRq(_buffer: Buffer, _offset: number = 0): void {
   // No additional data
 }
 
 /**
  * Parse A-RELEASE-RP PDU.
  */
-export function parseReleaseRp(buffer: Buffer, offset: number = 0): void {
+export function parseReleaseRp(_buffer: Buffer, _offset: number = 0): void {
   // No additional data
 }
 

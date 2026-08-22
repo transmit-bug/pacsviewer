@@ -2,7 +2,7 @@
  * Auth middleware - Thin wrapper around lib/auth module.
  */
 
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { authenticate, authorize } from '../lib/auth';
 import { UnauthorizedError, ForbiddenError } from '../lib/errors';
 

@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import { db } from '../db';
-import { comparisons, insertComparisonSchema } from '../db/schema';
+import { comparisons, } from '../db/schema';
 import { NotFoundError, ValidationError } from '../lib/errors';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 type Variables = {
   user: { id: string; role?: { name: string } };

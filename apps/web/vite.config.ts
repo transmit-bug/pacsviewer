@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import path from 'node:path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import commonjs from 'vite-plugin-commonjs';
 
@@ -22,7 +22,7 @@ function cornerstoneCodecPlugin() {
       // (`openjphjs.js`), which dicom-image-loader default-imports.
       const varMatch = code.match(/var\s+(\w+)\s*=\s*\(\(\)\s*=>/);
       if (varMatch) {
-        return code + '\nexport default ' + varMatch[1] + ';';
+        return `${code}\nexport default ${varMatch[1]};`;
       }
       return null;
     },

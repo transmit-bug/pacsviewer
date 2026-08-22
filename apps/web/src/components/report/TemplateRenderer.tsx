@@ -146,8 +146,8 @@ interface FieldRendererProps {
 function FieldRenderer({ field, value, onChange, readOnly, isAutoFilled }: FieldRendererProps) {
   const isOutOfRange = field.normalRange && value !== undefined && value !== '';
   const numValue = typeof value === 'number' ? value : parseFloat(value);
-  const isBelow = isOutOfRange && !isNaN(numValue) && numValue < (field.normalRange?.[0] ?? -Infinity);
-  const isAbove = isOutOfRange && !isNaN(numValue) && numValue > (field.normalRange?.[1] ?? Infinity);
+  const isBelow = isOutOfRange && !Number.isNaN(numValue) && numValue < (field.normalRange?.[0] ?? -Infinity);
+  const isAbove = isOutOfRange && !Number.isNaN(numValue) && numValue > (field.normalRange?.[1] ?? Infinity);
 
   return (
     <div className="space-y-2">

@@ -4,12 +4,12 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import {
-  ViewportState,
+  type ViewportState,
   defaultViewport,
   drawMeasurementLines,
   isWwWlGesture,
   applyWlDrag,
-  ComparisonLine,
+  type ComparisonLine,
 } from './shared';
 
 type BlendMode = 'normal' | 'difference' | 'lighten' | 'darken';

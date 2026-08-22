@@ -15,7 +15,8 @@
     "db:seed": "bun run src/db/seed.ts",
     "db:seed-hrf": "bun run scripts/seed-hrf.ts",
     "db:seed-clean": "bun run scripts/clean-synthetic.ts",
-    "db:cleanup": "bun run scripts/cleanup-full.ts"
+    "db:cleanup": "bun run scripts/cleanup-full.ts",
+    "lint": "biome check ."
   },
   "dependencies": {
     "@pacsviewer/image-processing": "workspace:*",

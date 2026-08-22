@@ -7,8 +7,8 @@
  * Reference: DICOM PS3.7 Section 9.1.2 (C-FIND)
  */
 
-import { Association } from '../ulp/association';
-import { PDataTf } from '../ulp/pdu';
+import type { Association } from '../ulp/association';
+import type { PDataTf } from '../ulp/pdu';
 import { db, worklistItems } from '../../db';
 import { eq, and, gte, lte, like } from 'drizzle-orm';
 import { log } from '../../lib/audit';
@@ -78,7 +78,7 @@ export function createCFindHandler(association: Association): (data: PDataTf) =>
 /**
  * Parse C-FIND query dataset.
  */
-function parseQueryDataset(data: Buffer): Record<string, any> {
+function parseQueryDataset(_data: Buffer): Record<string, any> {
   // Simplified parsing - in a full implementation, this would
   // parse the DICOM dataset properly
   const query: Record<string, any> = {};

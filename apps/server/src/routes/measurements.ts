@@ -11,7 +11,7 @@
  *                                  (measurement_key, studyDate)
  */
 import { Hono } from 'hono';
-import { eq, asc, sql } from 'drizzle-orm';
+import { eq, asc, sql, type SQL } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 import {
   db,
@@ -184,7 +184,7 @@ measurementsRouter.get('/trends', async (c) => {
   const patientId = c.req.query('patientId');
   const studyIdsParam = c.req.query('studyIds');
 
-  let studyFilter;
+  let studyFilter: SQL | undefined;
   if (studyIdsParam) {
     const ids = studyIdsParam.split(',').map((s) => s.trim()).filter(Boolean);
     if (ids.length > 0) {
@@ -283,7 +283,7 @@ measurementsRouter.get('/export', async (c) => {
   const patientId = c.req.query('patientId');
   const studyIdsParam = c.req.query('studyIds');
 
-  let studyFilter;
+  let studyFilter: SQL | undefined;
   if (studyIdsParam) {
     const ids = studyIdsParam.split(',').map((s) => s.trim()).filter(Boolean);
     if (ids.length > 0) {
@@ -338,7 +338,7 @@ measurementsRouter.get('/export', async (c) => {
     ),
   ].join('\r\n');
 
-  return new Response('\uFEFF' + csv, { // Add BOM for Excel UTF-8 support
+  return new Response(`\uFEFF${csv}`, { // Add BOM for Excel UTF-8 support
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="measurements-${new Date().toISOString().slice(0, 10)}.csv"`,

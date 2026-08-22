@@ -8,16 +8,16 @@
  * Reference: ADR-005-dicom-network-protocol.md
  */
 
-import { createServer, Server, Socket } from 'net';
+import { createServer, type Server, type Socket } from 'node:net';
 import { Association } from './ulp/association';
-import { AssociateRq, PDataTf, Abort, PresentationContextResult } from './ulp/pdu';
+import { type AssociateRq, type PDataTf, type Abort, PresentationContextResult } from './ulp/pdu';
 import { createCStoreHandler } from './services/cstore';
 import { createCEchoHandler } from './services/cecho';
 import { createCFindHandler } from './services/cfind';
 
 // ─── SOP Class UIDs ──────────────────────────────────────────────────────────
 
-const SOP_CLASSES = {
+const _SOP_CLASSES = {
   // Verification (C-ECHO)
   VERIFICATION: '1.2.840.10008.1.1',
 
@@ -220,7 +220,7 @@ export class DicomServer {
   }
 
   private async handleData(
-    association: Association,
+    _association: Association,
     data: PDataTf,
     cStoreHandler: ((data: PDataTf) => Promise<void>) | null,
     cEchoHandler: ((data: PDataTf) => Promise<void>) | null,
@@ -271,7 +271,7 @@ export class DicomServer {
     association.sendReleaseResponse();
   }
 
-  private handleAbort(association: Association, abort: Abort): void {
+  private handleAbort(_association: Association, abort: Abort): void {
     console.warn(
       `[DICOM] Association aborted: source=${abort.source}, reason=${abort.reason}`
     );
@@ -283,7 +283,7 @@ export class DicomServer {
     console.log(`[DICOM] Connection closed: ${connectionId}`);
   }
 
-  private handleConnectionError(association: Association, error: Error): void {
+  private handleConnectionError(_association: Association, error: Error): void {
     console.error(`[DICOM] Connection error: ${error.message}`);
   }
 }

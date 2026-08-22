@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { DicomAdapter } from '../dicom';
 import type { AdapterConfig } from '../types';
-import { existsSync } from 'fs';
-import { rm } from 'fs/promises';
+import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 
 describe('DicomAdapter', () => {
   let adapter: DicomAdapter;

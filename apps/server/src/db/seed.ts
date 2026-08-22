@@ -1022,7 +1022,7 @@ async function seed() {
   });
   demoStats.series++;
   const s1Img1 = await insertDemoImage({ seriesId: s1SeriesId, instanceNumber: 1, studyDate: '2024-06-18', sopInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618.1' });
-  const s1Img2 = await insertDemoImage({ seriesId: s1SeriesId, instanceNumber: 2, studyDate: '2024-06-18', sopInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618.2' });
+  const _s1Img2 = await insertDemoImage({ seriesId: s1SeriesId, instanceNumber: 2, studyDate: '2024-06-18', sopInstanceUid: '1.2.826.0.1.3680043.10.111.4.20240618.2' });
   await insertDemoPoint({ studyId: s1StudyId, imageId: s1Img1, key: 'cd', type: 'probe', value: 0.35, unit: '', capturedAt: '2024-06-18T10:10:00.000Z' });
   await insertDemoPoint({ studyId: s1StudyId, imageId: s1Img1, key: 'iop', type: 'probe', value: 16, unit: 'mmHg', capturedAt: '2024-06-18T10:10:00.000Z' });
   console.log('✅ Demo 配角 1「钱美玉」：眼底彩照（2 图）');
@@ -1135,7 +1135,7 @@ async function seed() {
   });
   demoStats.series++;
   const s3Img1 = await insertDemoImage({ seriesId: s3SeriesId, instanceNumber: 1, studyDate: '2024-10-08', sopInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008.1' });
-  const s3Img2 = await insertDemoImage({ seriesId: s3SeriesId, instanceNumber: 2, studyDate: '2024-10-08', sopInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008.2' });
+  const _s3Img2 = await insertDemoImage({ seriesId: s3SeriesId, instanceNumber: 2, studyDate: '2024-10-08', sopInstanceUid: '1.2.826.0.1.3680043.10.111.6.20241008.2' });
   await insertDemoPoint({ studyId: s3StudyId, imageId: s3Img1, key: 'md', type: 'probe', value: -6.8, unit: 'dB', capturedAt: '2024-10-08T15:30:00.000Z' });
   await insertDemoPoint({ studyId: s3StudyId, imageId: s3Img1, key: 'psd', type: 'probe', value: 5.2, unit: 'dB', capturedAt: '2024-10-08T15:30:00.000Z' });
   console.log('✅ Demo 配角 3「潘玉兰」：视野（MD -6.8dB / PSD 5.2dB）');
@@ -1289,7 +1289,7 @@ async function seed() {
 
   if (patientIds.length > 0 && studyIds.length >= 2) {
     const compPatient = patientIds[0];
-    const patientStudies = studyIds.slice(0, 2);
+    const _patientStudies = studyIds.slice(0, 2);
 
     await db.insert(comparisons).values([
       {

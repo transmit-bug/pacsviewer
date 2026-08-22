@@ -15,15 +15,13 @@
  * the association state for each DICOM connection.
  */
 
-import { Socket } from 'net';
+import type { Socket } from 'node:net';
 import {
   PduType,
-  AssociateRq,
-  AssociateAc,
-  AssociateRj,
-  PDataTf,
-  Abort,
-  PresentationContext,
+  type AssociateRq,
+  type PDataTf,
+  type Abort,
+  type PresentationContext,
   PresentationContextResult,
   AbortSource,
   AbortReason,
@@ -177,7 +175,7 @@ export class Association {
     presentationContextId: number,
     data: Buffer,
     command: boolean = false,
-    lastFragment: boolean = true
+    _lastFragment: boolean = true
   ): void {
     if (this.state !== AssociationState.ESTABLISHED) {
       throw new Error('Cannot send data: association not established');

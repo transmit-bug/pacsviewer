@@ -65,7 +65,7 @@ export async function initCornerstone(): Promise<void> {
     // Cornerstone loader uses its own XHR (no axios interceptor), and the
     // image endpoints are auth-protected. Reading the token at request time
     // keeps it fresh across refresh cycles.
-    beforeSend: async (): Promise<Record<string, string> | void> => {
+    beforeSend: async (): Promise<Record<string, string> | undefined> => {
       const token = useAuthStore.getState().token;
       if (token) {
         return { Authorization: `Bearer ${token}` };

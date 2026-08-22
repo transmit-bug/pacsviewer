@@ -11,8 +11,8 @@
  */
 
 import sharp from 'sharp';
-import { join } from 'path';
-import { mkdir } from 'fs/promises';
+import { join } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import dcmjs from 'dcmjs';
 
 const { DicomMessage, DicomMetaDictionary } = dcmjs.data;

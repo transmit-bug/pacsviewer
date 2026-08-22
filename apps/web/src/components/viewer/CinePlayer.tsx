@@ -61,9 +61,6 @@ export function CinePlayer({ className }: CinePlayerProps) {
   const lastTimeRef = useRef<number>(0);
   const directionRef = useRef<1 | -1>(1);
 
-  // Don't render for single-frame images
-  if (totalFrames <= 1) return null;
-
   // Cine playback loop
   const animate = useCallback((timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
@@ -177,6 +174,10 @@ export function CinePlayer({ className }: CinePlayerProps) {
 
   const currentModeConfig = PLAYBACK_MODES.find(m => m.mode === playbackMode)!;
   const ModeIcon = currentModeConfig.icon;
+
+  // Don't render for single-frame images — kept after all hooks so hook order
+  // stays stable when the same mounted instance switches between single/multi-frame.
+  if (totalFrames <= 1) return null;
 
   return (
     <div className={className}>

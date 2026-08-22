@@ -180,13 +180,14 @@ export function renderVisualField(options: VisualFieldRenderOptions): void {
     let prob: string;
 
     switch (mapType) {
-      case 'grayscale':
+      case 'grayscale': {
         value = point.sensitivity;
         // Grayscale: 0 dB = black, 35+ dB = white
         const gray = Math.round((Math.min(35, value) / 35) * 255);
         ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
         prob = 'ns';
         break;
+      }
 
       case 'total-deviation':
         value = point.totalDeviation;

@@ -208,7 +208,6 @@ export function generateEnfaceProjection(
           value = min;
           break;
         }
-        case 'average':
         default: {
           let sum = 0;
           for (let f = 0; f < numFrames; f++) {

@@ -120,7 +120,7 @@ describe('unauthenticated guard', () => {
 // ── Upload chain (wayfinder #131) ───────────────────────────────────────────
 // POST /api/images/upload accepts studyId (auto-creates a Series) or seriesId
 // (appends); /upload/batch stores multiple files into one series.
-const { join: pathJoin } = await import('path');
+const { join: pathJoin } = await import('node:path');
 
 // 1x1 PNG that sharp can process (metadata + thumbnail).
 const TINY_PNG = Buffer.from(

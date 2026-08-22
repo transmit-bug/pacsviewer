@@ -146,7 +146,7 @@ export function ImageUpload({
     const validFiles = newFiles.filter((file) => {
       if (file.name.toUpperCase() === 'DICOMDIR') return false;
       if (file.size > MAX_FILE_SIZE) return false;
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      const ext = `.${file.name.split('.').pop()?.toLowerCase()}`;
       const isAllowedExt = allowedExtensions.includes(ext);
       const isAllowedType = [
         'image/jpeg',

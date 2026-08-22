@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEditorStore, ImageFilter } from '@/stores/editorStore';
+import { useEditorStore, type ImageFilter } from '@/stores/editorStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

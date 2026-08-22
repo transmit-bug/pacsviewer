@@ -9,7 +9,6 @@
  *   DELETE /:id       - Delete device
  */
 
-import { eq } from 'drizzle-orm';
 import { db, devices, insertDeviceSchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
 

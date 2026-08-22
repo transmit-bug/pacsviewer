@@ -7,8 +7,6 @@
  * 独立临时库: 在 import db 模块前设置 DATABASE_URL (同 auth-refresh.test.ts)。
  */
 import { describe, test, expect, afterAll } from 'bun:test';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { Database } from 'bun:sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -31,7 +29,7 @@ async function makeUser(username: string, mustChangePassword = false): Promise<s
   const roleId = crypto.randomUUID();
   await db.insert(roles).values({
     id: roleId,
-    name: '角色_' + roleId.slice(0, 8),
+    name: `角色_${roleId.slice(0, 8)}`,
     description: 'test',
     permissions: {},
     isSystem: false,
@@ -56,8 +54,8 @@ async function getSessionByToken(token: string) {
 
 afterAll(() => {
   rmSync(TEMP_DB, { force: true });
-  rmSync(TEMP_DB + '-wal', { force: true });
-  rmSync(TEMP_DB + '-shm', { force: true });
+  rmSync(`${TEMP_DB}-wal`, { force: true });
+  rmSync(`${TEMP_DB}-shm`, { force: true });
 });
 
 describe('login session creation', () => {

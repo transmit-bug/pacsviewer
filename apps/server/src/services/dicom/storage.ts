@@ -5,17 +5,15 @@
  * Creates/updates database records for Patient → Study → Series → Image.
  */
 
-import { join } from 'path';
-import { mkdir, writeFile, readFile, unlink } from 'fs/promises';
-import { existsSync } from 'fs';
+import { join } from 'node:path';
+import { mkdir, writeFile, readFile, } from 'node:fs/promises';
 import { v4 as uuid } from 'uuid';
-import { eq, and } from 'drizzle-orm';
+import { eq, } from 'drizzle-orm';
 import { db } from '../../db';
 import {
   patients, studies, series, images, dicomFrames,
 } from '../../db/schema';
 import type { DicomMetadata, DicomParseResult } from './parser';
-import { parseDicomFile, isDicomFile } from './parser';
 import { generateDicomThumbnail } from './thumbnail';
 
 const DICOM_STORE_DIR = join(process.cwd(), 'data', 'dicom');
@@ -53,10 +51,10 @@ export async function storeDicomFile(parseResult: DicomParseResult): Promise<Sto
   const patientId = await findOrCreatePatient(patient);
 
   // 2. Find or create Study
-  const { studyId, isNew: isNewStudy } = await findOrCreateStudy(patientId, study);
+  const { studyId } = await findOrCreateStudy(patientId, study);
 
   // 3. Find or create Series
-  const { seriesId, isNew: isNewSeries } = await findOrCreateSeries(studyId, seriesMeta);
+  const { seriesId } = await findOrCreateSeries(studyId, seriesMeta);
 
   // 4. Check if image already exists (by SOPInstanceUID)
   const existingImage = await db.query.images.findFirst({

@@ -11,9 +11,9 @@
  */
 
 import { Hono } from 'hono';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-import { db, annotations, insertAnnotationSchema, images, measurementPoints } from '../db';
+import { db, annotations, images, measurementPoints } from '../db';
 import { NotFoundError } from '../lib/errors';
 import { extractMeasurements } from '../lib/measurement-extract';
 import { getDefinitionMap } from '../db/measurement-definitions';
@@ -27,7 +27,7 @@ annotationsRouter.get('/', async (c) => {
   const imageId = c.req.query('imageId');
   const studyId = c.req.query('studyId');
 
-  let conditions;
+  let conditions: SQL;
   if (imageId) {
     conditions = eq(annotations.imageId, imageId);
   } else if (studyId) {

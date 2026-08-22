@@ -70,7 +70,7 @@ function audit(event: string, detail: Record<string, unknown>): void {
   console.log(`[backup] ${line}`);
   try {
     const fd = openSync(LOG_FILE, 'a');
-    writeSync(fd, line + '\n');
+    writeSync(fd, `${line}\n`);
     closeSync(fd);
   } catch (err) {
     console.error(`[backup] failed to append ${LOG_FILE}:`, err);

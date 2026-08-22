@@ -6,7 +6,7 @@
  */
 
 import dcmjs from 'dcmjs';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 const { DicomMessage, DicomMetaDictionary } = dcmjs.data;
 
@@ -159,8 +159,8 @@ function extractMetadata(dataset: Record<string, any>): DicomMetadata {
   function parseNumberArray(val: any): number[] | null {
     if (val == null) return null;
     if (typeof val === 'number') return [val];
-    if (typeof val === 'string') return val.split('\\').map(Number).filter(n => !isNaN(n));
-    if (Array.isArray(val)) return val.map(Number).filter(n => !isNaN(n));
+    if (typeof val === 'string') return val.split('\\').map(Number).filter(n => !Number.isNaN(n));
+    if (Array.isArray(val)) return val.map(Number).filter(n => !Number.isNaN(n));
     return null;
   }
 
@@ -259,7 +259,7 @@ function extractFrames(dataset: Record<string, any>, numberOfFrames: number): Di
   for (let i = 0; i < numberOfFrames; i++) {
     const frame: DicomFrame = { frameIndex: i };
 
-    if (perFrameSeq && perFrameSeq[i]) {
+    if (perFrameSeq?.[i]) {
       const groups = perFrameSeq[i];
 
       // FrameType

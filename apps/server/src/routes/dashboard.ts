@@ -18,7 +18,7 @@ dashboard.get('/stats', async (c) => {
       .from(patients);
 
     // Total studies
-    const [studyCount] = await db
+    const [_studyCount] = await db
       .select({ count: count() })
       .from(studies);
 

@@ -41,7 +41,7 @@ interface LogEntry {
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString('zh-CN');
 }
 
@@ -152,7 +152,7 @@ export function SettingsPage() {
       a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (_error) {
       // Fallback: export from current logs
       const csv = [
         '时间,用户,操作,操作标签,资源,资源ID,IP地址',
@@ -169,7 +169,7 @@ export function SettingsPage() {
         ),
       ].join('\n');
 
-      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

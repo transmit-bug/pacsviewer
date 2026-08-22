@@ -7,8 +7,8 @@
  * Reference: DICOM PS3.7 Section 9.1 (C-STORE)
  */
 
-import { Association } from '../ulp/association';
-import { PDataTf } from '../ulp/pdu';
+import type { Association } from '../ulp/association';
+import type { PDataTf } from '../ulp/pdu';
 import { parseDicomFile, isDicomFile, storeDicomFile } from '../../services/dicom';
 import { log } from '../../lib/audit';
 import { AuditEvents } from '../../lib/audit-events';

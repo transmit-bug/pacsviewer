@@ -8,7 +8,7 @@
  */
 
 import { Hono } from 'hono';
-import { eq, and, desc, sql, gte, lte, like } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, } from 'drizzle-orm';
 import { db, auditLogs } from '../db';
 import { AuditEventLabels } from '../lib/audit-events';
 import { requireRole } from '../middleware/auth';
@@ -132,7 +132,7 @@ auditLogsRouter.get('/export', async (c) => {
     ),
   ].join('\n');
 
-  return new Response('\uFEFF' + csv, { // Add BOM for Excel UTF-8 support
+  return new Response(`\uFEFF${csv}`, { // Add BOM for Excel UTF-8 support
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="audit-logs-${new Date().toISOString().slice(0, 10)}.csv"`,

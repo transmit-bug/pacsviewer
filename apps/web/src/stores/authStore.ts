@@ -158,7 +158,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             token: data.token,
             refreshToken: data.refreshToken,
           });
-        } catch (error) {
+        } catch (_error) {
           get().logout();
         }
       },

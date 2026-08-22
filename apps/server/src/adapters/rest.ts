@@ -8,16 +8,16 @@
  * are received.
  */
 
-import { join } from 'path';
-import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { BaseAdapter } from './base';
-import {
-  type AdapterConfig,
-  type InboundImageData,
-  type PatientCriteria,
-  type PatientQueryResult,
-  type StudyCriteria,
-  type StudyQueryResult,
+import type {
+  AdapterConfig,
+  InboundImageData,
+  PatientCriteria,
+  PatientQueryResult,
+  StudyCriteria,
+  StudyQueryResult,
 } from './types';
 
 /** Result of processing an upload */
@@ -216,7 +216,7 @@ export class RestAdapter extends BaseAdapter {
 
     // HMAC-SHA256 signature if secret is configured
     if (this.webhookSecret) {
-      const crypto = await import('crypto');
+      const crypto = await import('node:crypto');
       const signature = crypto
         .createHmac('sha256', this.webhookSecret)
         .update(payload)

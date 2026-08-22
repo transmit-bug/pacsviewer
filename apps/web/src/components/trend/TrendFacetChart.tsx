@@ -23,7 +23,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
-  TrendSeries,
+  type TrendSeries,
   computeTrend,
   TREND_META,
   formatValue,
@@ -57,7 +57,7 @@ export function TrendFacetChart({ series, color = '#2563eb' }: TrendFacetChartPr
 
   const data = series.points.map((p) => ({
     x: shortDate(p.studyDate),
-    fullLabel: `${p.studyDate}${p.studyTime ? ' ' + p.studyTime : ''}`,
+    fullLabel: `${p.studyDate}${p.studyTime ? ` ${p.studyTime}` : ''}`,
     value: convertUnit(p.value, p.unit || recordedUnit, targetUnit),
     calibrated: p.calibrated,
   }));

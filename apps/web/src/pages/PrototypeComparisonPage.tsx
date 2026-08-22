@@ -279,10 +279,10 @@ export default function PrototypeComparisonPage() {
             {lines.map((l) => (
               <g key={l.id}>
                 <line
-                  x1={l.x1 * 100 + '%'}
-                  y1={l.y1 * 100 + '%'}
-                  x2={l.x2 * 100 + '%'}
-                  y2={l.y2 * 100 + '%'}
+                  x1={`${l.x1 * 100}%`}
+                  y1={`${l.y1 * 100}%`}
+                  x2={`${l.x2 * 100}%`}
+                  y2={`${l.y2 * 100}%`}
                   stroke="#fbbf24"
                   strokeWidth={2}
                   strokeDasharray="4 3"

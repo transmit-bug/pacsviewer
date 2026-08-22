@@ -9,16 +9,16 @@
  * or orthanc as an external service.
  */
 
-import { join } from 'path';
-import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { BaseAdapter } from './base';
-import {
-  type AdapterConfig,
-  type InboundImageData,
-  type PatientCriteria,
-  type PatientQueryResult,
-  type StudyCriteria,
-  type StudyQueryResult,
+import type {
+  AdapterConfig,
+  InboundImageData,
+  PatientCriteria,
+  PatientQueryResult,
+  StudyCriteria,
+  StudyQueryResult,
 } from './types';
 
 /**
@@ -64,13 +64,13 @@ function parseDicomMetadata(buffer: Buffer): Record<string, unknown> {
 
     // VR
     let vr: string;
-    let vrOffset: number;
+    let _vrOffset: number;
     let valueLength: number;
 
     if (group === 0x0002) {
       // Explicit VR for meta group
       vr = buffer.toString('ascii', offset + 4, offset + 6);
-      vrOffset = offset + 4;
+      _vrOffset = offset + 4;
       if (['OB', 'OW', 'OF', 'SQ', 'UC', 'UN', 'UR', 'UT'].includes(vr)) {
         valueLength = buffer.readUInt32LE(offset + 8);
         offset += 12;
@@ -81,7 +81,7 @@ function parseDicomMetadata(buffer: Buffer): Record<string, unknown> {
     } else {
       // Implicit VR for data elements - assume UN
       vr = 'UN';
-      vrOffset = offset + 4;
+      _vrOffset = offset + 4;
       valueLength = buffer.readUInt32LE(offset + 4);
       offset += 8;
     }

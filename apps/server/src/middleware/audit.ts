@@ -8,7 +8,7 @@
  * lib/audit + lib/audit-events.
  */
 
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { log } from '../lib/audit';
 import { AuditEvents } from '../lib/audit-events';
 import { AppError } from '../lib/errors';

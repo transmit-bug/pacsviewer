@@ -7,8 +7,6 @@
  * 旧 token 指向已删除用户 → 所有 API 401 → refresh "成功" 但重试仍失败.
  */
 import { describe, test, expect, afterAll } from 'bun:test';
-import { Database } from 'bun:sqlite';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -64,8 +62,8 @@ function seed() {
 
 afterAll(() => {
   rmSync(TEMP_DB, { force: true });
-  const wal = TEMP_DB + '-wal';
-  const shm = TEMP_DB + '-shm';
+  const wal = `${TEMP_DB}-wal`;
+  const shm = `${TEMP_DB}-shm`;
   rmSync(wal, { force: true });
   rmSync(shm, { force: true });
 });

@@ -28,14 +28,14 @@ export async function createTestApp() {
   // Seed: admin role + user
   const adminRoleId = uuid();
   const adminId = uuid();
-  let testToken = uuid();
+  const testToken = uuid();
   const adminPassword = await Bun.password.hash('admin123');
   const now = new Date().toISOString();
 
   try {
     await db.insert(schema.roles).values({
       id: adminRoleId,
-      name: '管理员_' + adminRoleId.slice(0, 8), // Make unique
+      name: `管理员_${adminRoleId.slice(0, 8)}`, // Make unique
       description: 'System admin',
       permissions: JSON.stringify({
         patients: { create: true, read: true, update: true, delete: true },
@@ -50,7 +50,7 @@ export async function createTestApp() {
 
     await db.insert(schema.users).values({
       id: adminId,
-      username: 'admin_' + adminId.slice(0, 8), // Make unique
+      username: `admin_${adminId.slice(0, 8)}`, // Make unique
       email: `admin_${adminId.slice(0, 8)}@test.com`,
       passwordHash: adminPassword,
       displayName: 'Test Admin',
@@ -108,7 +108,7 @@ export async function request(
 
   // If X-Test-User is set, we bypass auth by patching the middleware
   if (headers['X-Test-User']) {
-    headers['Authorization'] = `Bearer test-token-${headers['X-Test-User']}`;
+    headers.Authorization = `Bearer test-token-${headers['X-Test-User']}`;
   }
 
   const init: RequestInit = { method, headers };

@@ -7,8 +7,8 @@
  * Reference: DICOM PS3.7 Section 9.1.5 (C-ECHO)
  */
 
-import { Association } from '../ulp/association';
-import { PDataTf } from '../ulp/pdu';
+import type { Association } from '../ulp/association';
+import type { PDataTf } from '../ulp/pdu';
 
 // ─── C-ECHO Status Codes ─────────────────────────────────────────────────────
 

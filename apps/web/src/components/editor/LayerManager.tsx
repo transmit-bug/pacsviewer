@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEditorStore, Layer } from '@/stores/editorStore';
+import { useEditorStore, type Layer } from '@/stores/editorStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { layerApi, annotationApi } from '@/services/api';
 import { setLayerVisibility } from '@/lib/cornerstone/layerVisibility';

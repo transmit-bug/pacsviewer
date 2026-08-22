@@ -8,10 +8,10 @@
 import sharp from 'sharp';
 import dcmjs from 'dcmjs';
 import { v4 as uuid } from 'uuid';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { DicomParseResult, DicomMetadata } from './dicom/parser';
 
-const { DicomDict, DicomMetaDictionary, DicomMessage } = dcmjs.data;
+const { DicomDict, DicomMetaDictionary } = dcmjs.data;
 
 // Secondary Capture SOP Class UID — used for non-medical images wrapped as DICOM
 const SOP_CLASS_UID_SECONDARY_CAPTURE = '1.2.840.10008.5.1.4.1.1.7';
@@ -255,7 +255,7 @@ function generateUid(): string {
   // Use UUID without hyphens, prefixed with "2.25." per DICOM PS3.5 B.2
   const uuidStr = uuid().replace(/-/g, '');
   // Convert to a numeric string and prefix with 2.25
-  const numeric = BigInt('0x' + uuidStr).toString();
+  const numeric = BigInt(`0x${uuidStr}`).toString();
   return `2.25.${numeric}`;
 }
 

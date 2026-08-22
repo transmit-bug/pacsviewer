@@ -14,10 +14,10 @@
  *   bun run scripts/cleanup-full.ts
  */
 
-import { join } from 'path';
-import { readdir, unlink, stat, rm } from 'fs/promises';
-import { existsSync } from 'fs';
-import { db, images } from '../src/db';
+import { join } from 'node:path';
+import { readdir, unlink, stat, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { db, } from '../src/db';
 
 const BASE_DIR = join(import.meta.dir, '..');
 const IMAGES_DIR = join(BASE_DIR, 'data', 'images');

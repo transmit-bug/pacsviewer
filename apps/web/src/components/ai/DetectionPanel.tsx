@@ -88,7 +88,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
         case 'retinal_disease':
           result = await analyzeRetinalImage(sourceImage);
           break;
-        case 'optic_disc':
+        case 'optic_disc': {
           const discResult = await segmentOpticDisc(sourceImage);
           // Convert to DetectionResult format
           const imageData = getImageData(sourceImage);
@@ -118,7 +118,8 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
             analysisMethod: 'local',
           };
           break;
-        case 'vessel':
+        }
+        case 'vessel': {
           const vesselResult = await segmentVessels(sourceImage);
           const vesselImageData = getImageData(sourceImage);
           const vesselHeatmap = generateHeatmap(vesselImageData, {
@@ -141,6 +142,7 @@ export function DetectionPanel({ sourceImage, onResult }: DetectionPanelProps) {
             analysisMethod: 'local',
           };
           break;
+        }
         default:
           throw new Error('Unknown detection model');
       }

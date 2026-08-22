@@ -9,8 +9,8 @@
  */
 
 import sharp from 'sharp';
-import { join } from 'path';
-import { mkdir, stat } from 'fs/promises';
+import { join } from 'node:path';
+import { mkdir, stat } from 'node:fs/promises';
 import { db, images } from '../db';
 import { eq } from 'drizzle-orm';
 

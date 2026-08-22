@@ -399,7 +399,7 @@ describe('POST /annotations/sync → measurement_points', () => {
 
 describe('GET /measurements/trends', () => {
   test('groups points by key with studyDate ordering and definition metadata', async () => {
-    const { patientId, baselineStudyId, followupStudyId, imageId } = await createFixture();
+    const { patientId, followupStudyId, imageId } = await createFixture();
     // Baseline: rnfl 25mm (dates 2025-01-10)
     await sync(imageId, [
       annotation({ data: { handles: { points: [[0, 0, 0], [10, 0, 0]] }, cachedStats: { [TARGET_ID]: { length: 25, unit: 'mm' } }, label: 'RNFL 厚度' } }),

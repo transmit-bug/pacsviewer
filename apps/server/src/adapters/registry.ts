@@ -9,11 +9,11 @@
  */
 
 import { v4 as uuid } from 'uuid';
-import {
-  type AdapterConfig,
-  type AdapterStatusInfo,
-  type AdapterType,
-  type DeviceAdapter,
+import type {
+  AdapterConfig,
+  AdapterStatusInfo,
+  AdapterType,
+  DeviceAdapter,
 } from './types';
 
 /** Factory function: receives config, returns a ready-to-init adapter instance */

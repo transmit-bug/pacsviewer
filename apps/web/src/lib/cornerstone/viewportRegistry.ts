@@ -20,12 +20,16 @@ const listeners = new Map<string, Set<() => void>>();
 
 export function registerViewportElement(viewportId: string, element: HTMLDivElement): void {
   registry.set(viewportId, element);
-  listeners.get(viewportId)?.forEach((cb) => cb());
+  listeners.get(viewportId)?.forEach((cb) => {
+    cb();
+  });
 }
 
 export function unregisterViewportElement(viewportId: string): void {
   registry.delete(viewportId);
-  listeners.get(viewportId)?.forEach((cb) => cb());
+  listeners.get(viewportId)?.forEach((cb) => {
+    cb();
+  });
 }
 
 export function getViewportElement(viewportId: string): HTMLDivElement | undefined {

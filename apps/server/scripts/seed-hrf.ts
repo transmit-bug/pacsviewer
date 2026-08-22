@@ -21,13 +21,12 @@
  *   5. Links to existing users (doctors) for physician assignment
  */
 
-import { join } from 'path';
-import { mkdir, writeFile, readdir, stat, unlink, rm } from 'fs/promises';
-import { existsSync } from 'fs';
+import { join } from 'node:path';
+import { mkdir, writeFile, readdir, } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import sharp from 'sharp';
 import { v4 as uuid } from 'uuid';
-import { db, patients, studies, series, images, users } from '../src/db';
-import { eq } from 'drizzle-orm';
+import { db, patients, studies, series, images, } from '../src/db';
 
 // ── Configuration ───────────────────────────────────────────────────────────
 
@@ -102,7 +101,7 @@ async function getImageDimensions(imagePath: string): Promise<{ width: number; h
   };
 }
 
-function parseImageFilename(filename: string): { id: number; eye: 'OD' | 'OS' } | null {
+function _parseImageFilename(filename: string): { id: number; eye: 'OD' | 'OS' } | null {
   // HRF filenames: 01_h.jpg, 01_g.jpg, 01_dr.jpg
   // Also: healthy01.jpg, glaucoma01.jpg, dr01.jpg
   const match = filename.match(/(\d+)/);
@@ -144,7 +143,7 @@ async function seedHRF() {
     console.log(`\n📂 Processing: ${source.name} (${source.description})`);
     console.log('─'.repeat(50));
 
-    const categoryDir = join(HRF_DIR, source.name);
+    const _categoryDir = join(HRF_DIR, source.name);
     const extractDir = join(HRF_DIR, `${source.name}_extracted`);
 
     // Download ZIP if not exists

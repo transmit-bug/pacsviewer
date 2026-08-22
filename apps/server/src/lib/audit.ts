@@ -92,8 +92,6 @@ export async function query(options: AuditQueryOptions = {}) {
     userId,
     action,
     resource,
-    startDate,
-    endDate,
     page = 1,
     pageSize = 50,
   } = options;

@@ -150,8 +150,8 @@ export function useAnnotationHandler() {
         // Check if close to first point to complete polygon
         const firstPoint = points[0];
         const distance = Math.sqrt(
-          Math.pow(point.x - firstPoint.x, 2) + 
-          Math.pow(point.y - firstPoint.y, 2)
+          (point.x - firstPoint.x) ** 2 + 
+          (point.y - firstPoint.y) ** 2
         );
         
         if (distance < 10 && points.length >= 3) {

@@ -15,7 +15,7 @@
 
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
-import { db, followUpRecords, studies, annotations, patients } from '../db';
+import { db, followUpRecords, studies, annotations, } from '../db';
 import { extractMeasurementValue } from '../lib/measurement-extract';
 import { getDefinitionMap } from '../db/measurement-definitions';
 import { NotFoundError, ValidationError } from '../lib/errors';

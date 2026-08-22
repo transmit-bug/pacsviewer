@@ -19,7 +19,7 @@
  */
 
 import { Hono } from 'hono';
-import { eq, like, and, gte, lte, isNotNull } from 'drizzle-orm';
+import { eq, and, gte, lte, isNotNull } from 'drizzle-orm';
 import multipart from 'parse-multipart-data';
 import { db, studies, series, images, patients, dicomFrames } from '../db';
 import { parseDicomFile, isDicomFile, storeDicomFile, readDicomFile } from '../services/dicom';
@@ -164,8 +164,8 @@ dicomwebRouter.get('/studies/:studyUid/series/:seriesUid/instances', async (c) =
 
 // ─── WADO-RS: Retrieve Instance (DICOM binary) ─────────────────────────────
 dicomwebRouter.get('/studies/:studyUid/series/:seriesUid/instances/:instanceUid', async (c) => {
-  const studyUid = c.req.param('studyUid');
-  const seriesUid = c.req.param('seriesUid');
+  const _studyUid = c.req.param('studyUid');
+  const _seriesUid = c.req.param('seriesUid');
   const instanceUid = c.req.param('instanceUid');
 
   const image = await db.query.images.findFirst({

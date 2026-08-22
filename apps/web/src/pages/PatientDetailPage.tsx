@@ -163,7 +163,7 @@ export function PatientDetailPage() {
       await followUpApi.delete(recordId);
       if (id) loadFollowUpRecords(id);
       toast({ title: t('patient.recordDeleted') });
-    } catch (error) {
+    } catch (_error) {
       toast({ title: t('patient.deleteFailed'), variant: 'destructive' });
     }
   };
@@ -312,7 +312,7 @@ export function PatientDetailPage() {
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {study.studyDate}
-                            {study.studyTime ? ' ' + study.studyTime.slice(0, 5) : ''}
+                            {study.studyTime ? ` ${study.studyTime.slice(0, 5)}` : ''}
                           </p>
                           {study.description && (
                             <p className="text-sm text-muted-foreground mt-1">

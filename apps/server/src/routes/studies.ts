@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, } from 'drizzle-orm';
 import { db, studies, series, insertStudySchema } from '../db';
 import { createCrudRouter } from '../lib/crud';
 import { requirePermission } from '../middleware/auth';

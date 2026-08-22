@@ -14,7 +14,7 @@
 
 import { Hono } from 'hono';
 import { eq, and, gte, lte, like, desc } from 'drizzle-orm';
-import { db, worklistItems, patients, insertWorklistItemSchema } from '../db';
+import { db, worklistItems, } from '../db';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { log } from '../lib/audit';
 import { AuditEvents } from '../lib/audit-events';

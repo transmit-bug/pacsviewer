@@ -8,7 +8,7 @@
 import { describe, test, expect } from 'bun:test';
 
 function runScenario(extraEnv: Record<string, string> = {}): string {
-  const proc = Bun.spawnSync(['bun', 'run', import.meta.dir + '/fixtures/rate-limit-scenario.ts'], {
+  const proc = Bun.spawnSync(['bun', 'run', `${import.meta.dir}/fixtures/rate-limit-scenario.ts`], {
     cwd: import.meta.dir,
     env: { ...process.env, ...extraEnv },
   });

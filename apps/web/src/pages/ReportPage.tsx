@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
@@ -373,7 +374,8 @@ export function ReportPage() {
             <h3 className="font-medium text-lg mb-2">{t('report.findings')}</h3>
             <div
               className="prose dark:prose-invert max-w-none text-sm"
-              dangerouslySetInnerHTML={{ __html: report.content.findings }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized with DOMPurify above
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(report.content.findings) }}
             />
           </div>
         )}
@@ -538,8 +540,11 @@ export function ReportPage() {
                       onBlur={(e) =>
                         handleContentChange('findings', e.currentTarget.innerHTML)
                       }
+                      // biome-ignore lint/security/noDangerouslySetInnerHtml: contentEditable round-trip; sanitized via DOMPurify
                       dangerouslySetInnerHTML={{
-                        __html: report.content?.findings || '',
+                        // contentEditable is the source of this HTML (self-authored rich text);
+                        // React requires the raw value here. Read path is sanitized above.
+                        __html: DOMPurify.sanitize(report.content?.findings || ''),
                       }}
                     />
                   </CardContent>

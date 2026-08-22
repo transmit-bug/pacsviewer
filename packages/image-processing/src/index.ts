@@ -30,7 +30,7 @@ export interface ThumbnailOptions {
  * Compute SHA-256 hash of a buffer.
  */
 export async function computeHash(buffer: Buffer): Promise<string> {
-  const crypto = await import('crypto');
+  const crypto = await import('node:crypto');
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
@@ -63,7 +63,7 @@ export async function extractMetadata(buffer: Buffer): Promise<ImageMetadata> {
     height: metadata.height ?? 0,
     format: metadata.format ?? 'unknown',
     bitsPerSample: metadata.depth
-      ? (SHARP_DEPTH_BITS[metadata.depth] ?? parseInt(metadata.depth))
+      ? (SHARP_DEPTH_BITS[metadata.depth] ?? parseInt(metadata.depth, 10))
       : undefined,
     channels: metadata.channels,
     hasAlpha: metadata.hasAlpha,

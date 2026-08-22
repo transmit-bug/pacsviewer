@@ -2,7 +2,7 @@
  * Trend facet grid (随访对比 T3) — one mini chart per measurement key.
  */
 import { useTranslation } from 'react-i18next';
-import { TrendSeries, FACET_COLORS } from './trend-utils';
+import { type TrendSeries, FACET_COLORS } from './trend-utils';
 import { TrendFacetChart } from './TrendFacetChart';
 import { cn } from '@/lib/utils';
 

@@ -9,9 +9,9 @@
  */
 
 import { v4 as uuid } from 'uuid';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
-import { db, devices, inboundTransfers } from '../db';
+import { mkdir, } from 'node:fs/promises';
+import { join } from 'node:path';
+import { db, inboundTransfers } from '../db';
 import { eq, sql } from 'drizzle-orm';
 import {
   parseAssociateRQ,
@@ -21,7 +21,7 @@ import {
   buildCStoreRSP,
   type AssociateRQ,
 } from './pdu';
-import { PDU_TYPE, STATUS, SOP_CLASS } from './constants';
+import { PDU_TYPE, STATUS, } from './constants';
 
 const DEFAULT_AE_TITLE = 'PACSVIEWER';
 const DEFAULT_PORT = 11112;
@@ -69,10 +69,10 @@ export async function startDicomServer(): Promise<void> {
       data(socket, data) {
         handleData(socket, Buffer.from(data), config);
       },
-      error(socket, error) {
+      error(_socket, error) {
         console.error('[DICOM] Socket error:', error);
       },
-      close(socket) {
+      close(_socket) {
         // Clean up socket data
       },
     },
@@ -144,7 +144,7 @@ async function handleData(socket: any, data: Buffer, config: DicomAdapterConfig)
   }
 }
 
-async function handlePDU(socket: any, pdu: Buffer, pduType: number, config: DicomAdapterConfig): Promise<void> {
+async function handlePDU(socket: any, pdu: Buffer, pduType: number, _config: DicomAdapterConfig): Promise<void> {
   const state = getSocketState(socket);
 
   switch (pduType) {

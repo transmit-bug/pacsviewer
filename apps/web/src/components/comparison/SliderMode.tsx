@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import {
-  ViewportState,
+  type ViewportState,
   defaultViewport,
   drawMeasurementLines,
   isWwWlGesture,
   applyWlDrag,
-  ComparisonLine,
+  type ComparisonLine,
 } from './shared';
 
 interface SliderModeProps {

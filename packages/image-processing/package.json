@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "sharp": "^0.35.0"
+  },
+  "scripts": {
+    "lint": "biome check ."
   }
 }

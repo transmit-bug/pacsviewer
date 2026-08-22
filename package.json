@@ -15,7 +15,7 @@
     "build:server": "bun run --filter @pacsviewer/server build",
     "build:web": "bun run --filter @pacsviewer/web build",
     "test": "bun run --filter '*' test",
-    "lint": "bun run --filter '*' lint",
+    "lint": "biome check .",
     "typecheck": "bun run --filter '*' typecheck",
     "db:generate": "bun run --filter @pacsviewer/server db:generate",
     "db:migrate": "bun run --filter @pacsviewer/server db:migrate",
@@ -23,6 +23,7 @@
     "db:seed": "bun run --filter @pacsviewer/server db:seed"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
     "@playwright/test": "1.62.1",
     "@radix-ui/react-label": "^2.1.11",
     "@types/better-sqlite3": "^7.6.13",
