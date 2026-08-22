@@ -32,5 +32,8 @@
   },
   "dependencies": {
     "pinyin-match": "^1.2.10"
-  }
+  },
+  "trustedDependencies": [
+    "better-sqlite3"
+  ]
 }

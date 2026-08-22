@@ -13,6 +13,8 @@ export const users = sqliteTable('users', {
   avatar: text('avatar'),
   roleId: text('role_id').references(() => roles.id),
   status: text('status', { enum: ['active', 'disabled', 'locked'] }).default('active').notNull(),
+  // 首登强制改密: 账号仍持有初始/管理员下发的密码时为 true (#139)
+  mustChangePassword: integer('must_change_password', { mode: 'boolean' }).default(false).notNull(),
   lastLoginAt: text('last_login_at'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
@@ -36,6 +38,10 @@ export const sessions = sqliteTable('sessions', {
   refreshToken: text('refresh_token').notNull().unique(),
   deviceInfo: text('device_info', { mode: 'json' }),
   ipAddress: text('ip_address'),
+  // 滑动过期 (空闲超时): 每次成功认证后顺延 now + SESSION_IDLE_MINUTES
+  lastActiveAt: text('last_active_at'),
+  // 绝对上限: 登录时刻 + SESSION_ABSOLUTE_HOURS, refresh 轮换不重置 (#139)
+  absoluteExpiresAt: text('absolute_expires_at').notNull(),
   expiresAt: text('expires_at').notNull(),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 }, (table) => [
@@ -341,9 +347,13 @@ export const systemSettings = sqliteTable('system_settings', {
 });
 
 // Audit logs table
+// userId is nullable (#118/#138): unauthenticated requests (e.g. failed logins,
+// brute-force attempts) are recorded with NULL — a fake 'anonymous' id would
+// violate the FK. NULL renders as 未认证 in the query UI.
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),
-  userId: text('user_id').references(() => users.id).notNull(),
+  // 可空: 登录失败审计要记录「用户名不存在」的尝试, 此时无从关联任何用户 (#139)
+  userId: text('user_id').references(() => users.id),
   action: text('action').notNull(),
   resource: text('resource').notNull(),
   resourceId: text('resource_id'),

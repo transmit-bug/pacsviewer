@@ -63,13 +63,17 @@ export async function createTestApp() {
     // Create a valid session for authenticated tests
     const testRefreshToken = uuid();
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    // #139: sessions.absoluteExpiresAt 为 NOT NULL, 测试会话同样要给足绝对上限
+    const dayAfterTomorrow = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
     await db.insert(schema.sessions).values({
       id: uuid(),
       userId: adminId,
       token: testToken,
       refreshToken: testRefreshToken,
+      lastActiveAt: now,
       expiresAt: tomorrow,
+      absoluteExpiresAt: dayAfterTomorrow,
     });
   } catch (e) {
     // Tables might not exist yet - that's ok, tests will fail with clear message

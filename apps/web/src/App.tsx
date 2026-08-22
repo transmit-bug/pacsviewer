@@ -1,8 +1,5 @@
-import { Suspense, useEffect, useState } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { LoadingScreen } from '@/components/brand/LoadingScreen';
-import { RouteTransition } from '@/components/transition/RouteTransition';
+import { Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { GuidedTour } from '@/components/tour/GuidedTour';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/LoginPage';
@@ -26,34 +23,13 @@ import { StudyListPage } from '@/pages/StudyListPage';
 import { UserManagementPage } from '@/pages/UserManagementPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
-/**
- * 品牌加载页 boot overlay: 首帧展示产品标识, 最短 ~700ms 后淡出,
- * 让首屏数据请求在后台先行, 露出时多为就绪态。
- */
-function BootLoader({ done }: { done: boolean }) {
+/** 路由级过渡已移除 (#134 引入的黑屏闪烁问题, 2026-08-15):
+ * 旧实现用 AnimatePresence mode="wait" 让页面淡出到透明度 0 再淡入,
+ * 深色主题下每次跳转都会露出近黑背景 ~400ms (黑屏闪烁)。
+ * 恢复为瞬时跳转; 如需动画可后续基于 "不经过全透明" 的方式重做。 */
+function AppRoutes() {
   return (
-    <AnimatePresence>
-      {!done && (
-        <motion.div
-          key="boot-loader"
-          className="fixed inset-0 z-50"
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <LoadingScreen />
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-/** 路由级过渡: location-frozen 的 Routes (退出动画渲染旧路由内容) */
-function AnimatedRoutes() {
-  const location = useLocation();
-
-  return (
-    <RouteTransition>
-      <Routes location={location}>
+    <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/prototype/viewer" element={<ViewerWorkspacePrototype />} />
         <Route path="/prototype/comparison" element={<PrototypeComparisonPage />} />
@@ -77,27 +53,18 @@ function AnimatedRoutes() {
           <Route path="devices" element={<DevicesPage />} />
         </Route>
       </Routes>
-    </RouteTransition>
   );
 }
 
 export default function App() {
-  const [booted, setBooted] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setBooted(true), 700);
-    return () => window.clearTimeout(timer);
-  }, []);
-
   return (
     <>
       {/* 路由级 Suspense fallback: 页面为 eager 加载时不会触发, 为后续懒加载预留 */}
-      <Suspense fallback={<LoadingScreen />}>
-        <AnimatedRoutes />
+      <Suspense fallback={null}>
+        <AppRoutes />
       </Suspense>
       {/* 演示走查浮层 — 全局挂载, 跨路由保持 */}
       <GuidedTour />
-      <BootLoader done={booted} />
     </>
   );
 }

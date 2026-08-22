@@ -1,0 +1,25 @@
+# Caddy gateway — TLS 终结 (#139)
+#
+# 自签证书: `tls internal` 让 Caddy 用内置 CA 现场签发自签证书,
+# 无需外部域名/CA (1.0 医院试点内网部署)。
+# 首次启动后导出根证书分发给工作站信任:
+#   docker compose exec gateway caddy trust           # 本机信任 (Linux 容器内无效, 仅参考)
+#   docker compose cp gateway:/data/caddy/pki/authorities/local/root.crt ./pacsviewer-root.crt
+# 工作站导入该 root.crt 到系统/浏览器信任库后不再出现证书告警。
+#
+# 对外仅暴露 443; web (nginx) 与 server 均只在 compose 内网可达。
+
+{
+	# 内网自签场景不需要 ACME (Let's Encrypt) 流程
+	auto_https disable_redirects
+}
+
+:443 {
+	tls internal
+
+	# 压缩
+	encode gzip
+
+	# 全部流量转发给 web 的 nginx (静态 SPA + /api → server:3000 反代)
+	reverse_proxy web:80
+}
