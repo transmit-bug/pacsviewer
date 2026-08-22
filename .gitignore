@@ -13,3 +13,4 @@ qa-knowledge/
 
 # E2E synthetic fixtures (generated at test time)
 tests/e2e/.fixtures/
+playwright-report/
