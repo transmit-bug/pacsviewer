@@ -46,6 +46,6 @@ test.describe('Diagnostic Workflow', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('**/');
     await page.goto('/devices');
-    await expect(page.locator('text=设备管理')).toBeVisible();
+    await expect(page.locator('text=设备管理').first()).toBeVisible();
   });
 });
