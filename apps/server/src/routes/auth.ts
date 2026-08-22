@@ -62,14 +62,27 @@ function authRateLimiter(fallbackField?: string) {
     standardHeaders: 'draft-6',
     skipSuccessfulRequests: true,
     keyGenerator: (c) => attemptKey(c, fallbackField),
-    handler: (c) =>
-      c.json(
+    handler: (c) => {
+      // 锁定事件写入审计 (#138 联动限流): 细粒度 user.login_lockout
+      void attemptKey(c, fallbackField).then((key) => {
+        const username = key.split(':').slice(1).join(':');
+        log({
+          userId: null,
+          action: AuditEvents.USER_LOGIN_LOCKOUT,
+          resource: 'auth',
+          details: { username, windowMinutes: RATE_LIMIT_WINDOW_MIN, maxAttempts: RATE_LIMIT_MAX },
+          ipAddress: clientIp(c),
+          userAgent: c.req.header('User-Agent'),
+        });
+      });
+      return c.json(
         {
           success: false,
           message: `尝试次数过多，已临时锁定 ${RATE_LIMIT_WINDOW_MIN} 分钟，请稍后重试`,
         },
         429,
-      ),
+      );
+    },
   });
 }
 
@@ -108,18 +121,8 @@ auth.post('/login', authRateLimiter('username'), async (c) => {
       data: toSessionPayload(result),
     });
   } catch (err) {
-    // 登录失败写审计 (#139, 联动 #138): 用户名不存在时 userId 为 null
-    if (err instanceof UnauthorizedError) {
-      const known = await db.query.users.findFirst({ where: eq(users.username, username) });
-      log({
-        userId: known?.id ?? null,
-        action: 'login_failed',
-        resource: 'auth',
-        details: { username, reason: err.message },
-        ipAddress,
-        userAgent: c.req.header('User-Agent'),
-      });
-    }
+    // 登录失败审计由 lib/auth.ts 的 logLoginFailure 统一记录 (#138)，
+    // 此处不再重复写一行（避免同一失败产生两条审计记录）。
     throw err;
   }
 });

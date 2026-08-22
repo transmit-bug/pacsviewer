@@ -97,7 +97,7 @@ await createUser('ghost-target'); // 占位避免用户名冲突判断混乱
 await loginReq('ghost-user', 'whatever', '10.0.0.9');
 await new Promise((r) => setTimeout(r, 50));
 const rows = await db.query.auditLogs.findMany({});
-const failures = rows.filter((r: any) => r.action === 'login_failed');
+const failures = rows.filter((r: any) => r.action === 'user.login' && r.details?.success === false);
 const usernames = failures.map((r: any) => r.details?.username);
 const ghost = failures.find((r: any) => r.details?.username === 'ghost-user');
 console.log('RESULT auditFailuresLogged', usernames.includes('audited') && usernames.includes('ghost-user') ? 'yes' : 'no');

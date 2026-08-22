@@ -44,6 +44,7 @@ export const AuditEvents = {
 
   // ─── User/Session Operations ──────────────────────────────────────────────
   USER_LOGIN: 'user.login',
+  USER_LOGIN_LOCKOUT: 'user.login_lockout',
   USER_LOGOUT: 'user.logout',
   USER_PASSWORD_CHANGE: 'user.password_change',
   USER_PROFILE_UPDATE: 'user.profile.update',
@@ -116,6 +117,7 @@ export const AuditEventLabels: Record<string, string> = {
   [AuditEvents.DICOM_QUERY]: 'DICOM 查询',
 
   [AuditEvents.USER_LOGIN]: '用户登录',
+  [AuditEvents.USER_LOGIN_LOCKOUT]: '登录锁定（失败次数过多）',
   [AuditEvents.USER_LOGOUT]: '用户登出',
   [AuditEvents.USER_PASSWORD_CHANGE]: '密码变更',
   [AuditEvents.USER_PROFILE_UPDATE]: '更新个人信息',
