@@ -10,3 +10,6 @@ test-results/
 
 # QA 工作产物 — 含患者截图（PHI），禁止入库
 qa-knowledge/
+
+# E2E synthetic fixtures (generated at test time)
+tests/e2e/.fixtures/
